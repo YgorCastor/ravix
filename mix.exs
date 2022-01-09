@@ -29,6 +29,8 @@ defmodule Ravix.MixProject do
       {:enum_type, "~> 1.1"},
       {:elixir_uuid, "~> 1.2"},
       {:ok, "~> 2.3"},
+      {:timex, "~> 3.7"},
+      {:tzdata, "~> 1.1"},
       {:ex_machina, "~> 2.7", only: :test},
       {:faker, "~> 0.17.0", only: :test},
       {:fake_server, "~> 2.1", only: :test}

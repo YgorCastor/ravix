@@ -1,10 +1,10 @@
 defmodule Ravix.Documents.Conventions do
-  defstruct max_number_of_requests_per_session: 30,
-            max_ids_to_catch: 32,
-            timeout: 30,
+  defstruct max_number_of_requests_per_session: nil,
+            max_ids_to_catch: nil,
+            timeout: nil,
             use_optimistic_concurrency: false,
-            max_length_of_query_using_get_url: 1024 + 512,
-            identity_parts_separator: "/",
+            max_length_of_query_using_get_url: nil,
+            identity_parts_separator: nil,
             disable_topology_update: false
 
   alias Ravix.Documents.Conventions

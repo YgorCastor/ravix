@@ -1,7 +1,6 @@
 defmodule Ravix.Documents.Session.State do
   defstruct session_id: nil,
             database: nil,
-            request_executor: nil,
             documents_by_id: [],
             included_documents_by_id: [],
             known_missing_ids: [],
@@ -12,7 +11,6 @@ defmodule Ravix.Documents.Session.State do
   @type t :: %State{
           session_id: UUID.t(),
           database: String.t(),
-          request_executor: UUID.t(),
           documents_by_id: list(String.t()),
           included_documents_by_id: list(String.t()),
           known_missing_ids: list(String.t()),

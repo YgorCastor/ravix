@@ -1,4 +1,4 @@
-defmodule Ravix.Documents.Session.Supervisor do
+defmodule Ravix.Documents.Session.SessionsManager do
   use DynamicSupervisor
 
   alias Ravix.Documents.Session.State
@@ -15,7 +15,7 @@ defmodule Ravix.Documents.Session.Supervisor do
     DynamicSupervisor.start_link(__MODULE__, attrs, name: __MODULE__)
   end
 
-  def create_supervised_session(session_state = %State{}) do
+  def create_session(session_state = %State{}) do
     DynamicSupervisor.start_child(__MODULE__, {Session, session_state})
   end
 end

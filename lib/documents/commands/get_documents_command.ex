@@ -1,6 +1,7 @@
 defmodule Ravix.Documents.Commands.GetDocuments do
   use Ravix.Documents.Commands.RavenCommand,
     ids: [],
+    method: "GET",
     includes: nil,
     metadata_only: false,
     start: nil,

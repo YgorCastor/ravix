@@ -9,7 +9,7 @@ defmodule Ravix.Documents.StoreTest do
 
   describe "A document store session" do
     test "should be opened succesfully" do
-      {:ok, session_id} = Store.open_session("test", "3c2e4d5d-aeeb-464c-ba4f-bd94d1aede1c")
+      {:ok, session_id} = Store.open_session("test")
 
       assert session_id != ""
     end
