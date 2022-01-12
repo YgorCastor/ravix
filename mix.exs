@@ -7,7 +7,15 @@ defmodule Ravix.MixProject do
       version: "0.0.1",
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      elixirc_paths: elixirc_paths(Mix.env()),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
     ]
   end
 
@@ -33,7 +41,13 @@ defmodule Ravix.MixProject do
       {:tzdata, "~> 1.1"},
       {:ex_machina, "~> 2.7", only: :test},
       {:faker, "~> 0.17.0", only: :test},
-      {:fake_server, "~> 2.1", only: :test}
+      {:fake_server, "~> 2.1", only: :test},
+      {:assertions, "~> 0.19.0", only: :test},
+      {:excoveralls, "~> 0.14.4", only: :test},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 end

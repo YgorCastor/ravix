@@ -51,6 +51,6 @@ defmodule Ravix.Documents.Store do
         nil
       )
 
-    {:reply, {:ok, session_id}, state}
+    {:reply, session_id, state}
   end
 end
