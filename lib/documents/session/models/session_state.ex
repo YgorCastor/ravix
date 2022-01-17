@@ -2,7 +2,6 @@ defmodule Ravix.Documents.Session.State do
   defstruct session_id: nil,
             database: nil,
             documents_by_id: %{},
-            documents_by_entity: %{},
             included_documents_by_id: [],
             known_missing_ids: [],
             defer_commands: [],
@@ -17,7 +16,6 @@ defmodule Ravix.Documents.Session.State do
           session_id: String.t(),
           database: String.t(),
           documents_by_id: map(),
-          documents_by_entity: map(),
           included_documents_by_id: list(String.t()),
           known_missing_ids: list(String.t()),
           defer_commands: list(%{key: any()}),
@@ -48,14 +46,37 @@ defmodule Ravix.Documents.Session.State do
     after
       %State{
         state
-        | documents_by_entity:
-            Map.put(state.documents_by_entity, entity, %{
-              original_value: original_document,
-              key: key
-            }),
-          documents_by_id: Map.put(state.documents_by_id, key, entity)
+        | documents_by_id:
+            Map.put(state.documents_by_id, key, %{
+              entity: entity,
+              change_data: %{original_value: original_document}
+            })
       }
     end
+  end
+
+  @spec clear_deferred_commands(State.t()) :: State.t()
+  def clear_deferred_commands(state = %State{}) do
+    %State{
+      state
+      | defer_commands: []
+    }
+  end
+
+  @spec clear_deleted_entities(State.t()) :: State.t()
+  def clear_deleted_entities(state = %State{}) do
+    %State{
+      state
+      | deleted_entities: []
+    }
+  end
+
+  @spec clear_documents(State.t()) :: State.t()
+  def clear_documents(state = %State{}) do
+    %State{
+      state
+      | documents_by_id: %{}
+    }
   end
 
   @spec document_not_in_deferred_command(State.t(), binary()) ::

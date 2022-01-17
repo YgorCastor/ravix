@@ -2,6 +2,7 @@ defmodule Ravix.Connection.InMemoryNetworkState do
   use Agent
 
   alias Ravix.Connection.Network.State
+  alias Ravix.Connection.NetworkStateManager
 
   def start_link(_attrs, params) do
     Agent.start_link(
@@ -13,9 +14,7 @@ defmodule Ravix.Connection.InMemoryNetworkState do
           params[:certificate]
         )
       end,
-      name: network_state_for_database(params[:database_name])
+      name: NetworkStateManager.network_state_for_database(params[:database_name])
     )
   end
-
-  defp network_state_for_database(database), do: {:via, Registry, {:network_state, database}}
 end

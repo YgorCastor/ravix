@@ -85,4 +85,21 @@ defmodule Ravix.Documents.SessionTest do
         end
     end
   end
+
+  describe "save_changes/1" do
+    test "Documents on session should be saved" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:ok, save_result} =
+        OK.for do
+          session_id <- Store.open_session("test")
+          _ <- Session.store(session_id, any_entity)
+          result <- Session.save_changes(session_id)
+        after
+          result
+        end
+
+      assert save_result.status == 201
+    end
+  end
 end

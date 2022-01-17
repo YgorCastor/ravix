@@ -21,8 +21,11 @@ defmodule Ravix.Connection.ServerNode do
     %ServerNode{
       url: parsed_url.host,
       port: parsed_url.port,
-      protocol: parsed_url.scheme,
+      protocol: String.to_atom(parsed_url.scheme),
       database: database
     }
   end
+
+  def node_url(server_node = %ServerNode{}),
+    do: "/databases/#{server_node.database}"
 end

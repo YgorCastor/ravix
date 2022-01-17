@@ -1,5 +1,5 @@
 defmodule Ravix.Connection.Topology do
-  defstruct etag: nil,
+  defstruct etag: 0,
             nodes: []
 
   alias Ravix.Connection.Topology

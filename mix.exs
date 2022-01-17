@@ -30,7 +30,7 @@ defmodule Ravix.MixProject do
   defp deps do
     [
       {:mint, "~> 1.4"},
-      {:poison, "~> 5.0"},
+      {:jason, "~> 1.3"},
       {:castore, "~> 0.1.14"},
       {:vex, "~> 0.9.0"},
       {:mappable, "~> 0.2.4"},

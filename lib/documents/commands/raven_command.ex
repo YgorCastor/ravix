@@ -9,8 +9,8 @@ defmodule Ravix.Documents.Commands.RavenCommand do
     failed_nodes: nil,
     timeout: nil,
     requested_node: nil,
-    files: nil,
-    is_raft_request: nil,
+    files: [],
+    is_raft_request: false,
     raft_unique_request_id: nil
   ]
   defmacro __using__(fields) do

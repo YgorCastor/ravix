@@ -2,8 +2,6 @@ defmodule Ravix.Connection.NetworkStateManager do
   use DynamicSupervisor
 
   alias Ravix.Connection.InMemoryNetworkState
-  alias Ravix.Connection.NetworkStateManager
-  alias Ravix.Documents.Conventions
 
   def init(init_arg) do
     DynamicSupervisor.init(
@@ -16,9 +14,11 @@ defmodule Ravix.Connection.NetworkStateManager do
     DynamicSupervisor.start_link(__MODULE__, attrs, name: __MODULE__)
   end
 
-  @spec create_network_state(list(String.t()), String.t(), Conventions.t(), any) :: {:ok, pid}
+  @spec create_network_state(any, binary, any, any) ::
+          :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
   def create_network_state(urls, database_name, conventions, certificate \\ nil) do
-    with networks when networks == [] <- NetworkStateManager.find_existing_network(database_name) do
+    with network when network == {:error, :network_not_found} <-
+           find_existing_network(database_name) do
       DynamicSupervisor.start_child(
         __MODULE__,
         {InMemoryNetworkState,
@@ -26,16 +26,26 @@ defmodule Ravix.Connection.NetworkStateManager do
            urls: urls,
            database_name: database_name,
            document_conventions: conventions,
-           certificate: certificate,
+           certificate: certificate
          ]}
       )
     else
-      existing_networks -> existing_networks[0]
+      existing_network -> existing_network
     end
   end
 
-  @spec find_existing_network(String.t()) :: [{pid, any}]
+  @spec network_exists?(binary) :: boolean
+  def network_exists?(database), do: find_existing_network(database) |> Enum.count() > 1
+
+  @spec find_existing_network(String.t()) :: {:ok, {pid, any}} | {:error, :network_not_found}
   def find_existing_network(database) do
-    Registry.lookup(:network_state, database)
+    case Registry.lookup(:network_state, database) do
+      existing_network when existing_network != [] -> {:ok, Enum.at(existing_network, 0)}
+      _ -> {:error, :network_not_found}
+    end
   end
+
+  @spec network_state_for_database(String.t()) :: {:via, Registry, {:network_state, String.t()}}
+  def network_state_for_database(database),
+    do: {:via, Registry, {:network_state, database}}
 end

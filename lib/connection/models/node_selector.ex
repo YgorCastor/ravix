@@ -1,6 +1,6 @@
 defmodule Ravix.Connection.NodeSelector do
   defstruct topology: nil,
-            current_node_index: nil
+            current_node_index: 0
 
   alias Ravix.Connection.NodeSelector
   alias Ravix.Connection.ServerNode
@@ -13,6 +13,6 @@ defmodule Ravix.Connection.NodeSelector do
 
   @spec current_node(Ravix.Connection.NodeSelector.t()) :: ServerNode.t()
   def current_node(node_selector = %NodeSelector{}) do
-    node_selector.topology.nodes[node_selector.current_node_index]
+    Enum.at(node_selector.topology.nodes, node_selector.current_node_index)
   end
 end
