@@ -87,19 +87,26 @@ defmodule Ravix.Documents.SessionTest do
   end
 
   describe "save_changes/1" do
-    test "Documents on session should be saved" do
+    test "Documents on session should be saved and the session updated" do
       any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
 
-      {:ok, save_result} =
+      {:ok, [result, state]} =
         OK.for do
           session_id <- Store.open_session("test")
           _ <- Session.store(session_id, any_entity)
           result <- Session.save_changes(session_id)
+          session_state <- Session.fetch_state(session_id)
         after
-          result
+          [result, session_state]
         end
 
-      assert save_result.status == 201
+      assert result["Results"] != []
+      assert state.number_of_requests == 1
+
+      first_result = Enum.at(result["Results"], 0)
+      document_in_session = Session.State.fetch_document(state, first_result["@id"])
+
+      assert document_in_session.change_vector == first_result["@change-vector"]
     end
   end
 end

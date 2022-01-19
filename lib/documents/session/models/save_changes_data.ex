@@ -45,7 +45,7 @@ defmodule Ravix.Documents.Session.SaveChangesData do
 
   defp documents_with_changes(documents_by_id) do
     Enum.filter(documents_by_id, fn document ->
-      document.entity != document.change_data.original_value
+      document.entity != document.original_value
     end)
   end
 end

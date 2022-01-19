@@ -19,14 +19,16 @@ defmodule Ravix.Documents.Session.StateTest do
       state = build(:session_state)
       entity = %{id: Enum.at(state.defer_commands, 0).key}
 
-      {:error, :document_already_deferred} = State.register_document(state, entity.id, entity)
+      {:error, :document_already_deferred} =
+        State.register_document(state, entity.id, entity, "", %{}, %{}, nil)
     end
 
     test "if the document is deleted, return an :document_deleted error" do
       state = build(:session_state)
       entity = %{id: Enum.at(state.deleted_entities, 0).id}
 
-      {:error, :document_deleted} = State.register_document(state, entity.id, entity)
+      {:error, :document_deleted} =
+        State.register_document(state, entity.id, entity, "", %{}, %{}, nil)
     end
 
     test "if the document already exists, return an :document_already_stored error" do
@@ -34,14 +36,16 @@ defmodule Ravix.Documents.Session.StateTest do
       keys = Map.keys(state.documents_by_id)
       entity = %{id: Enum.at(keys, 0)}
 
-      {:error, :document_already_stored} = State.register_document(state, entity.id, entity)
+      {:error, :document_already_stored} =
+        State.register_document(state, entity.id, entity, "", %{}, %{}, nil)
     end
 
     test "if no error occurs, return the updated state with a new document" do
       state = build(:session_state)
       entity = %{id: "any_id"}
 
-      {:ok, updated_state = %State{}} = State.register_document(state, entity.id, entity)
+      {:ok, updated_state = %State{}} =
+        State.register_document(state, entity.id, entity, "", %{}, %{}, nil)
 
       assert Map.has_key?(updated_state.documents_by_id, "any_id") == true
     end

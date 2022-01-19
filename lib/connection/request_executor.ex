@@ -7,15 +7,16 @@ defmodule Ravix.Connection.RequestExecutor do
   alias Ravix.Connection.NodeSelector
   alias Ravix.Documents.Protocols.CreateRequest
 
+  @spec execute(map(), Network.State.t()) :: {:error, any} | {:ok, map()}
   def execute(command, network_state = %Network.State{}) do
     OK.for do
       current_node = NodeSelector.current_node(network_state.node_selector)
       request = CreateRequest.create_request(command, current_node)
       conn <- Mint.HTTP.connect(current_node.protocol, current_node.url, current_node.port)
-    after
+
       {:ok, conn, _ref} =
         Mint.HTTP.request(conn, request.method, request.url, @default_headers, request.data)
-
+    after
       receive do
         message ->
           case Mint.HTTP.stream(conn, message) do

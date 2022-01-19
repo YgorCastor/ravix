@@ -24,12 +24,13 @@ defmodule Ravix.Documents.Store do
     Store.State.from_config(ravix_configs)
   end
 
-  defp create_new_session(database) do
+  defp create_new_session(database, store_state = %Store.State{}) do
     session_id = UUID.uuid4()
 
     session_initial_state = %Session.State{
       session_id: session_id,
-      database: database
+      database: database,
+      conventions: store_state.document_conventions
     }
 
     {:ok, _} = SessionsManager.create_session(session_initial_state)
@@ -41,7 +42,7 @@ defmodule Ravix.Documents.Store do
   #     Handlers     #
   ####################
   def handle_call({:open_session, database}, _from, state = %Store.State{}) do
-    session_id = create_new_session(database)
+    session_id = create_new_session(database, state)
 
     {:ok, _pid} =
       NetworkStateManager.create_network_state(

@@ -1,6 +1,7 @@
 defmodule Ravix.Documents.Session.State do
   defstruct session_id: nil,
             database: nil,
+            conventions: nil,
             documents_by_id: %{},
             included_documents_by_id: [],
             known_missing_ids: [],
@@ -11,10 +12,12 @@ defmodule Ravix.Documents.Session.State do
   require OK
 
   alias Ravix.Documents.Session.State
+  alias Ravix.Documents.Conventions
 
   @type t :: %State{
           session_id: String.t(),
           database: String.t(),
+          conventions: Conventions.t(),
           documents_by_id: map(),
           included_documents_by_id: list(String.t()),
           known_missing_ids: list(String.t()),
@@ -31,13 +34,16 @@ defmodule Ravix.Documents.Session.State do
     }
   end
 
-  @spec register_document(State.t(), binary(), any(), any()) ::
-          {:error, atom()} | {:ok, State.t()}
+  @spec register_document(State.t(), binary, map(), binary(), map(), map() | nil, map() | nil) ::
+          {:error, any} | {:ok, State.t()}
   def register_document(
         state = %State{},
         key,
         entity,
-        original_document \\ nil
+        change_vector,
+        metadata,
+        original_metadata,
+        original_document
       ) do
     OK.for do
       _ <- document_not_in_deferred_command(state, key)
@@ -49,11 +55,43 @@ defmodule Ravix.Documents.Session.State do
         | documents_by_id:
             Map.put(state.documents_by_id, key, %{
               entity: entity,
-              change_data: %{original_value: original_document}
+              key: key,
+              original_value: original_document,
+              change_vector: change_vector,
+              metadata: metadata,
+              original_metadata: original_metadata
             })
       }
     end
   end
+
+  @spec update_session(State.t(), maybe_improper_list) :: State.t()
+  def update_session(session_state = %State{}, []), do: session_state
+
+  def update_session(session_state = %State{}, updates) when is_list(updates) do
+    update = Enum.at(updates, 0)
+
+    updated_state =
+      case update do
+        {:ok, :update_document, document} ->
+          %State{
+            session_state
+            | documents_by_id: Map.put(session_state.documents_by_id, document.key, document)
+          }
+
+        {:error, :not_implemented, _action_type} ->
+          session_state
+      end
+
+    remaining_updates = Enum.drop(updates, 1)
+
+    update_session(updated_state, remaining_updates)
+  end
+
+  @spec fetch_document(State.t(), any) :: map()
+  def fetch_document(_state = %State{}, document_id) when document_id == nil, do: nil
+
+  def fetch_document(state = %State{}, document_id), do: state.documents_by_id[document_id]
 
   @spec clear_deferred_commands(State.t()) :: State.t()
   def clear_deferred_commands(state = %State{}) do
@@ -68,14 +106,6 @@ defmodule Ravix.Documents.Session.State do
     %State{
       state
       | deleted_entities: []
-    }
-  end
-
-  @spec clear_documents(State.t()) :: State.t()
-  def clear_documents(state = %State{}) do
-    %State{
-      state
-      | documents_by_id: %{}
     }
   end
 
