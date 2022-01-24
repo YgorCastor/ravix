@@ -37,6 +37,7 @@ defmodule Ravix.MixProject do
       {:enum_type, "~> 1.1"},
       {:elixir_uuid, "~> 1.2"},
       {:ok, "~> 2.3"},
+      {:morphix, "~> 0.8.1"},
       {:timex, "~> 3.7"},
       {:tzdata, "~> 1.1"},
       {:ex_machina, "~> 2.7", only: :test},

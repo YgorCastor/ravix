@@ -36,7 +36,7 @@ defmodule Ravix.Documents.Session.StateTest do
       keys = Map.keys(state.documents_by_id)
       entity = %{id: Enum.at(keys, 0)}
 
-      {:error, :document_already_stored} =
+      {:error, {:document_already_stored, _stored_entity}} =
         State.register_document(state, entity.id, entity, "", %{}, %{}, nil)
     end
 

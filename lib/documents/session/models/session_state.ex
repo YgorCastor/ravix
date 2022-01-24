@@ -12,6 +12,8 @@ defmodule Ravix.Documents.Session.State do
   require OK
 
   alias Ravix.Documents.Session.State
+  alias Ravix.Documents.Session.Validations
+  alias Ravix.Documents.Session.SessionDocument
   alias Ravix.Documents.Conventions
 
   @type t :: %State{
@@ -46,14 +48,14 @@ defmodule Ravix.Documents.Session.State do
         original_document
       ) do
     OK.for do
-      _ <- document_not_in_deferred_command(state, key)
-      _ <- document_not_deleted(state, key)
-      _ <- document_not_stored(state, key)
+      _ <- Validations.document_not_in_deferred_command(state, key)
+      _ <- Validations.document_not_deleted(state, key)
+      _ <- Validations.document_not_stored(state, key)
     after
       %State{
         state
         | documents_by_id:
-            Map.put(state.documents_by_id, key, %{
+            Map.put(state.documents_by_id, key, %SessionDocument{
               entity: entity,
               key: key,
               original_value: original_document,
@@ -88,10 +90,11 @@ defmodule Ravix.Documents.Session.State do
     update_session(updated_state, remaining_updates)
   end
 
-  @spec fetch_document(State.t(), any) :: map()
-  def fetch_document(_state = %State{}, document_id) when document_id == nil, do: nil
+  @spec fetch_document(State.t(), any) :: {:error, :document_not_found} | {:ok, map()}
+  def fetch_document(_state = %State{}, document_id) when document_id == nil,
+    do: {:error, :document_not_found}
 
-  def fetch_document(state = %State{}, document_id), do: state.documents_by_id[document_id]
+  def fetch_document(state = %State{}, document_id), do: {:ok, state.documents_by_id[document_id]}
 
   @spec clear_deferred_commands(State.t()) :: State.t()
   def clear_deferred_commands(state = %State{}) do
@@ -107,31 +110,5 @@ defmodule Ravix.Documents.Session.State do
       state
       | deleted_entities: []
     }
-  end
-
-  @spec document_not_in_deferred_command(State.t(), binary()) ::
-          {:ok, binary()} | {:error, :document_already_deferred}
-  defp document_not_in_deferred_command(state = %State{}, entity_id) do
-    state.defer_commands
-    |> Enum.find_value({:ok, entity_id}, fn elmn ->
-      if elmn.key == entity_id, do: {:error, :document_already_deferred}
-    end)
-  end
-
-  @spec document_not_deleted(State.t(), binary()) :: {:ok, binary()} | {:error, :document_deleted}
-  defp document_not_deleted(state = %State{}, entity_id) do
-    state.deleted_entities
-    |> Enum.find_value({:ok, entity_id}, fn elmn ->
-      if elmn.id == entity_id, do: {:error, :document_deleted}
-    end)
-  end
-
-  @spec document_not_stored(State.t(), binary()) ::
-          {:ok, binary()} | {:error, :document_already_stored}
-  defp document_not_stored(state = %State{}, entity_id) do
-    case Map.has_key?(state.documents_by_id, entity_id) do
-      true -> {:error, :document_already_stored}
-      false -> {:ok, entity_id}
-    end
   end
 end

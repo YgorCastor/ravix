@@ -14,6 +14,7 @@ defmodule Ravix.Documents.Store do
     GenServer.start_link(__MODULE__, initial_state(), name: __MODULE__)
   end
 
+  @spec open_session(String.t()) :: String.t()
   def open_session(database) do
     GenServer.call(__MODULE__, {:open_session, database})
   end

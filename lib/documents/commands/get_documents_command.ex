@@ -1,4 +1,4 @@
-defmodule Ravix.Documents.Commands.GetDocuments do
+defmodule Ravix.Documents.Commands.GetDocumentsCommand do
   use Ravix.Documents.Commands.RavenCommand,
     ids: [],
     includes: nil,
@@ -11,7 +11,7 @@ defmodule Ravix.Documents.Commands.GetDocuments do
   import Ravix.Documents.Commands.RavenCommand
 
   alias Ravix.Documents.Protocols.CreateRequest
-  alias Ravix.Documents.Commands.GetDocuments
+  alias Ravix.Documents.Commands.GetDocumentsCommand
   alias Ravix.Connection.ServerNode
 
   command_type(%{
@@ -23,12 +23,12 @@ defmodule Ravix.Documents.Commands.GetDocuments do
     counter_includes: list(String.t()) | nil
   })
 
-  defimpl CreateRequest, for: GetDocuments do
-    @spec create_request(GetDocuments.t(), ServerNode.t()) :: map()
-    def create_request(command = %GetDocuments{}, server_node = %ServerNode{}) do
+  defimpl CreateRequest, for: GetDocumentsCommand do
+    @spec create_request(GetDocumentsCommand.t(), ServerNode.t()) :: map()
+    def create_request(command = %GetDocumentsCommand{}, server_node = %ServerNode{}) do
       base_url = server_node |> ServerNode.node_url()
 
-      %GetDocuments{
+      %GetDocumentsCommand{
         command
         | method: "GET",
           is_read_request: true,

@@ -5,7 +5,8 @@ defmodule Ravix.Documents.Session do
 
   alias Ravix.Documents.Session
   alias Ravix.Documents.Session.SaveChangesData
-  alias Ravix.Documents.Commands.BatchCommand
+  alias Ravix.Documents.Session.Validations
+  alias Ravix.Documents.Commands.{BatchCommand, GetDocumentsCommand}
   alias Ravix.Documents.Conventions
   alias Ravix.Connection.Network
   alias Ravix.Connection.NetworkStateManager
@@ -31,13 +32,23 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:fetch_state})
   end
 
-  @spec load(binary(), any()) :: any()
-  def load(session_id, id) do
+  def load(session_id, id, includes \\ nil) do
     session_id
     |> session_id()
-    |> GenServer.call({:load, id})
+    |> GenServer.call({:load, [document_id: id, includes: includes]})
   end
 
+  def delete(session_id, entity) when is_map_key(entity, "id") do
+    delete(session_id, entity.id)
+  end
+
+  def delete(session_id, id) when is_binary(id) do
+    session_id
+    |> session_id()
+    |> GenServer.call({:delete, id})
+  end
+
+  @spec store(binary(), map(), binary() | nil, binary() | nil) :: any
   def store(session_id, entity, key \\ nil, change_vector \\ nil)
 
   def store(_session_id, entity, _key, _change_vector) when entity == nil,
@@ -49,10 +60,40 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:store, [entity: entity, key: key, change_vector: change_vector]})
   end
 
+  @spec save_changes(binary) :: any
   def save_changes(session_id) do
     session_id
     |> session_id()
     |> GenServer.call({:save_changes})
+  end
+
+  defp do_load_document(state = %Session.State{}, document_id, includes) do
+    OK.try do
+      _ <- Validations.document_not_stored(state, document_id)
+      {pid, _} <- NetworkStateManager.find_existing_network(state.database)
+      network_state = Agent.get(pid, fn ns -> ns end)
+      response <- execute_load_request(network_state, [document_id], includes)
+    after
+      Map.get(response, "Results")
+    rescue
+      {:document_already_stored, document} -> [document]
+      _ -> {:error, :unexpected_error}
+    end
+  end
+
+  defp execute_load_request(network_state = %Network.State{}, ids, includes)
+       when is_list(ids) do
+    OK.try do
+      response <-
+        %GetDocumentsCommand{ids: ids, includes: includes}
+        |> RequestExecutor.execute(network_state)
+
+      decoded_response <- Jason.decode(response.data)
+    after
+      {:ok, decoded_response}
+    rescue
+      err -> err
+    end
   end
 
   defp do_store_entity(state = %Session.State{}, entity, key, change_vector) do
@@ -65,6 +106,18 @@ defmodule Ravix.Documents.Session do
       {:reply, {:ok, entity}, updated_state}
     rescue
       err -> {:reply, {:error, err}, state}
+    end
+  end
+
+  defp do_save_changes(state = %Session.State{}) do
+    OK.try do
+      {pid, _} <- NetworkStateManager.find_existing_network(state.database)
+      network_state = Agent.get(pid, fn ns -> ns end)
+      result <- execute_save_request(state, network_state)
+    after
+      {:ok, result}
+    rescue
+      err -> err
     end
   end
 
@@ -94,24 +147,20 @@ defmodule Ravix.Documents.Session do
     end
   end
 
-  defp do_save_changes(state = %Session.State{}) do
-    OK.try do
-      {pid, _} <- NetworkStateManager.find_existing_network(state.database)
-      network_state = Agent.get(pid, fn ns -> ns end)
-      result <- execute_save_request(state, network_state)
-    after
-      {:ok, result}
-    rescue
-      err -> err
-    end
-  end
-
   @spec session_id(String.t()) :: {:via, Registry, {:sessions, String.t()}}
-  defp session_id(id), do: {:via, Registry, {:sessions, id}}
+  defp session_id(id) when id != nil, do: {:via, Registry, {:sessions, id}}
 
   ####################
   #     Handlers     #
   ####################
+  def handle_call(
+        {:load, [document_id: id, includes: includes]},
+        _from,
+        state = %Session.State{}
+      ) do
+    {:reply, {:ok, do_load_document(state, id, includes)}, state}
+  end
+
   def handle_call(
         {:store, [entity: entity, key: key, change_vector: change_vector]},
         _from,

@@ -8,6 +8,7 @@ defmodule Ravix.Documents.Commands.BatchCommand do
   alias Ravix.Documents.Protocols.{CreateRequest, ToJson}
   alias Ravix.Documents.Commands.BatchCommand
   alias Ravix.Documents.Session
+  alias Ravix.Documents.Session.SessionDocument
   alias Ravix.Connection.ServerNode
 
   command_type(%{
@@ -29,10 +30,16 @@ defmodule Ravix.Documents.Commands.BatchCommand do
 
   defp update_document(session_state, document) when is_map_key(document, "@id") do
     case Session.State.fetch_document(session_state, document["@id"]) do
-      existing_document when existing_document != nil ->
-        %{
+      {:ok, existing_document} ->
+        %SessionDocument{
           existing_document
           | change_vector: document["@change-vector"],
+            metadata: %{
+              "@change-vector": document["@change-vector"],
+              "@collection": document["@collection"],
+              "@id": document["@id"],
+              "@last-modified": document["@last-modified"]
+            },
             original_metadata: existing_document.metadata,
             original_value: existing_document.entity
         }

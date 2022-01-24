@@ -70,7 +70,7 @@ defmodule Ravix.Documents.SessionTest do
     test "If an error happens while storing, returns it" do
       any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
 
-      {:error, :document_already_stored} =
+      {:error, {:document_already_stored, _stored_entity}} =
         OK.for do
           session_id <- Store.open_session("test")
           _ <- Session.store(session_id, any_entity)
@@ -104,9 +104,48 @@ defmodule Ravix.Documents.SessionTest do
       assert state.number_of_requests == 1
 
       first_result = Enum.at(result["Results"], 0)
-      document_in_session = Session.State.fetch_document(state, first_result["@id"])
+      {:ok, document_in_session} = Session.State.fetch_document(state, first_result["@id"])
 
       assert document_in_session.change_vector == first_result["@change-vector"]
+    end
+  end
+
+  describe "load/1" do
+    test "Should load a document to a session successfully" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:ok, result} =
+        OK.for do
+          session_id <- Store.open_session("test")
+          _ <- Session.store(session_id, any_entity)
+          _ <- Session.save_changes(session_id)
+          session_id <- Store.open_session("test")
+          result <- Session.load(session_id, any_entity.id)
+        after
+          Enum.at(result, 0)
+        end
+
+      assert result["id"] == any_entity.id
+      assert result["cat_name"] == any_entity.cat_name
+      assert result["@metadata"]["@change-vector"] != nil
+    end
+
+    test "If the document is already in the session, just return it" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:ok, result} =
+        OK.for do
+          session_id <- Store.open_session("test")
+          _ <- Session.store(session_id, any_entity)
+          _ <- Session.save_changes(session_id)
+          result <- Session.load(session_id, any_entity.id)
+        after
+          Enum.at(result, 0)
+        end
+
+      assert result["id"] == any_entity.id
+      assert result["cat_name"] == any_entity.cat_name
+      assert result["@metadata"]["@change-vector"] != nil
     end
   end
 end
