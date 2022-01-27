@@ -12,6 +12,7 @@ defmodule Ravix.Documents.Commands.GetDocumentsCommand do
 
   alias Ravix.Documents.Protocols.CreateRequest
   alias Ravix.Documents.Commands.GetDocumentsCommand
+  alias Ravix.Documents.Session.{SessionDocument, State}
   alias Ravix.Connection.ServerNode
 
   command_type(%{
@@ -22,6 +23,25 @@ defmodule Ravix.Documents.Commands.GetDocumentsCommand do
     page_size: non_neg_integer() | nil,
     counter_includes: list(String.t()) | nil
   })
+
+  @spec parse_response(State.t(), map) :: [{:includes, list()} | {:results, list}, ...]
+  def parse_response(session_state, documents_response) do
+    [
+      results: extract_results(session_state, Map.get(documents_response, "Results")),
+      includes: extract_includes(session_state, Map.get(documents_response, "Includes"))
+    ]
+  end
+
+  defp extract_results(session_state, results) do
+    results
+    |> Enum.map(fn batch_item ->
+      {:ok, :update_document, SessionDocument.update_document(session_state, batch_item)}
+    end)
+  end
+
+  defp extract_includes(session_state, includes) do
+    []
+  end
 
   defimpl CreateRequest, for: GetDocumentsCommand do
     @spec create_request(GetDocumentsCommand.t(), ServerNode.t()) :: map()

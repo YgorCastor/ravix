@@ -94,7 +94,12 @@ defmodule Ravix.Documents.Session.State do
   def fetch_document(_state = %State{}, document_id) when document_id == nil,
     do: {:error, :document_not_found}
 
-  def fetch_document(state = %State{}, document_id), do: {:ok, state.documents_by_id[document_id]}
+  def fetch_document(state = %State{}, document_id) do
+    case state.documents_by_id[document_id] do
+      nil -> {:error, :document_not_found}
+      document -> {:ok, document}
+    end
+  end
 
   @spec clear_deferred_commands(State.t()) :: State.t()
   def clear_deferred_commands(state = %State{}) do

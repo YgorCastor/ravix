@@ -27,4 +27,13 @@ defmodule Ravix.Documents.Session.Validations do
       document -> {:error, {:document_already_stored, SessionDocument.merge_entity(document)}}
     end
   end
+
+  @spec all_ids_are_not_already_loaded(list, list) ::
+          {:error, :all_ids_already_loaded} | {:ok, [...]}
+  def all_ids_are_not_already_loaded(document_ids, already_loaded_ids) do
+    case document_ids -- already_loaded_ids do
+      [] -> {:error, :all_ids_already_loaded}
+      ids_to_load -> {:ok, ids_to_load}
+    end
+  end
 end

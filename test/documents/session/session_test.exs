@@ -114,38 +114,51 @@ defmodule Ravix.Documents.SessionTest do
     test "Should load a document to a session successfully" do
       any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
 
-      {:ok, result} =
+      {:ok, response} =
         OK.for do
+          # Create a document and save it
           session_id <- Store.open_session("test")
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
+          # Create a new session to fetch the document
           session_id <- Store.open_session("test")
           result <- Session.load(session_id, any_entity.id)
+          current_state <- Session.fetch_state(session_id)
         after
-          Enum.at(result, 0)
+          Map.put(result, "state", current_state)
         end
+
+      state = response["state"]
+      result = Enum.at(response["Results"], 0)
 
       assert result["id"] == any_entity.id
       assert result["cat_name"] == any_entity.cat_name
       assert result["@metadata"]["@change-vector"] != nil
+
+      assert state.documents_by_id[any_entity.id].entity ==
+               any_entity |> Morphix.stringmorphiform!()
     end
 
-    test "If the document is already in the session, just return it" do
+    test "If the document is already in the session, return that it was already loaded" do
       any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
 
-      {:ok, result} =
+      {:ok, response} =
         OK.for do
           session_id <- Store.open_session("test")
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
           result <- Session.load(session_id, any_entity.id)
+          current_state <- Session.fetch_state(session_id)
         after
-          Enum.at(result, 0)
+          Map.put(result, "state", current_state)
         end
 
-      assert result["id"] == any_entity.id
-      assert result["cat_name"] == any_entity.cat_name
-      assert result["@metadata"]["@change-vector"] != nil
+      state = response["state"]
+      already_loaded = response["already_loaded_ids"]
+
+      assert length(response["Results"]) == 0
+      assert map_size(state.documents_by_id) == 1
+      assert Enum.any?(already_loaded, fn element -> element == any_entity.id end)
     end
   end
 end
