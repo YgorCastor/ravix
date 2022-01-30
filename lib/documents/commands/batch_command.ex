@@ -25,6 +25,9 @@ defmodule Ravix.Documents.Commands.BatchCommand do
       "PUT" ->
         {:ok, :update_document, SessionDocument.update_document(session_state, batch_item)}
 
+      "DELETE" ->
+        {:ok, :delete_document, batch_item["Id"]}
+
       action_type ->
         {:error, :not_implemented, action_type}
     end

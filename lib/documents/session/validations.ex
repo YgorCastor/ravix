@@ -28,6 +28,13 @@ defmodule Ravix.Documents.Session.Validations do
     end
   end
 
+  def document_in_session?(state = %State{}, entity_id) do
+    case Map.get(state.documents_by_id, entity_id) do
+      nil -> {:error, :document_not_in_session}
+      document -> {:ok, SessionDocument.merge_entity(document)}
+    end
+  end
+
   @spec all_ids_are_not_already_loaded(list, list) ::
           {:error, :all_ids_already_loaded} | {:ok, [...]}
   def all_ids_are_not_already_loaded(document_ids, already_loaded_ids) do

@@ -67,6 +67,23 @@ defmodule Ravix.Documents.Session.State do
     end
   end
 
+  @spec mark_document_for_exclusion(State.t(), binary) :: {:error, any} | {:ok, State.t()}
+  def mark_document_for_exclusion(
+        state = %State{},
+        document_id
+      ) do
+    OK.for do
+      _ <- Validations.document_not_in_deferred_command(state, document_id)
+      _ <- Validations.document_not_deleted(state, document_id)
+      document <- Validations.document_in_session?(state, document_id)
+    after
+      %State{
+        state
+        | deleted_entities: state.deleted_entities ++ [document]
+      }
+    end
+  end
+
   @spec update_session(State.t(), maybe_improper_list) :: State.t()
   def update_session(session_state = %State{}, []), do: session_state
 
@@ -79,6 +96,12 @@ defmodule Ravix.Documents.Session.State do
           %State{
             session_state
             | documents_by_id: Map.put(session_state.documents_by_id, document.key, document)
+          }
+
+        {:ok, :delete_document, document_id} ->
+          %State{
+            session_state
+            | documents_by_id: Map.delete(session_state.documents_by_id, document_id)
           }
 
         {:error, :not_implemented, _action_type} ->

@@ -139,6 +139,36 @@ defmodule Ravix.Documents.SessionTest do
                any_entity |> Morphix.stringmorphiform!()
     end
 
+    test "Should be able to load multiple documents" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+      any_entity_2 = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:ok, response} =
+        OK.for do
+          # Create a document and save it
+          session_id <- Store.open_session("test")
+          _ <- Session.store(session_id, any_entity)
+          _ <- Session.store(session_id, any_entity_2)
+          _ <- Session.save_changes(session_id)
+          # Create a new session to fetch the document
+          session_id <- Store.open_session("test")
+          result <- Session.load(session_id, [any_entity.id, any_entity_2.id])
+          current_state <- Session.fetch_state(session_id)
+        after
+          Map.put(result, "state", current_state)
+        end
+
+      state = response["state"]
+
+      assert length(response["Results"]) == 2
+
+      assert state.documents_by_id[any_entity.id].entity ==
+               any_entity |> Morphix.stringmorphiform!()
+
+      assert state.documents_by_id[any_entity_2.id].entity ==
+               any_entity_2 |> Morphix.stringmorphiform!()
+    end
+
     test "If the document is already in the session, return that it was already loaded" do
       any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
 
@@ -159,6 +189,30 @@ defmodule Ravix.Documents.SessionTest do
       assert length(response["Results"]) == 0
       assert map_size(state.documents_by_id) == 1
       assert Enum.any?(already_loaded, fn element -> element == any_entity.id end)
+    end
+  end
+
+  describe "delete/1" do
+    test "Should delete the document successfully" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:ok, result} =
+        OK.for do
+          session_id <- Store.open_session("test")
+          _ <- Session.store(session_id, any_entity)
+          _ <- Session.save_changes(session_id)
+          delete_response <- Session.delete(session_id, any_entity)
+          _ <- Session.save_changes(session_id)
+          current_state <- Session.fetch_state(session_id)
+        after
+          [response: delete_response, state: current_state]
+        end
+
+      response = result[:response]
+      state = result[:state]
+
+      assert response == any_entity.id
+      assert state.documents_by_id == %{}
     end
   end
 end

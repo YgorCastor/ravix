@@ -25,13 +25,6 @@ defmodule Ravix.Documents.Session do
     )
   end
 
-  @spec fetch_state(binary()) :: Session.State.t()
-  def fetch_state(session_id) do
-    session_id
-    |> session_id()
-    |> GenServer.call({:fetch_state})
-  end
-
   @spec load(binary, binary() | list(binary()), list() | nil) :: any
   def load(session_id, ids, includes \\ nil)
   def load(_session_id, nil, _includes), do: {:error, :document_ids_not_informed}
@@ -48,7 +41,7 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:load, [document_ids: [id], includes: includes]})
   end
 
-  def delete(session_id, entity) when is_map_key(entity, "id") do
+  def delete(session_id, entity) when is_map_key(entity, :id) do
     delete(session_id, entity.id)
   end
 
@@ -75,6 +68,13 @@ defmodule Ravix.Documents.Session do
     session_id
     |> session_id()
     |> GenServer.call({:save_changes})
+  end
+
+  @spec fetch_state(binary()) :: Session.State.t()
+  def fetch_state(session_id) do
+    session_id
+    |> session_id()
+    |> GenServer.call({:fetch_state})
   end
 
   defp do_load_documents(state = %Session.State{}, document_ids, includes) do
@@ -152,8 +152,20 @@ defmodule Ravix.Documents.Session do
       {pid, _} <- NetworkStateManager.find_existing_network(state.database)
       network_state = Agent.get(pid, fn ns -> ns end)
       result <- execute_save_request(state, network_state)
+
+      parsed_updates =
+        BatchCommand.parse_batch_response(
+          result[:request_response]["Results"],
+          result[:updated_state]
+        )
+
+      updated_session =
+        Session.State.update_session(
+          result[:updated_state],
+          parsed_updates
+        )
     after
-      {:ok, result}
+      {:ok, [result: result[:request_response], updated_state: updated_session]}
     end
   end
 
@@ -181,6 +193,14 @@ defmodule Ravix.Documents.Session do
     end
   end
 
+  defp do_delete_document(state = %Session.State{}, document_id) do
+    OK.for do
+      updated_state <- Session.State.mark_document_for_exclusion(state, document_id)
+    after
+      updated_state
+    end
+  end
+
   @spec session_id(String.t()) :: {:via, Registry, {:sessions, String.t()}}
   defp session_id(id) when id != nil, do: {:via, Registry, {:sessions, id}}
 
@@ -192,11 +212,9 @@ defmodule Ravix.Documents.Session do
         _from,
         state = %Session.State{}
       ) do
-    OK.try do
-      result <- do_load_documents(state, ids, includes)
-    after
+    with {:ok, result} <- do_load_documents(state, ids, includes) do
       {:reply, {:ok, result[:response]}, result[:updated_state]}
-    rescue
+    else
       err -> {:reply, err, state}
     end
   end
@@ -228,17 +246,18 @@ defmodule Ravix.Documents.Session do
     do: {:reply, {:ok, state}, state}
 
   def handle_call({:save_changes}, _from, state = %Session.State{}) do
-    OK.try do
-      [request_response: response, updated_state: updated_state] <-
-        do_save_changes(state)
+    with {:ok, response} <- do_save_changes(state) do
+      {:reply, {:ok, response[:result]}, response[:updated_state]}
+    else
+      {:error, err} -> {:reply, {:error, err}, state}
+    end
+  end
 
-      parsed_updates = BatchCommand.parse_batch_response(response["Results"], updated_state)
-
-      updated_session = Session.State.update_session(updated_state, parsed_updates)
-    after
-      {:reply, {:ok, response}, updated_session}
-    rescue
-      err -> err
+  def handle_call({:delete, id}, _from, state = %Session.State{}) do
+    with {:ok, updated_state} <- do_delete_document(state, id) do
+      {:reply, {:ok, id}, updated_state}
+    else
+      {:error, err} -> {:reply, {:error, err}, state}
     end
   end
 end
