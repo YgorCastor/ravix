@@ -3,8 +3,6 @@ defmodule Ravix.Documents.Session.State do
             database: nil,
             conventions: nil,
             documents_by_id: %{},
-            included_documents_by_id: [],
-            known_missing_ids: [],
             defer_commands: [],
             deleted_entities: [],
             number_of_requests: 0
@@ -21,8 +19,6 @@ defmodule Ravix.Documents.Session.State do
           database: String.t(),
           conventions: Conventions.t(),
           documents_by_id: map(),
-          included_documents_by_id: list(String.t()),
-          known_missing_ids: list(String.t()),
           defer_commands: list(%{key: any()}),
           deleted_entities: list(%{id: any()}),
           number_of_requests: non_neg_integer()
@@ -93,16 +89,10 @@ defmodule Ravix.Documents.Session.State do
     updated_state =
       case update do
         {:ok, :update_document, document} ->
-          %State{
-            session_state
-            | documents_by_id: Map.put(session_state.documents_by_id, document.key, document)
-          }
+          update_document(session_state, document)
 
         {:ok, :delete_document, document_id} ->
-          %State{
-            session_state
-            | documents_by_id: Map.delete(session_state.documents_by_id, document_id)
-          }
+          delete_document(session_state, document_id)
 
         {:error, :not_implemented, _action_type} ->
           session_state
@@ -137,6 +127,20 @@ defmodule Ravix.Documents.Session.State do
     %State{
       state
       | deleted_entities: []
+    }
+  end
+
+  defp update_document(session_state, document) do
+    %State{
+      session_state
+      | documents_by_id: Map.put(session_state.documents_by_id, document.key, document)
+    }
+  end
+
+  defp delete_document(session_state, document_id) do
+    %State{
+      session_state
+      | documents_by_id: Map.delete(session_state.documents_by_id, document_id)
     }
   end
 end

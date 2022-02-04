@@ -25,8 +25,6 @@ defmodule Ravix.Factory do
       session_id: UUID.uuid4(),
       database: Faker.Cat.name(),
       documents_by_id: Map.put(%{}, random_document_id, build(:session_document)),
-      included_documents_by_id: [UUID.uuid4()],
-      known_missing_ids: [UUID.uuid4()],
       defer_commands: [%{key: UUID.uuid4()}],
       deleted_entities: [random_deleted_entity],
       number_of_requests: Enum.random(0..100)

@@ -23,7 +23,7 @@ defmodule Ravix.Documents.Commands.BatchCommand do
   defp parse_batch_item(batch_item, session_state) when is_map_key(batch_item, "Type") do
     case batch_item["Type"] do
       "PUT" ->
-        {:ok, :update_document, SessionDocument.update_document(session_state, batch_item)}
+        {:ok, :update_document, SessionDocument.upsert_document(session_state, batch_item)}
 
       "DELETE" ->
         {:ok, :delete_document, batch_item["Id"]}

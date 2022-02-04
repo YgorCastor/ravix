@@ -15,6 +15,9 @@ defmodule Ravix.MixProject do
         "coveralls.detail": :test,
         "coveralls.post": :test,
         "coveralls.html": :test
+      ],
+      dialyzer: [
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
       ]
     ]
   end
@@ -40,6 +43,7 @@ defmodule Ravix.MixProject do
       {:morphix, "~> 0.8.1"},
       {:timex, "~> 3.7"},
       {:tzdata, "~> 1.1"},
+      {:dialyxir, "~> 1.1.0", only: [:dev], runtime: false},
       {:ex_machina, "~> 2.7", only: :test},
       {:faker, "~> 0.17.0", only: :test},
       {:fake_server, "~> 2.1", only: :test},

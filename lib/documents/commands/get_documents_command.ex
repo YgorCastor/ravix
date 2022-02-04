@@ -36,12 +36,15 @@ defmodule Ravix.Documents.Commands.GetDocumentsCommand do
     results
     |> Enum.reject(fn batch_item -> batch_item == nil end)
     |> Enum.map(fn batch_item ->
-      {:ok, :update_document, SessionDocument.update_document(session_state, batch_item)}
+      {:ok, :update_document, SessionDocument.upsert_document(session_state, batch_item)}
     end)
   end
 
   defp extract_includes(session_state, includes) do
-    []
+    includes
+    |> Enum.map(fn {doc_id, document} ->
+      {:ok, :update_document, SessionDocument.upsert_document(session_state, doc_id, document)}
+    end)
   end
 
   defimpl CreateRequest, for: GetDocumentsCommand do
@@ -59,7 +62,7 @@ defmodule Ravix.Documents.Commands.GetDocumentsCommand do
             |> append_param("start", command.start)
             |> append_param("pageSize", command.page_size)
             |> append_param("metadataOnly", command.metadata_only)
-            |> append_param("includes", command.includes)
+            |> append_param("include", command.includes)
       }
     end
   end

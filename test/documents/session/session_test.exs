@@ -225,6 +225,43 @@ defmodule Ravix.Documents.SessionTest do
       assert map_size(state.documents_by_id) == 1
       assert Map.has_key?(state.documents_by_id, any_entity.id)
     end
+
+    test "Includes should be loaded successfully" do
+      any_entity_to_include = %{id: UUID.uuid4(), owner_name: Faker.Person.first_name()}
+
+      any_entity = %{
+        id: UUID.uuid4(),
+        cat_name: Faker.Cat.name(),
+        owner_id: any_entity_to_include.id
+      }
+
+      {:ok, response} =
+        OK.for do
+          # Create a document and save it
+          session_id <- Store.open_session("test")
+          _ <- Session.store(session_id, any_entity)
+          _ <- Session.store(session_id, any_entity_to_include)
+          _ <- Session.save_changes(session_id)
+          # Create a new session to fetch the document
+          session_id <- Store.open_session("test")
+          result <- Session.load(session_id, any_entity.id, ["owner_id"])
+          current_state <- Session.fetch_state(session_id)
+        after
+          Map.put(result, "state", current_state)
+        end
+
+      state = response["state"]
+      result = Enum.at(response["Results"], 0)
+
+      assert result["id"] == any_entity.id
+      assert result["cat_name"] == any_entity.cat_name
+      assert result["@metadata"]["@change-vector"] != nil
+
+      assert response["Includes"][any_entity_to_include.id]["id"] == any_entity_to_include.id
+
+      assert state.documents_by_id[any_entity.id].entity ==
+               any_entity |> Morphix.stringmorphiform!()
+    end
   end
 
   describe "delete/1" do
