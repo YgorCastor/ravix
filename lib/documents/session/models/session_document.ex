@@ -17,7 +17,9 @@ defmodule Ravix.Documents.Session.SessionDocument do
           original_value: map()
         }
 
-  @spec update_document(State.t(), map) :: nil | SessionDocument.t()
+  @spec update_document(any, nil | map) :: nil | {:error, :document_is_null} | SessionDocument.t()
+  def update_document(_session_state, nil), do: {:error, :document_is_null}
+
   def update_document(session_state, document) when is_map_key(document, "@id") do
     case State.fetch_document(session_state, document["@id"]) do
       {:ok, existing_document} ->

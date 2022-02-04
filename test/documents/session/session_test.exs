@@ -190,6 +190,41 @@ defmodule Ravix.Documents.SessionTest do
       assert map_size(state.documents_by_id) == 1
       assert Enum.any?(already_loaded, fn element -> element == any_entity.id end)
     end
+
+    test "If a document does not exist, return an :document_not_found error" do
+      {:error, :document_not_found} =
+        OK.for do
+          session_id <- Store.open_session("test")
+          result <- Session.load(session_id, UUID.uuid4())
+          current_state <- Session.fetch_state(session_id)
+        after
+          Map.put(result, "state", current_state)
+        end
+    end
+
+    test "When loading multiple documents, if one does not exists, it returns as null" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session("test")
+          _ <- Session.store(session_id, any_entity)
+          _ <- Session.save_changes(session_id)
+          # Create a new session to fetch the document
+          session_id <- Store.open_session("test")
+          result <- Session.load(session_id, [UUID.uuid4(), any_entity.id])
+          current_state <- Session.fetch_state(session_id)
+        after
+          Map.put(result, "state", current_state)
+        end
+
+      state = response["state"]
+      results = response["Results"]
+
+      assert length(results) == 2
+      assert map_size(state.documents_by_id) == 1
+      assert Map.has_key?(state.documents_by_id, any_entity.id)
+    end
   end
 
   describe "delete/1" do
@@ -213,6 +248,16 @@ defmodule Ravix.Documents.SessionTest do
 
       assert response == any_entity.id
       assert state.documents_by_id == %{}
+    end
+
+    test "If the document is not loaded, return an error" do
+      {:error, :document_not_in_session} =
+        OK.for do
+          session_id <- Store.open_session("test")
+          delete_response <- Session.delete(session_id, UUID.uuid4())
+        after
+          delete_response
+        end
     end
   end
 end

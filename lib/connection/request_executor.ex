@@ -21,7 +21,10 @@ defmodule Ravix.Connection.RequestExecutor do
         message ->
           case Mint.HTTP.stream(conn, message) do
             {:ok, _conn, responses} ->
-              handle_responses(responses)
+              case parse_response(responses) do
+                %{headers: _, status: 404} -> {:error, :document_not_found}
+                parsed_response -> {:ok, parsed_response}
+              end
 
             {:error, _conn, error, _headers} when is_struct(error, Mint.HTTPError) ->
               {:error, error.reason}
@@ -36,15 +39,12 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
-  defp handle_responses(responses) do
-    result =
-      responses
-      |> Enum.take_while(fn response -> elem(response, 0) != :done end)
-      |> Enum.map(fn content -> Map.put(%{}, elem(content, 0), elem(content, 2)) end)
-      |> Enum.reduce(fn x, y ->
-        Map.merge(x, y, fn _k, v1, v2 -> v2 ++ v1 end)
-      end)
-
-    {:ok, result}
+  defp parse_response(responses) do
+    responses
+    |> Enum.take_while(fn response -> elem(response, 0) != :done end)
+    |> Enum.map(fn content -> Map.put(%{}, elem(content, 0), elem(content, 2)) end)
+    |> Enum.reduce(fn x, y ->
+      Map.merge(x, y, fn _k, v1, v2 -> v2 ++ v1 end)
+    end)
   end
 end

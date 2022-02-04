@@ -28,6 +28,7 @@ defmodule Ravix.Documents.Session.Validations do
     end
   end
 
+  @spec document_in_session?(State.t(), any) :: {:error, :document_not_in_session} | {:ok, map}
   def document_in_session?(state = %State{}, entity_id) do
     case Map.get(state.documents_by_id, entity_id) do
       nil -> {:error, :document_not_in_session}

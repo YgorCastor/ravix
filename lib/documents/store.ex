@@ -3,7 +3,7 @@ defmodule Ravix.Documents.Store do
 
   alias Ravix.Documents.Store
   alias Ravix.Documents.Session
-  alias Ravix.Documents.Session.SessionsManager
+  alias Ravix.Documents.Session.SessionsSupervisor
   alias Ravix.Connection.NetworkStateManager
 
   def init(attr) do
@@ -34,7 +34,7 @@ defmodule Ravix.Documents.Store do
       conventions: store_state.document_conventions
     }
 
-    {:ok, _} = SessionsManager.create_session(session_initial_state)
+    {:ok, _} = SessionsSupervisor.create_session(session_initial_state)
 
     {:ok, session_id}
   end

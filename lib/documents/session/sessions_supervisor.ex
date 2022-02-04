@@ -1,4 +1,4 @@
-defmodule Ravix.Documents.Session.SessionsManager do
+defmodule Ravix.Documents.Session.SessionsSupervisor do
   use DynamicSupervisor
 
   alias Ravix.Documents.Session.State

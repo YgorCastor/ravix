@@ -34,6 +34,7 @@ defmodule Ravix.Documents.Commands.GetDocumentsCommand do
 
   defp extract_results(session_state, results) do
     results
+    |> Enum.reject(fn batch_item -> batch_item == nil end)
     |> Enum.map(fn batch_item ->
       {:ok, :update_document, SessionDocument.update_document(session_state, batch_item)}
     end)
