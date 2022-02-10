@@ -43,6 +43,8 @@ defmodule Ravix.MixProject do
       {:morphix, "~> 0.8.1"},
       {:timex, "~> 3.7"},
       {:tzdata, "~> 1.1"},
+      {:gradient, github: "esl/gradient", only: [:dev], runtime: false},
+      {:elixir_sense, github: "elixir-lsp/elixir_sense", only: [:dev]},
       {:dialyxir, "~> 1.1.0", only: [:dev], runtime: false},
       {:ex_machina, "~> 2.7", only: :test},
       {:faker, "~> 0.17.0", only: :test},
