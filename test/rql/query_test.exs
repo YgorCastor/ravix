@@ -20,6 +20,7 @@ defmodule Ravix.RQL.QueryTest do
           session_id <- Store.open_session("test")
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
+          :timer.sleep(500)
 
           query_response <-
             from("@all_docs")
@@ -40,6 +41,7 @@ defmodule Ravix.RQL.QueryTest do
       {:ok, response} =
         OK.for do
           session_id <- Store.open_session("test")
+
           query_response <-
             from("@all_docs")
             |> where(equal_to("cat_name", "Scrubbers, the destroyer"))
