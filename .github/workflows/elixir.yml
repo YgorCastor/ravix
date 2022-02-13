@@ -13,7 +13,7 @@ jobs:
     container: elixir:1.13.2-alpine
     services:
       ravendb:
-        image: 5.3-ubuntu-latest
+        image: ravendb/ravendb:5.3-ubuntu-latest
         env:
           RAVEN_Setup_Mode: None
           RAVEN_Security_UnsecuredAccessAllowed: PrivateNetwork
