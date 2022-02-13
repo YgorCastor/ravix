@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         env:
           RAVENDB_HOST: http://localhost:${{ job.services.ravendb.ports['8080'] }}
-        run: mix deps.get
+        run: mix local.hex --force && mix deps.get
       - name: Run tests
         env:
           RAVENDB_HOST: http://localhost:${{ job.services.ravendb.ports['8080'] }}
