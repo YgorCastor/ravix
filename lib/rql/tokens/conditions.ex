@@ -2,7 +2,7 @@ defmodule Ravix.RQL.Tokens.Condition do
   defstruct [
     :token,
     :field,
-    :param
+    :params
   ]
 
   alias Ravix.RQL.Tokens.Condition
@@ -11,7 +11,7 @@ defmodule Ravix.RQL.Tokens.Condition do
     %Condition{
       token: :greater_than,
       field: field_name,
-      param: value
+      params: [value]
     }
   end
 
@@ -19,7 +19,7 @@ defmodule Ravix.RQL.Tokens.Condition do
     %Condition{
       token: :greater_than_or_eq,
       field: field_name,
-      param: value
+      params: [value]
     }
   end
 
@@ -27,7 +27,7 @@ defmodule Ravix.RQL.Tokens.Condition do
     %Condition{
       token: :lower_than,
       field: field_name,
-      param: value
+      params: [value]
     }
   end
 
@@ -35,7 +35,7 @@ defmodule Ravix.RQL.Tokens.Condition do
     %Condition{
       token: :lower_than_or_eq,
       field: field_name,
-      param: value
+      params: [value]
     }
   end
 
@@ -43,7 +43,23 @@ defmodule Ravix.RQL.Tokens.Condition do
     %Condition{
       token: :eq,
       field: field_name,
-      param: value
+      params: [value]
+    }
+  end
+
+  def in?(field_name, values) do
+    %Condition{
+      token: :in,
+      field: field_name,
+      params: values
+    }
+  end
+
+  def between(field_name, values) do
+    %Condition{
+      token: :between,
+      field: field_name,
+      params: values
     }
   end
 end

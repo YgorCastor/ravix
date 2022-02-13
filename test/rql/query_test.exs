@@ -55,4 +55,39 @@ defmodule Ravix.RQL.QueryTest do
       assert length(results) == 0
     end
   end
+
+  describe "delete_for/2" do
+    test "Should delete documents that match the query" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+      any_entity_2 = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:ok, [delete_response, query_response]} =
+        OK.for do
+          session_id <- Store.open_session("test")
+          _ <- Session.store(session_id, any_entity)
+          _ <- Session.store(session_id, any_entity_2)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          delete_response <-
+            from("@all_docs")
+            |> where(equal_to("cat_name", any_entity.cat_name))
+            |> delete_for(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            from("@all_docs")
+            |> where(equal_to("id", any_entity.id))
+            |> or?(equal_to("id", any_entity_2.id))
+            |> list_all(session_id)
+        after
+          [delete_response, query_response]
+        end
+
+      assert delete_response["OperationId"] != nil
+      assert length(query_response["Results"]) == 1
+    end
+  end
 end

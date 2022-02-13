@@ -16,7 +16,6 @@ defmodule Ravix.Documents.Commands.ExecuteQueryCommand do
       %ExecuteQueryCommand{
         command
         | url: url <> "/queries",
-          method: "POST",
           data: command |> ToJson.to_json()
       }
     end

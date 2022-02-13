@@ -34,7 +34,6 @@ defmodule Ravix.MixProject do
     [
       {:mint, "~> 1.4"},
       {:jason, "~> 1.3"},
-      {:castore, "~> 0.1.14"},
       {:vex, "~> 0.9.0"},
       {:mappable, "~> 0.2.4"},
       {:enum_type, "~> 1.1"},

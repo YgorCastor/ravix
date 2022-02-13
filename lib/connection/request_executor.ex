@@ -8,11 +8,12 @@ defmodule Ravix.Connection.RequestExecutor do
   alias Ravix.Documents.Protocols.CreateRequest
 
   @spec execute(map(), Network.State.t()) :: {:error, any} | {:ok, map()}
-  def execute(command, network_state = %Network.State{}) do
+  def execute(command, %Network.State{} = network_state) do
     OK.for do
       current_node = NodeSelector.current_node(network_state.node_selector)
       request = CreateRequest.create_request(command, current_node)
-      conn <- Mint.HTTP.connect(current_node.protocol, current_node.url, current_node.port)
+      conn_params <- build_params(network_state, current_node.protocol)
+      conn <- Mint.HTTP.connect(current_node.protocol, current_node.url, current_node.port, conn_params)
 
       {:ok, conn, _ref} =
         Mint.HTTP.request(conn, request.method, request.url, @default_headers, request.data)
@@ -36,6 +37,16 @@ defmodule Ravix.Connection.RequestExecutor do
               {:error, :unexpected_request_error}
           end
       end
+    end
+  end
+
+  defp build_params(_network_state, :http), do: {:ok, []}
+
+  defp build_params(%Network.State{} = network_state, :https) do
+    case network_state do
+      %Network.State{certificate: nil, certificate_file: file} -> {:ok, transport_opts: [cacertfile: file]}
+      %Network.State{certificate: cert, certificate_file: nil} -> {:ok, transport_opts: [cacert: cert]}
+      _ -> {:error, :invalid_ssl_certificate}
     end
   end
 
