@@ -1,16 +1,18 @@
 defmodule Ravix.RQL.Tokens.From do
   defstruct [
     :token,
+    :as_alias,
     :document_or_index
   ]
 
   alias Ravix.RQL.Tokens.From
 
-  def from(nil), do: {:error, :collection_not_informed}
+  def from(nil, as_alias), do: {:error, :collection_not_informed}
 
-  def from(document) do
+  def from(document, as_alias) do
     %From{
       token: :from,
+      as_alias: as_alias,
       document_or_index: document
     }
   end

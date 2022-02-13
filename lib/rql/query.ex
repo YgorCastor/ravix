@@ -22,9 +22,9 @@ defmodule Ravix.RQL.Query do
 
   def from(nil), do: {:error, :query_document_must_be_informed}
 
-  def from(document) when is_bitstring(document) do
+  def from(document, as_alias \\ nil) when is_bitstring(document) do
     %Query{
-      from_token: From.from(document)
+      from_token: From.from(document, as_alias)
     }
   end
 
@@ -56,7 +56,15 @@ defmodule Ravix.RQL.Query do
     }
   end
 
-  def list_all(%Query{is_raw: false} = query, session_id) do
+  def list_all(%Query{} = query, session_id) do
+    execute_for(query, session_id, "POST")
+  end
+
+  def delete_for(%Query{} = query, session_id) do
+    execute_for(query, session_id, "DELETE")
+  end
+
+  defp execute_for(%Query{is_raw: false} = query, session_id, method) do
     OK.for do
       parsed_query = QueryParser.parse(query)
       session_state <- Session.fetch_state(session_id)
@@ -65,7 +73,8 @@ defmodule Ravix.RQL.Query do
 
       command = %ExecuteQueryCommand{
         Query: parsed_query.query_string,
-        QueryParameters: parsed_query.query_params
+        QueryParameters: parsed_query.query_params,
+        method: method
       }
 
       result <- execute_query(command, network_state)
@@ -74,14 +83,15 @@ defmodule Ravix.RQL.Query do
     end
   end
 
-  def list_all(%Query{is_raw: true} = query, session_id) do
+  defp execute_for(%Query{is_raw: true} = query, session_id, method) do
     OK.for do
       session_state <- Session.fetch_state(session_id)
       {pid, _} <- NetworkStateManager.find_existing_network(session_state.database)
       network_state = Agent.get(pid, fn ns -> ns end)
 
       command = %ExecuteQueryCommand{
-        Query: query.query_string
+        Query: query.query_string,
+        method: method
       }
 
       result <- execute_query(command, network_state)
