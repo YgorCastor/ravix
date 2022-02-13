@@ -1,7 +1,7 @@
 import Config
 
 config :ravix,
-  urls: ["http://localhost:8080"],
+  urls: [System.fetch_env!("RAVENDB_HOST")],
   database: "default",
   document_conventions: %{
     max_number_of_requests_per_session: 30,
@@ -12,7 +12,3 @@ config :ravix,
     identity_parts_separator: "/",
     disable_topology_update: false
   }
-
-# Import environment specific config. This must remain at the bottom
-# of this file so it overrides the configuration defined above.
-import_config "#{Mix.env()}.exs"
