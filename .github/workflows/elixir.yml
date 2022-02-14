@@ -28,11 +28,11 @@ jobs:
           path: deps
           key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
           restore-keys: ${{ runner.os }}-mix-
+      - name: Install Git
+        run: apk add --no-cache --virtual git
       - name: Install dependencies
-        env:
-          RAVENDB_HOST: http://localhost:${{ job.services.ravendb.ports['8080'] }}
         run: mix local.hex --force && mix deps.get
       - name: Run tests
         env:
-          RAVENDB_HOST: http://localhost:${{ job.services.ravendb.ports['8080'] }}
+          RAVENDB_URL: http://localhost:${{ job.services.ravendb.ports['8080'] }}
         run: mix test

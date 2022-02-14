@@ -1,7 +1,7 @@
 import Config
 
 config :ravix,
-  urls: [System.fetch_env!("RAVENDB_HOST")],
+  urls: [System.get_env("RAVENDB_URL", "http://localhost:8080")],
   database: "default",
   document_conventions: %{
     max_number_of_requests_per_session: 30,
