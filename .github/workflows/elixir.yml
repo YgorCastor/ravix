@@ -29,8 +29,10 @@ jobs:
           restore-keys: ${{ runner.os }}-mix-
       - name: Install Git
         run: apk add --no-cache git
+      - name: Instal Mix and Rebar
+        run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
-        run: mix local.hex --force && mix deps.get
+        run: mix deps.get
       - name: Run tests
         env:
           RAVENDB_URL: http://localhost:${{ job.services.ravendb.ports['8080'] }}
