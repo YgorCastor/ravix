@@ -10,7 +10,8 @@ jobs:
   run-test:
     name: Build and test
     runs-on: ubuntu-latest
-    container: elixir:1.13.2-alpine
+    container:
+      image: elixir:1.13.2-alpine
     services:
       ravendb:
         image: ravendb/ravendb:5.3-ubuntu-latest
@@ -19,6 +20,8 @@ jobs:
           RAVEN_Security_UnsecuredAccessAllowed: PrivateNetwork
         ports:
           - 8080:8080
+        options: --health-cmd "curl -f http://localhost:8080" --health-interval 10s --health-timeout 5s --health-retries 5
+
     steps:
       - uses: actions/checkout@v2
       - name: Restore dependencies cache
