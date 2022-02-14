@@ -11,6 +11,7 @@ defmodule Ravix.Connection.RequestExecutor do
   def execute(command, %Network.State{} = network_state) do
     OK.for do
       current_node = NodeSelector.current_node(network_state.node_selector)
+      IO.inspect(current_node)
       request = CreateRequest.create_request(command, current_node)
       conn_params <- build_params(network_state, current_node.protocol)
       conn <- Mint.HTTP.connect(current_node.protocol, current_node.url, current_node.port, conn_params)

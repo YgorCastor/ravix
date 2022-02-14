@@ -67,7 +67,7 @@ defmodule Ravix.RQL.Query do
   defp execute_for(%Query{is_raw: false} = query, session_id, method) do
     OK.for do
       parsed_query = QueryParser.parse(query)
-      session_state <- Session.fetch_state(session_id)
+      session_state = Session.fetch_state(session_id)
       {pid, _} <- NetworkStateManager.find_existing_network(session_state.database)
       network_state = Agent.get(pid, fn ns -> ns end)
 
@@ -85,7 +85,7 @@ defmodule Ravix.RQL.Query do
 
   defp execute_for(%Query{is_raw: true} = query, session_id, method) do
     OK.for do
-      session_state <- Session.fetch_state(session_id)
+      session_state = Session.fetch_state(session_id)
       {pid, _} <- NetworkStateManager.find_existing_network(session_state.database)
       network_state = Agent.get(pid, fn ns -> ns end)
 
