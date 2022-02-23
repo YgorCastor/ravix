@@ -16,10 +16,12 @@ defmodule Ravix.Documents.SessionTest do
     any =
       OK.for do
         session_id <- Store.open_session("test")
-        stored_document <- Session.store(session_id, any_entity)
-        session_state <- Session.fetch_state(session_id)
+        _ <- Session.store(session_id, any_entity)
+        _ <- Session.save_changes(session_id)
+        result <- Session.load(session_id, any_entity.id)
+        current_state <- Session.fetch_state(session_id)
       after
-        [stored_document: stored_document, session_state: session_state]
+        Map.put(result, "state", current_state)
       end
 
     IO.inspect(any)
