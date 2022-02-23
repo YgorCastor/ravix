@@ -16,7 +16,7 @@ jobs:
       ravendb:
         image: ravendb/ravendb
         ports:
-          - 8080/tcp
+          - 8080:8080
         env:
           RAVEN_ARGS: '--log-to-console'
           RAVEN_Setup_Mode: 'None'
@@ -37,8 +37,8 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
       - name: Check port
-        run: sleep 5m && curl http://localhost:${{ job.services.ravendb.ports[8080] }}/studio/index.html
+        run: sleep 1m && curl http://localhost:8080/studio/index.html
       - name: Run tests
         env:
-          RAVENDB_URL: 'http://localhost:${{ job.services.ravendb.ports[8080] }}'
+          RAVENDB_URL: 'http://localhost:8080'
         run: mix test
