@@ -10,6 +10,23 @@ defmodule Ravix.Documents.SessionTest do
     %{ravix: start_supervised!(Ravix)}
   end
 
+  test "something" do
+    any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+    any =
+      OK.for do
+        session_id <- Store.open_session("test")
+        stored_document <- Session.store(session_id, any_entity)
+        session_state <- Session.fetch_state(session_id)
+      after
+        [stored_document: stored_document, session_state: session_state]
+      end
+
+    IO.inspect(any)
+
+    refute true
+  end
+
   describe "store/3" do
     test "A document should be stored using the entity id" do
       any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
