@@ -24,7 +24,7 @@ defmodule Ravix.Documents.SessionTest do
         Map.put(result, "state", current_state)
       end
 
-    Exception.message(error)
+    IO.inspect(Exception.message(error))
 
     refute true
   end
