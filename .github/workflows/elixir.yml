@@ -17,10 +17,12 @@ jobs:
         image: ravendb/ravendb:5.3-ubuntu-latest
         env:
           RAVEN_Setup_Mode: None
-          RAVEN_Security_UnsecuredAccessAllowed: PrivateNetwork
+          RAVEN_License_Eula_Accepted: true
+          RAVEN_Security_UnsecuredAccessAllowed: PublicNetwork
+          RAVEN_ServerUrl: "http://0.0.0.0:8080"
         ports:
           - 8080:8080
-        options: --health-cmd "curl -f http://localhost:8080" --health-interval 10s --health-timeout 5s --health-retries 5
+          - 38888:38888
 
     steps:
       - uses: actions/checkout@v2
