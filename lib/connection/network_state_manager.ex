@@ -17,6 +17,7 @@ defmodule Ravix.Connection.NetworkStateManager do
   @spec create_network_state(any, binary, any, any) ::
           :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
   def create_network_state(urls, database_name, conventions, certificate \\ nil) do
+    IO.inspect(urls)
     with network when network == {:error, :network_not_found} <-
            find_existing_network(database_name) do
       DynamicSupervisor.start_child(

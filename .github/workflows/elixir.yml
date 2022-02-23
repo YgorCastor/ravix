@@ -14,16 +14,13 @@ jobs:
       image: elixir:1.13.2-alpine
     services:
       ravendb:
-        image: ravendb/ravendb:5.3-ubuntu-latest
-        env:
-          RAVEN_Setup_Mode: None
-          RAVEN_License_Eula_Accepted: true
-          RAVEN_Security_UnsecuredAccessAllowed: PublicNetwork
-          RAVEN_ServerUrl: "http://0.0.0.0:8080"
+        image: ravendb/ravendb
         ports:
-          - 8080:8080
-          - 38888:38888
-
+          - 8080/tcp
+        env:
+          RAVEN_ARGS: '--Setup.Mode=None'
+          RAVEN_License_Eula_Accepted: 'true'
+          RAVEN_Security_UnsecuredAccessAllowed: 'PrivateNetwork'
     steps:
       - uses: actions/checkout@v2
       - name: Restore dependencies cache
@@ -38,7 +35,9 @@ jobs:
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
         run: mix deps.get
+      - name: Check port
+        run: echo '${{ job.services.ravendb.ports[8080] }}'
       - name: Run tests
         env:
-          RAVENDB_URL: http://0.0.0.0:${{ job.services.ravendb.ports['8080'] }}
+          RAVENDB_URL: http://localhost:${{ job.services.ravendb.ports[8080] }}
         run: mix test
