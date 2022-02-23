@@ -31,6 +31,7 @@ defmodule Ravix.Connection.RequestExecutor do
               {:error, error.reason}
 
             {:error, _conn, error, _headers} when is_struct(error, Mint.TransportError) ->
+              IO.inspect(error)
               {:error, error.reason}
 
             _ ->

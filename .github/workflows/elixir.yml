@@ -20,7 +20,7 @@ jobs:
         env:
           RAVEN_ARGS: '--Setup.Mode=None'
           RAVEN_License_Eula_Accepted: 'true'
-          RAVEN_Security_UnsecuredAccessAllowed: 'PrivateNetwork'
+          RAVEN_Security_UnsecuredAccessAllowed: 'PublicNetwork'
     steps:
       - uses: actions/checkout@v2
       - name: Restore dependencies cache
