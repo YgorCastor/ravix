@@ -13,7 +13,7 @@ defmodule Ravix.Documents.SessionTest do
   test "something" do
     any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
 
-    any =
+    {:error, %Mint.TransportError{} = error} =
       OK.for do
         session_id <- Store.open_session("test")
         _ <- Session.store(session_id, any_entity)
@@ -24,7 +24,7 @@ defmodule Ravix.Documents.SessionTest do
         Map.put(result, "state", current_state)
       end
 
-    IO.inspect(any)
+    Exception.message(error)
 
     refute true
   end
