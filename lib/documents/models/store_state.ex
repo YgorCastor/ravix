@@ -3,7 +3,7 @@ defmodule Ravix.Documents.Store.State do
             default_database: nil,
             document_conventions: nil
 
-  alias Ravix.Documents.Store.State
+  alias Ravix.Documents.Store.{State, Configs}
   alias Ravix.Documents.Conventions
 
   @type t :: %State{
@@ -12,7 +12,8 @@ defmodule Ravix.Documents.Store.State do
           document_conventions: Conventions.t()
         }
 
-  def from_config(ravix_configs) do
+  @spec from_map(Configs.t()) :: State.t()
+  def from_map(%Configs{} = ravix_configs) do
     %State{
       urls: ravix_configs.urls,
       default_database: ravix_configs.database,

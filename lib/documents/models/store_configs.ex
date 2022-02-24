@@ -40,18 +40,12 @@ defmodule Ravix.Documents.Store.Configs do
     presence: true
   )
 
-  @spec read_configs(map) :: {:error, list} | {:ok, Ravix.Documents.Store.Configs.t()}
-  def read_configs(configs) when configs != nil do
-    configs
-    |> Mappable.to_struct(DocumentStoreConfigs)
-    |> validate_configs()
-  end
-
-  @spec read_configs :: {:error, list} | {:ok, Ravix.Documents.Store.Configs.t()}
-  def read_configs() do
+  @spec read_from_config_file :: {:error, list} | {:ok, Ravix.Documents.Store.Configs.t()}
+  def read_from_config_file() do
     %Configs{
       urls: Application.fetch_env!(:ravix, :urls),
-      database: Application.fetch_env!(:ravix, :database)
+      database: Application.fetch_env!(:ravix, :database),
+      document_conventions: Application.fetch_env!(:ravix, :document_conventions)
     }
     |> validate_configs()
   end

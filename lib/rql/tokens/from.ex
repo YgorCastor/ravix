@@ -7,7 +7,7 @@ defmodule Ravix.RQL.Tokens.From do
 
   alias Ravix.RQL.Tokens.From
 
-  def from(nil, as_alias), do: {:error, :collection_not_informed}
+  def from(nil, _as_alias), do: {:error, :collection_not_informed}
 
   def from(document, as_alias) do
     %From{

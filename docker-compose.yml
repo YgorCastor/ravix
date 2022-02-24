@@ -5,7 +5,8 @@ services:
     image: ravendb/ravendb:5.3.1-ubuntu.20.04-arm64v8
     environment:
       - RAVEN_Setup_Mode=None
-      - RAVEN_Security_UnsecuredAccessAllowed=PrivateNetwork
+      - RAVEN_License_Eula_Accepted=true
+      - RAVEN_Security_UnsecuredAccessAllowed=PublicNetwork
       - RAVEN_ARGS=--log-to-console
     ports:
       - 8080:8080

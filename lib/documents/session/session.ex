@@ -64,7 +64,7 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:save_changes})
   end
 
-  @spec fetch_state(binary()) :: Session.State.t()
+  @spec fetch_state(binary()) :: {:ok, Session.State.t()} | {:error, any}
   def fetch_state(session_id) do
     session_id
     |> session_id()
@@ -77,7 +77,6 @@ defmodule Ravix.Documents.Session do
   ####################
   #     Handlers     #
   ####################
-
   def handle_call(
         {:load, [document_ids: ids, includes: includes]},
         _from,

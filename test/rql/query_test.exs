@@ -8,8 +8,11 @@ defmodule Ravix.RQL.QueryTest do
   alias Ravix.Documents.{Store, Session}
 
   setup do
-    %{ravix: start_supervised!(Ravix)}
+    ravix = %{ravix: start_supervised!(Ravix)}
+    Store.create_database("test")
+    ravix
   end
+
 
   describe "list_all/2" do
     test "Should list all the matching documents of a query" do
@@ -68,14 +71,14 @@ defmodule Ravix.RQL.QueryTest do
           _ <- Session.store(session_id, any_entity_2)
           _ <- Session.save_changes(session_id)
 
-          :timer.sleep(500)
+          :timer.sleep(1000)
 
           delete_response <-
             from("@all_docs")
             |> where(equal_to("cat_name", any_entity.cat_name))
             |> delete_for(session_id)
 
-          :timer.sleep(500)
+          :timer.sleep(1000)
 
           query_response <-
             from("@all_docs")

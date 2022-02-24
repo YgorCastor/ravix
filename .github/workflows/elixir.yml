@@ -1,0 +1,42 @@
+name: Elixir CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  run-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    container:
+      image: elixir:1.13.2-alpine
+    services:
+      ravendb:
+        image: ravendb/ravendb
+        ports:
+          - 8080:8080
+        env:
+          RAVEN_ARGS: '--log-to-console'
+          RAVEN_Setup_Mode: 'None'
+          RAVEN_License_Eula_Accepted: 'true'
+          RAVEN_Security_UnsecuredAccessAllowed: 'PublicNetwork'
+    steps:
+      - uses: actions/checkout@v2
+      - name: Restore dependencies cache
+        uses: actions/cache@v2
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+      - name: Install Git
+        run: apk add --no-cache git curl
+      - name: Instal Mix and Rebar
+        run: mix local.hex --force && mix local.rebar --force
+      - name: Install dependencies
+        run: mix deps.get
+      - name: Run tests
+        env:
+          RAVENDB_URL: 'http://ravendb:8080'
+        run: mix test
