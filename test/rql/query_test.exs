@@ -8,8 +8,11 @@ defmodule Ravix.RQL.QueryTest do
   alias Ravix.Documents.{Store, Session}
 
   setup do
-    %{ravix: start_supervised!(Ravix)}
+    ravix = %{ravix: start_supervised!(Ravix)}
+    Store.create_database("test")
+    ravix
   end
+
 
   describe "list_all/2" do
     test "Should list all the matching documents of a query" do

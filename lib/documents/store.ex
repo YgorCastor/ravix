@@ -1,8 +1,10 @@
 defmodule Ravix.Documents.Store do
   use GenServer
+  require OK
 
   alias Ravix.Documents.Store.State, as: StoreState
   alias Ravix.Documents.Store.Configs
+  alias Ravix.Documents.DatabaseManager
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.SessionsSupervisor
   alias Ravix.Connection.NetworkStateManager
@@ -26,6 +28,10 @@ defmodule Ravix.Documents.Store do
   @spec open_session(String.t()) :: String.t()
   def open_session(database) do
     GenServer.call(__MODULE__, {:open_session, database})
+  end
+
+  def create_database(database, opts \\ []) do
+    GenServer.call(__MODULE__, {:create_database, database, opts})
   end
 
   defp from_configs_file() do
@@ -62,5 +68,23 @@ defmodule Ravix.Documents.Store do
       )
 
     {:reply, session_id, state}
+  end
+
+  def handle_call({:create_database, database, opts}, _from, %StoreState{} = state) do
+    OK.try do
+      _pid <-
+        NetworkStateManager.create_network_state(
+          state.urls,
+          database,
+          state.document_conventions,
+          nil
+        )
+
+      response <- DatabaseManager.create_database(database, opts)
+    after
+      {:reply, {:ok, response}, state}
+    rescue
+      error -> {:reply, {:error, error}, state}
+    end
   end
 end

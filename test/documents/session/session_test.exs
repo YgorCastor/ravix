@@ -7,26 +7,9 @@ defmodule Ravix.Documents.SessionTest do
   alias Ravix.Documents.Store
 
   setup do
-    %{ravix: start_supervised!(Ravix)}
-  end
-
-  test "something" do
-    any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
-
-    {:error, %Mint.TransportError{} = error} =
-      OK.for do
-        session_id <- Store.open_session("test")
-        _ <- Session.store(session_id, any_entity)
-        _ <- Session.save_changes(session_id)
-        result <- Session.load(session_id, any_entity.id)
-        current_state <- Session.fetch_state(session_id)
-      after
-        Map.put(result, "state", current_state)
-      end
-
-    IO.inspect(Exception.message(error))
-
-    refute true
+    ravix = %{ravix: start_supervised!(Ravix)}
+    Store.create_database("test")
+    ravix
   end
 
   describe "store/3" do

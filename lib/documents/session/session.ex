@@ -77,7 +77,6 @@ defmodule Ravix.Documents.Session do
   ####################
   #     Handlers     #
   ####################
-
   def handle_call(
         {:load, [document_ids: ids, includes: includes]},
         _from,

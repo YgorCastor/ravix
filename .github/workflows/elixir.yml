@@ -36,9 +36,7 @@ jobs:
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
         run: mix deps.get
-      - name: Check port
-        run: sleep 1m && curl http://ravendb:8080/studio/index.html
       - name: Run tests
         env:
-          RAVENDB_URL: 'http://localhost:8080'
+          RAVENDB_URL: 'http://ravendb:8080'
         run: mix test

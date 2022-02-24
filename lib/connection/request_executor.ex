@@ -13,7 +13,9 @@ defmodule Ravix.Connection.RequestExecutor do
       current_node = NodeSelector.current_node(network_state.node_selector)
       request = CreateRequest.create_request(command, current_node)
       conn_params <- build_params(network_state, current_node.protocol)
-      conn <- Mint.HTTP.connect(current_node.protocol, current_node.url, current_node.port, conn_params)
+
+      conn <-
+        Mint.HTTP.connect(current_node.protocol, current_node.url, current_node.port, conn_params)
 
       {:ok, conn, _ref} =
         Mint.HTTP.request(conn, request.method, request.url, @default_headers, request.data)
@@ -31,7 +33,6 @@ defmodule Ravix.Connection.RequestExecutor do
               {:error, error.reason}
 
             {:error, _conn, error, _headers} when is_struct(error, Mint.TransportError) ->
-              IO.inspect(error)
               {:error, error.reason}
 
             _ ->
@@ -45,9 +46,14 @@ defmodule Ravix.Connection.RequestExecutor do
 
   defp build_params(%Network.State{} = network_state, :https) do
     case network_state do
-      %Network.State{certificate: nil, certificate_file: file} -> {:ok, transport_opts: [cacertfile: file]}
-      %Network.State{certificate: cert, certificate_file: nil} -> {:ok, transport_opts: [cacert: cert]}
-      _ -> {:error, :invalid_ssl_certificate}
+      %Network.State{certificate: nil, certificate_file: file} ->
+        {:ok, transport_opts: [cacertfile: file]}
+
+      %Network.State{certificate: cert, certificate_file: nil} ->
+        {:ok, transport_opts: [cacert: cert]}
+
+      _ ->
+        {:error, :invalid_ssl_certificate}
     end
   end
 
