@@ -10,6 +10,8 @@ jobs:
   run-test:
     name: Build and test
     runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
     container:
       image: elixir:1.13.2-alpine
     services:
@@ -39,4 +41,5 @@ jobs:
       - name: Run tests
         env:
           RAVENDB_URL: 'http://ravendb:8080'
-        run: mix test
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mix coveralls.github
