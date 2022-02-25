@@ -55,7 +55,7 @@ defmodule Ravix.RQL.QueryTest do
 
       results = response["Results"]
 
-      assert length(results) == 0
+      assert results == []
     end
   end
 

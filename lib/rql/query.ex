@@ -20,14 +20,29 @@ defmodule Ravix.RQL.Query do
   alias Ravix.Connection.NetworkStateManager
   alias Ravix.Connection.Network.State, as: NetworkState
 
+  @type t :: %Query{
+          from_token: From.t() | nil,
+          where_token: Where.t() | nil,
+          and_tokens: list(And.t()),
+          or_tokens: list(Or.t()),
+          projection_token: any(),
+          query_string: String.t(),
+          query_params: map(),
+          params_count: non_neg_integer(),
+          is_raw: boolean()
+        }
+
+  @spec from(nil | bitstring) :: {:error, :query_document_must_be_informed} | Query.t()
   def from(nil), do: {:error, :query_document_must_be_informed}
 
-  def from(document, as_alias \\ nil) when is_bitstring(document) do
+  @spec from(String.t(), boolean()) :: Query.t()
+  def from(document, as_alias \\ false) do
     %Query{
       from_token: From.from(document, as_alias)
     }
   end
 
+  @spec where(Query.t(), Condition.t()) :: Query.t()
   def where(%Query{} = query, %Condition{} = condition) do
     %Query{
       query
@@ -35,6 +50,7 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @spec and?(Query.t(), Condition.t()) :: Query.t()
   def and?(%Query{} = query, %Condition{} = condition) do
     %Query{
       query
@@ -42,6 +58,7 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @spec or?(Query.t(), Condition.t()) :: Query.t()
   def or?(%Query{} = query, %Condition{} = condition) do
     %Query{
       query
@@ -49,6 +66,7 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @spec raw(String.t()) :: Query.t()
   def raw(raw_query) do
     %Query{
       query_string: raw_query,
@@ -56,17 +74,19 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @spec list_all(Query.t(), binary) :: {:error, any} | {:ok, any}
   def list_all(%Query{} = query, session_id) do
     execute_for(query, session_id, "POST")
   end
 
+  @spec delete_for(Query.t(), binary) :: {:error, any} | {:ok, any}
   def delete_for(%Query{} = query, session_id) do
     execute_for(query, session_id, "DELETE")
   end
 
   defp execute_for(%Query{is_raw: false} = query, session_id, method) do
     OK.for do
-      parsed_query = QueryParser.parse(query)
+      parsed_query <- QueryParser.parse(query)
       session_state <- Session.fetch_state(session_id)
       {pid, _} <- NetworkStateManager.find_existing_network(session_state.database)
       network_state = Agent.get(pid, fn ns -> ns end)

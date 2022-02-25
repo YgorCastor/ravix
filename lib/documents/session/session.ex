@@ -3,15 +3,15 @@ defmodule Ravix.Documents.Session do
 
   require OK
 
-  alias Ravix.Documents.Session
+  alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.SessionManager
 
   def init(session_state) do
     {:ok, session_state}
   end
 
-  @spec start_link(any, Session.State.t()) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(_attr, initial_state = %Session.State{}) do
+  @spec start_link(any, SessionState.t()) :: :ignore | {:error, any} | {:ok, pid}
+  def start_link(_attr, %SessionState{} = initial_state) do
     GenServer.start_link(
       __MODULE__,
       initial_state,
@@ -35,6 +35,19 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:load, [document_ids: [id], includes: includes]})
   end
 
+  @spec delete(
+          binary,
+          binary
+          | %{
+              :id =>
+                binary
+                | %{
+                    :id => binary | %{:id => binary | map, optional(any) => any},
+                    optional(any) => any
+                  },
+              optional(any) => any
+            }
+        ) :: any
   def delete(session_id, entity) when is_map_key(entity, :id) do
     delete(session_id, entity.id)
   end
@@ -64,7 +77,7 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:save_changes})
   end
 
-  @spec fetch_state(binary()) :: {:ok, Session.State.t()} | {:error, any}
+  @spec fetch_state(binary()) :: {:ok, SessionState.t()} | {:error, any}
   def fetch_state(session_id) do
     session_id
     |> session_id()
@@ -80,7 +93,7 @@ defmodule Ravix.Documents.Session do
   def handle_call(
         {:load, [document_ids: ids, includes: includes]},
         _from,
-        state = %Session.State{}
+        %SessionState{} = state
       ) do
     with {:ok, result} <- SessionManager.load_documents(state, ids, includes) do
       {:reply, {:ok, result[:response]}, result[:updated_state]}
@@ -92,30 +105,45 @@ defmodule Ravix.Documents.Session do
   def handle_call(
         {:store, [entity: entity, key: key, change_vector: change_vector]},
         _from,
-        state = %Session.State{}
+        %SessionState{} = state
       )
-      when key != nil,
-      do: SessionManager.store_entity(state, entity, key, change_vector)
+      when key != nil do
+    OK.try do
+      [entity, updated_state] <- SessionManager.store_entity(state, entity, key, change_vector)
+    after
+      {:reply, {:ok, entity}, updated_state}
+    rescue
+      err -> {:reply, {:error, err}, state}
+    end
+  end
 
   def handle_call(
         {:store, [entity: entity, key: _, change_vector: change_vector]},
         _from,
-        state = %Session.State{}
+        %SessionState{} = state
       )
-      when entity.id != nil,
-      do: SessionManager.store_entity(state, entity, entity.id, change_vector)
+      when entity.id != nil do
+    OK.try do
+      [entity, updated_state] <-
+        SessionManager.store_entity(state, entity, entity.id, change_vector)
+    after
+      {:reply, {:ok, entity}, updated_state}
+    rescue
+      err -> {:reply, {:error, err}, state}
+    end
+  end
 
   def handle_call(
         {:store, [entity: _, key: _, change_vector: _]},
         _from,
-        state = %Session.State{}
+        %SessionState{} = state
       ),
       do: {:reply, {:error, :no_valid_id_informed}, state}
 
-  def handle_call({:fetch_state}, _from, state = %Session.State{}),
+  def handle_call({:fetch_state}, _from, %SessionState{} = state),
     do: {:reply, {:ok, state}, state}
 
-  def handle_call({:save_changes}, _from, state = %Session.State{}) do
+  def handle_call({:save_changes}, _from, %SessionState{} = state) do
     with {:ok, response} <- SessionManager.save_changes(state) do
       {:reply, {:ok, response[:result]}, response[:updated_state]}
     else
@@ -123,7 +151,7 @@ defmodule Ravix.Documents.Session do
     end
   end
 
-  def handle_call({:delete, id}, _from, state = %Session.State{}) do
+  def handle_call({:delete, id}, _from, %SessionState{} = state) do
     with {:ok, updated_state} <- SessionManager.delete_document(state, id) do
       {:reply, {:ok, id}, updated_state}
     else

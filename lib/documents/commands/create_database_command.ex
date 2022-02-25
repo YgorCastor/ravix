@@ -22,7 +22,7 @@ defmodule Ravix.Documents.Commands.CreateDatabaseCommand do
 
   defimpl CreateRequest, for: CreateDatabaseCommand do
     @spec create_request(CreateDatabaseCommand.t(), ServerNode.t()) :: CreateDatabaseCommand.t()
-    def create_request(command = %CreateDatabaseCommand{}, _server_node = %ServerNode{}) do
+    def create_request(%CreateDatabaseCommand{} = command, %ServerNode{} = _server_node) do
       %CreateDatabaseCommand{
         command
         | url:

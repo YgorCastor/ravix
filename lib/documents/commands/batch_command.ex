@@ -35,7 +35,7 @@ defmodule Ravix.Documents.Commands.BatchCommand do
 
   defimpl CreateRequest, for: BatchCommand do
     @spec create_request(BatchCommand.t(), ServerNode.t()) :: BatchCommand.t()
-    def create_request(command = %BatchCommand{}, server_node = %ServerNode{}) do
+    def create_request(%BatchCommand{} = command, %ServerNode{} = server_node) do
       url = server_node |> ServerNode.node_url()
 
       %BatchCommand{

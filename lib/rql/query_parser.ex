@@ -2,13 +2,19 @@ defmodule Ravix.RQL.QueryParser do
   require OK
   alias Ravix.RQL.Query
 
+  @spec parse(Query.t()) :: {:error, any} | {:ok, Query.t()}
   def parse(%Query{} = query) do
-    query
-    |> parse_token(query.from_token)
-    |> parse_token(query.where_token)
-    |> parse_tokens(query.and_tokens)
-    |> parse_tokens(query.or_tokens)
-    |> parse_token(query.projection_token)
+    OK.for do
+      parsed_query =
+        query
+        |> parse_token(query.from_token)
+        |> parse_token(query.where_token)
+        |> parse_tokens(query.and_tokens)
+        |> parse_tokens(query.or_tokens)
+        |> parse_token(query.projection_token)
+    after
+      parsed_query
+    end
   end
 
   defp parse_tokens({:ok, query}, tokens), do: parse_tokens(query, tokens)
@@ -141,7 +147,6 @@ defmodule Ravix.RQL.QueryParser do
   defp parse_params_to_positional_string(query, params) do
     parse_params_to_positional(query, params)
     |> Map.keys()
-    |> Enum.map(fn key -> "$#{key}" end)
-    |> Enum.join(",")
+    |> Enum.map_join(",", fn key -> "$#{key}" end)
   end
 end

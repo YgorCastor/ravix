@@ -80,7 +80,7 @@ defmodule Ravix.Documents.Session.SessionDocument do
   end
 
   @spec merge_entity(SessionDocument.t()) :: map
-  def merge_entity(session_document = %SessionDocument{}) do
+  def merge_entity(%SessionDocument{} = session_document) do
     session_document.entity
     |> Map.put("@metadata", session_document.metadata)
     |> Morphix.stringmorphiform!()

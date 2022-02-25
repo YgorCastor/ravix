@@ -5,6 +5,7 @@ defmodule Ravix.Documents.DatabaseManager do
   alias Ravix.Connection.NetworkStateManager
   alias Ravix.Documents.Commands.CreateDatabaseCommand
 
+  @spec create_database(binary, list()) :: {:error, any} | {:ok, any}
   def create_database(database_name, opts \\ []) do
     OK.for do
       {pid, _} <- NetworkStateManager.find_existing_network(database_name)

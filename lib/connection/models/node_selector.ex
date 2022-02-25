@@ -11,8 +11,8 @@ defmodule Ravix.Connection.NodeSelector do
           current_node_index: non_neg_integer()
         }
 
-  @spec current_node(Ravix.Connection.NodeSelector.t()) :: ServerNode.t()
-  def current_node(node_selector = %NodeSelector{}) do
+  @spec current_node(NodeSelector.t()) :: ServerNode.t()
+  def current_node(%NodeSelector{} = node_selector) do
     Enum.at(node_selector.topology.nodes, node_selector.current_node_index)
   end
 end

@@ -12,9 +12,10 @@ defmodule Ravix.Connection.ServerNode do
           port: non_neg_integer(),
           protocol: atom(),
           database: String.t(),
-          cluster_tag: String.t()
+          cluster_tag: String.t() | nil
         }
 
+  @spec from_url(binary | URI.t(), String.t()) :: ServerNode.t()
   def from_url(url, database) do
     parsed_url = URI.new!(url)
 
@@ -26,6 +27,7 @@ defmodule Ravix.Connection.ServerNode do
     }
   end
 
-  def node_url(server_node = %ServerNode{}),
+  @spec node_url(ServerNode.t()) :: String.t()
+  def node_url(%ServerNode{} = server_node),
     do: "/databases/#{server_node.database}"
 end

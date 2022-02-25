@@ -6,6 +6,12 @@ defmodule Ravix.RQL.Tokens.Or do
 
   alias Ravix.RQL.Tokens.{Or, Condition}
 
+  @type t :: %Or{
+          token: atom(),
+          condition: Condition.t()
+        }
+
+  @spec condition(Condition.t()) :: Or.t()
   def condition(%Condition{} = condition) do
     %Or{
       token: :or,

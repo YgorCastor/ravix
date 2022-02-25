@@ -9,7 +9,7 @@ defmodule Ravix.RQL.QueryParserTest do
 
   describe "parse/1" do
     test "It should parse the tokens succesfully" do
-      query_result =
+      {:ok, query_result} =
         from("test")
         |> where(greater_than("field", 10))
         |> and?(equal_to("field2", "asdf"))

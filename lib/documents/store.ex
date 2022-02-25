@@ -30,6 +30,7 @@ defmodule Ravix.Documents.Store do
     GenServer.call(__MODULE__, {:open_session, database})
   end
 
+  @spec create_database(String.t(), maybe_improper_list()) :: {:ok, map()} | {:error, any()}
   def create_database(database, opts \\ []) do
     GenServer.call(__MODULE__, {:create_database, database, opts})
   end

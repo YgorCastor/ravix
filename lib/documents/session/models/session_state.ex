@@ -15,27 +15,27 @@ defmodule Ravix.Documents.Session.State do
   alias Ravix.Documents.Conventions
 
   @type t :: %State{
-          session_id: String.t(),
+          session_id: binary(),
           database: String.t(),
           conventions: Conventions.t(),
           documents_by_id: map(),
-          defer_commands: list(%{key: any()}),
-          deleted_entities: list(%{id: any()}),
+          defer_commands: list(),
+          deleted_entities: list(),
           number_of_requests: non_neg_integer()
         }
 
   @spec increment_request_count(State.t()) :: State.t()
-  def increment_request_count(session_state = %State{}) do
+  def increment_request_count(%State{} = session_state) do
     %State{
       session_state
       | number_of_requests: session_state.number_of_requests + 1
     }
   end
 
-  @spec register_document(State.t(), binary, map(), binary(), map(), map() | nil, map() | nil) ::
-          {:error, any} | {:ok, State.t()}
+  @spec register_document(State.t(), binary(), map(), String.t(), map(), map() | nil, map() | nil) ::
+          {:error, atom()} | {:ok, State.t()}
   def register_document(
-        state = %State{},
+        %State{} = state,
         key,
         entity,
         change_vector,
@@ -63,9 +63,9 @@ defmodule Ravix.Documents.Session.State do
     end
   end
 
-  @spec mark_document_for_exclusion(State.t(), binary) :: {:error, any} | {:ok, State.t()}
+  @spec mark_document_for_exclusion(State.t(), binary) :: {:error, atom()} | {:ok, State.t()}
   def mark_document_for_exclusion(
-        state = %State{},
+        %State{} = state,
         document_id
       ) do
     OK.for do
@@ -81,9 +81,9 @@ defmodule Ravix.Documents.Session.State do
   end
 
   @spec update_session(State.t(), maybe_improper_list) :: State.t()
-  def update_session(session_state = %State{}, []), do: session_state
+  def update_session(%State{} = session_state, []), do: session_state
 
-  def update_session(session_state = %State{}, updates) when is_list(updates) do
+  def update_session(%State{} = session_state, updates) when is_list(updates) do
     update = Enum.at(updates, 0)
 
     updated_state =
@@ -104,10 +104,10 @@ defmodule Ravix.Documents.Session.State do
   end
 
   @spec fetch_document(State.t(), any) :: {:error, :document_not_found} | {:ok, map()}
-  def fetch_document(_state = %State{}, document_id) when document_id == nil,
+  def fetch_document(_state, document_id) when document_id == nil,
     do: {:error, :document_not_found}
 
-  def fetch_document(state = %State{}, document_id) do
+  def fetch_document(%State{} = state, document_id) do
     case state.documents_by_id[document_id] do
       nil -> {:error, :document_not_found}
       document -> {:ok, document}
@@ -115,7 +115,7 @@ defmodule Ravix.Documents.Session.State do
   end
 
   @spec clear_deferred_commands(State.t()) :: State.t()
-  def clear_deferred_commands(state = %State{}) do
+  def clear_deferred_commands(%State{} = state) do
     %State{
       state
       | defer_commands: []
@@ -123,7 +123,7 @@ defmodule Ravix.Documents.Session.State do
   end
 
   @spec clear_deleted_entities(State.t()) :: State.t()
-  def clear_deleted_entities(state = %State{}) do
+  def clear_deleted_entities(%State{} = state) do
     %State{
       state
       | deleted_entities: []

@@ -7,6 +7,13 @@ defmodule Ravix.RQL.Tokens.Condition do
 
   alias Ravix.RQL.Tokens.Condition
 
+  @type t :: %Condition{
+          token: atom(),
+          field: String.t(),
+          params: list()
+        }
+
+  @spec greater_than(String.t(), any) :: Condition.t()
   def greater_than(field_name, value) do
     %Condition{
       token: :greater_than,
@@ -15,6 +22,7 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
+  @spec greater_than_or_equal_to(String.t(), any) :: Condition.t()
   def greater_than_or_equal_to(field_name, value) do
     %Condition{
       token: :greater_than_or_eq,
@@ -23,6 +31,7 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
+  @spec lower_than(String.t(), any) :: Condition.t()
   def lower_than(field_name, value) do
     %Condition{
       token: :lower_than,
@@ -31,6 +40,7 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
+  @spec lower_than_or_equal_to(String.t(), any) :: Condition.t()
   def lower_than_or_equal_to(field_name, value) do
     %Condition{
       token: :lower_than_or_eq,
@@ -39,6 +49,7 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
+  @spec equal_to(String.t(), any) :: Condition.t()
   def equal_to(field_name, value) do
     %Condition{
       token: :eq,
@@ -47,6 +58,7 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
+  @spec in?(String.t(), any) :: Condition.t()
   def in?(field_name, values) do
     %Condition{
       token: :in,
@@ -55,6 +67,7 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
+  @spec between(String.t(), any) :: Condition.t()
   def between(field_name, values) do
     %Condition{
       token: :between,

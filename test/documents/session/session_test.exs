@@ -7,7 +7,7 @@ defmodule Ravix.Documents.SessionTest do
   alias Ravix.Documents.Store
 
   setup do
-    ravix = %{ravix: start_supervised!(Ravix)}
+    ravix =  %{ravix: start_supervised!(Ravix)}
     Store.create_database("test")
     ravix
   end
@@ -188,7 +188,7 @@ defmodule Ravix.Documents.SessionTest do
       state = response["state"]
       already_loaded = response["already_loaded_ids"]
 
-      assert length(response["Results"]) == 0
+      assert response["Results"] == []
       assert map_size(state.documents_by_id) == 1
       assert Enum.any?(already_loaded, fn element -> element == any_entity.id end)
     end

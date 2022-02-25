@@ -50,7 +50,7 @@ defmodule Ravix.Documents.Store.Configs do
     |> validate_configs()
   end
 
-  defp validate_configs(configs = %Configs{}) do
+  defp validate_configs(%Configs{} = configs) do
     case Vex.valid?(configs) do
       true -> {:ok, configs}
       false -> {:error, Vex.errors(configs)}

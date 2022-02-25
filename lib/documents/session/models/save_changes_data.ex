@@ -14,7 +14,7 @@ defmodule Ravix.Documents.Session.SaveChangesData do
         }
 
   @spec add_deferred_commands(SaveChangesData.t(), list(map())) :: SaveChangesData.t()
-  def add_deferred_commands(save_changes_data = %SaveChangesData{}, deferred_commands) do
+  def add_deferred_commands(%SaveChangesData{} = save_changes_data, deferred_commands) do
     %SaveChangesData{
       save_changes_data
       | commands: save_changes_data.commands ++ deferred_commands,
@@ -23,7 +23,7 @@ defmodule Ravix.Documents.Session.SaveChangesData do
   end
 
   @spec add_delete_commands(SaveChangesData.t(), list(map())) :: SaveChangesData.t()
-  def add_delete_commands(save_changes_data = %SaveChangesData{}, deleted_entities) do
+  def add_delete_commands(%SaveChangesData{} = save_changes_data, deleted_entities) do
     delete_commands =
       Enum.map(
         deleted_entities,
@@ -38,7 +38,7 @@ defmodule Ravix.Documents.Session.SaveChangesData do
   end
 
   @spec add_put_commands(SaveChangesData.t(), map()) :: SaveChangesData.t()
-  def add_put_commands(save_changes_data = %SaveChangesData{}, documents_by_id) do
+  def add_put_commands(%SaveChangesData{} = save_changes_data, documents_by_id) do
     put_commands =
       documents_by_id
       |> Map.values()

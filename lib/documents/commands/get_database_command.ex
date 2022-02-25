@@ -15,7 +15,7 @@ defmodule Ravix.Documents.Commands.GetDatabaseCommand do
 
   defimpl CreateRequest, for: GetDatabaseCommand do
     @spec create_request(GetDatabaseCommand.t(), ServerNode.t()) :: GetDatabaseCommand.t()
-    def create_request(command = %GetDatabaseCommand{}, _server_node = %ServerNode{}) do
+    def create_request(%GetDatabaseCommand{} = command, %ServerNode{} = _server_node) do
       %GetDatabaseCommand{
         command
         | url:

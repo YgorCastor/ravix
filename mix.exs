@@ -36,7 +36,6 @@ defmodule Ravix.MixProject do
       {:jason, "~> 1.3"},
       {:vex, "~> 0.9.0"},
       {:mappable, "~> 0.2.4"},
-      {:enum_type, "~> 1.1"},
       {:elixir_uuid, "~> 1.2"},
       {:ok, "~> 2.3"},
       {:morphix, "~> 0.8.1"},

@@ -1,4 +1,5 @@
 defmodule Ravix.Helpers.UrlBuilder do
+  @spec append_param(String.t(), String.t(), any()) :: String.t()
   def append_param(base_url, param_name, param_value)
 
   def append_param(base_url, name, values) when is_list(values),
@@ -12,6 +13,6 @@ defmodule Ravix.Helpers.UrlBuilder do
     do: append_param(base_url, param_name, [param_value])
 
   defp build_list_params(base_url, name, values) do
-    base_url <> (Enum.map(values, &"&#{name}=#{&1}") |> Enum.join(""))
+    base_url <> Enum.map_join(values, "", &"&#{name}=#{&1}")
   end
 end

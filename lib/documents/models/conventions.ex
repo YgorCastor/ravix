@@ -19,6 +19,7 @@ defmodule Ravix.Documents.Conventions do
           disable_topology_update: boolean()
         }
 
+  @spec build_default_metadata(nil | map) :: {} | map
   def build_default_metadata(entity) when entity == nil, do: {}
 
   def build_default_metadata(entity) do

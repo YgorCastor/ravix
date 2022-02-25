@@ -49,7 +49,7 @@ defmodule Ravix.Documents.Commands.GetDocumentsCommand do
 
   defimpl CreateRequest, for: GetDocumentsCommand do
     @spec create_request(GetDocumentsCommand.t(), ServerNode.t()) :: map()
-    def create_request(command = %GetDocumentsCommand{}, server_node = %ServerNode{}) do
+    def create_request(%GetDocumentsCommand{} = command, %ServerNode{} = server_node) do
       base_url = server_node |> ServerNode.node_url()
 
       %GetDocumentsCommand{

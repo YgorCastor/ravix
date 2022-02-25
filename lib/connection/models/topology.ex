@@ -6,7 +6,7 @@ defmodule Ravix.Connection.Topology do
   alias Ravix.Connection.ServerNode
 
   @type t :: %Topology{
-          etag: String.t(),
+          etag: integer(),
           nodes: list(ServerNode.t())
         }
 end

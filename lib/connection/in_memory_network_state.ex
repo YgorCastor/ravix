@@ -4,6 +4,7 @@ defmodule Ravix.Connection.InMemoryNetworkState do
   alias Ravix.Connection.Network.State
   alias Ravix.Connection.NetworkStateManager
 
+  @spec start_link(any, map) :: {:error, any} | {:ok, pid}
   def start_link(_attrs, params) do
     Agent.start_link(
       fn ->

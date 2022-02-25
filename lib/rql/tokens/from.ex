@@ -7,6 +7,13 @@ defmodule Ravix.RQL.Tokens.From do
 
   alias Ravix.RQL.Tokens.From
 
+  @type t :: %From{
+          token: atom(),
+          as_alias: boolean(),
+          document_or_index: String.t()
+        }
+
+  @spec from(any, any) :: {:error, :collection_not_informed} | From.t()
   def from(nil, _as_alias), do: {:error, :collection_not_informed}
 
   def from(document, as_alias) do
@@ -17,6 +24,7 @@ defmodule Ravix.RQL.Tokens.From do
     }
   end
 
+  @spec from_index(any) :: {:error, :index_not_informed} | From.t()
   def from_index(nil), do: {:error, :index_not_informed}
 
   def from_index(index) do

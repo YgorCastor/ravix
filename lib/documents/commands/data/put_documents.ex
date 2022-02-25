@@ -3,4 +3,12 @@ defmodule Ravix.Documents.Commands.Data.PutDocument do
   defstruct Id: nil,
             Document: nil,
             Type: "PUT"
+
+  alias Ravix.Documents.Commands.Data.PutDocument
+
+  @type t :: %PutDocument{
+    Id: binary(),
+    Document: map(),
+    Type: String.t()
+  }
 end
