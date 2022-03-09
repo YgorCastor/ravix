@@ -7,75 +7,78 @@ defmodule Ravix.RQL.QueryParser do
     OK.for do
       parsed_query =
         query
-        |> parse_token(query.from_token)
-        |> parse_token(query.where_token)
-        |> parse_tokens(query.and_tokens)
-        |> parse_tokens(query.or_tokens)
-        |> parse_token(query.projection_token)
+        |> parse_stmt(query.from_token)
+        |> parse_stmt(query.where_token)
+        |> parse_stmts(query.and_tokens)
+        |> parse_stmts(query.or_tokens)
+        |> parse_stmt(query.projection_token)
+        |> parse_stmt(query.update_token)
     after
       parsed_query
     end
   end
 
-  defp parse_tokens({:ok, query}, tokens), do: parse_tokens(query, tokens)
+  defp parse_stmts({:ok, query}, stmts), do: parse_stmts(query, stmts)
 
-  defp parse_tokens({:error, err}, _),
+  defp parse_stmts({:error, err}, _),
     do: {:error, err}
 
-  defp parse_tokens(%Query{} = query, []), do: query
+  defp parse_stmts(%Query{} = query, []), do: query
 
-  defp parse_tokens(%Query{} = query, tokens) do
-    tokens
-    |> Enum.reduce(query, fn token, acc ->
-      case parse_token(acc, token) do
-        {:ok, tokens} -> Map.merge(acc, tokens)
+  defp parse_stmts(%Query{} = query, stmts) do
+    stmts
+    |> Enum.reduce(query, fn stmt, acc ->
+      case parse_stmt(acc, stmt) do
+        {:ok, stmts} -> Map.merge(acc, stmts)
         {:error, err} -> {:error, err}
       end
     end)
   end
 
-  defp parse_token({:ok, query}, tokens), do: parse_token(query, tokens)
+  defp parse_stmt({:ok, query}, stmt), do: parse_stmt(query, stmt)
 
-  defp parse_token(%Query{} = query, nil), do: query
+  defp parse_stmt(%Query{} = query, nil), do: query
 
-  defp parse_token({:error, err}, _),
+  defp parse_stmt({:error, err}, _),
     do: {:error, err}
 
-  defp parse_token(%Query{} = query, token) do
-    case token.token do
-      :from -> parse_from(query, token)
-      :from_index -> parse_from_index(query, token)
-      :where -> parse_where(query, token)
-      :and -> parse_and(query, token)
-      :or -> parse_or(query, token)
+  defp parse_stmt(%Query{} = query, stmt) do
+    case stmt.token do
+      :from -> parse_from(query, stmt)
+      :from_index -> parse_from_index(query, stmt)
+      :update -> parse_update(query, stmt)
+      :where -> parse_where(query, stmt)
+      :and -> parse_and(query, stmt)
+      :or -> parse_or(query, stmt)
+      _ -> {:error, :invalid_statement}
     end
   end
 
-  defp parse_condition_token(%Query{} = query, nil), do: query
+  defp parse_condition_stmt(%Query{} = query, nil), do: query
 
-  defp parse_condition_token(%Query{} = query, condition) do
+  defp parse_condition_stmt(%Query{} = query, condition) do
     query_part =
       case condition.token do
         :greater_than ->
-          "#{condition.field} > $p#{query.params_count}"
+          "#{parse_field(query, condition.field)} > $p#{query.params_count}"
 
         :eq ->
-          "#{condition.field} = $p#{query.params_count}"
+          "#{parse_field(query, condition.field)} = $p#{query.params_count}"
 
         :greater_than_or_eq ->
-          "#{condition.field} >= $p#{query.params_count}"
+          "#{parse_field(query, condition.field)} >= $p#{query.params_count}"
 
         :lower_than ->
-          "#{condition.field} < $p#{query.params_count}"
+          "#{parse_field(query, condition.field)} < $p#{query.params_count}"
 
         :lower_than_or_eq ->
-          "#{condition.field} <= $p#{query.params_count}"
+          "#{parse_field(query, condition.field)} <= $p#{query.params_count}"
 
         :between ->
-          "#{condition.field} between $p#{query.params_count} and $p#{query.params_count + 1}"
+          "#{parse_field(query, condition.field)} between $p#{query.params_count} and $p#{query.params_count + 1}"
 
         :in ->
-          "#{condition.field} in " <>
+          "#{parse_field(query, condition.field)} in " <>
             "(" <> parse_params_to_positional_string(query, condition.params) <> ")"
 
         _ ->
@@ -92,7 +95,10 @@ defmodule Ravix.RQL.QueryParser do
     {:ok,
      %Query{
        query
-       | query_string: query.query_string <> "from #{from_token.document_or_index}"
+       | query_string:
+           query.query_string <>
+             "from #{from_token.document_or_index}" <>
+             parse_alias(query, from_token.document_or_index)
      }}
   end
 
@@ -100,27 +106,61 @@ defmodule Ravix.RQL.QueryParser do
     {:ok,
      %Query{
        query
-       | query_string: query.query_string <> "from index #{from_token.document_or_index}"
+       | query_string:
+           query.query_string <>
+             "from index #{from_token.document_or_index}" <>
+             parse_alias(query, from_token.document_or_index)
+     }}
+  end
+
+  defp parse_update(%Query{} = query, update_token) do
+    fields_to_update =
+      update_token.fields
+      |> Map.keys()
+      |> Enum.reduce(%{updates: [], current_position: query.params_count}, fn field, acc ->
+        %{
+          acc
+          | updates: acc.updates ++ ["#{parse_field(query, field)} = $p#{acc.current_position}"],
+            current_position: acc.current_position + 1
+        }
+      end)
+
+    positional_params = parse_params_to_positional(query, Map.values(update_token.fields))
+
+    query_params =
+      Map.merge(
+        query.query_params,
+        positional_params
+      )
+
+    {:ok,
+     %Query{
+       query
+       | query_string:
+           query.query_string <>
+             " update{ " <> Enum.join(fields_to_update.updates, ", ") <> " }",
+         query_params: query_params,
+         params_count: fields_to_update.current_position
      }}
   end
 
   defp parse_where(%Query{} = query, where_token) do
-    parse_action_token(query, where_token, "where")
+    parse_locator_stmt(query, where_token, "where")
   end
 
   defp parse_and(%Query{} = query, and_token) do
-    parse_action_token(query, and_token, "and")
+    parse_locator_stmt(query, and_token, "and")
   end
 
   defp parse_or(%Query{} = query, or_token) do
-    parse_action_token(query, or_token, "or")
+    parse_locator_stmt(query, or_token, "or")
   end
 
-  defp parse_action_token(%Query{} = query, token, token_string) do
+  defp parse_locator_stmt(%Query{} = query, stmt, locator) do
     OK.for do
-      condition <- parse_condition_token(query, token.condition)
-      positional_params = parse_params_to_positional(query, token.condition.params)
-      params_count = query.params_count + length(token.condition.params)
+      condition <- parse_condition_stmt(query, stmt.condition)
+      positional_params = parse_params_to_positional(query, stmt.condition.params)
+      params_count = query.params_count + length(stmt.condition.params)
 
       query_params =
         Map.merge(
@@ -130,7 +170,7 @@ defmodule Ravix.RQL.QueryParser do
     after
       %Query{
         query
-        | query_string: query.query_string <> " #{token_string} #{condition}",
+        | query_string: query.query_string <> " #{locator} #{condition}",
           query_params: query_params,
           params_count: params_count
       }
@@ -148,5 +188,19 @@ defmodule Ravix.RQL.QueryParser do
     parse_params_to_positional(query, params)
     |> Map.keys()
     |> Enum.map_join(",", fn key -> "$#{key}" end)
+  end
+
+  defp parse_alias(%Query{aliases: aliases}, document) do
+    case Map.has_key?(aliases, document) do
+      true -> " as " <> Map.get(aliases, document)
+      false -> ""
+    end
+  end
+
+  defp parse_field(%Query{aliases: aliases, from_token: from_token}, field) do
+    case Map.has_key?(aliases, from_token.document_or_index) do
+      true -> Map.get(aliases, from_token.document_or_index) <> ".#{field}"
+      false -> field
+    end
   end
 end

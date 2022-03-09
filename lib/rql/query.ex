@@ -1,19 +1,21 @@
 defmodule Ravix.RQL.Query do
   defstruct from_token: nil,
             where_token: nil,
+            update_token: nil,
             and_tokens: [],
             or_tokens: [],
             projection_token: nil,
             query_string: "",
             query_params: %{},
             params_count: 0,
+            aliases: %{},
             is_raw: false
 
   require OK
 
   alias Ravix.RQL.Query
   alias Ravix.RQL.QueryParser
-  alias Ravix.RQL.Tokens.{Where, From, And, Or, Condition}
+  alias Ravix.RQL.Tokens.{Where, From, And, Or, Condition, Update}
   alias Ravix.Documents.Session
   alias Ravix.Connection.RequestExecutor
   alias Ravix.Documents.Commands.ExecuteQueryCommand
@@ -23,22 +25,40 @@ defmodule Ravix.RQL.Query do
   @type t :: %Query{
           from_token: From.t() | nil,
           where_token: Where.t() | nil,
+          update_token: Update.t() | nil,
           and_tokens: list(And.t()),
           or_tokens: list(Or.t()),
           projection_token: any(),
           query_string: String.t(),
           query_params: map(),
           params_count: non_neg_integer(),
+          aliases: map(),
           is_raw: boolean()
         }
 
   @spec from(nil | bitstring) :: {:error, :query_document_must_be_informed} | Query.t()
   def from(nil), do: {:error, :query_document_must_be_informed}
 
-  @spec from(String.t(), boolean()) :: Query.t()
-  def from(document, as_alias \\ false) do
+  @spec from(String.t()) :: Query.t()
+  def from(document) do
     %Query{
-      from_token: From.from(document, as_alias)
+      from_token: From.from(document)
+    }
+  end
+
+  @spec from(String.t(), String.t()) :: Query.t()
+  def from(document, as_alias) do
+    %Query{
+      from_token: From.from(document),
+      aliases: Map.put(%{}, document, as_alias)
+    }
+  end
+
+  @spec update(Query.t(), map()) :: Query.t()
+  def update(%Query{} = query, document_updates) do
+    %Query{
+      query
+      | update_token: Update.update(document_updates)
     }
   end
 
@@ -82,6 +102,11 @@ defmodule Ravix.RQL.Query do
   @spec delete_for(Query.t(), binary) :: {:error, any} | {:ok, any}
   def delete_for(%Query{} = query, session_id) do
     execute_for(query, session_id, "DELETE")
+  end
+
+  @spec update_for(Query.t(), binary) :: {:error, any} | {:ok, any}
+  def update_for(%Query{} = query, session_id) do
+    execute_for(query, session_id, "PATCH")
   end
 
   defp execute_for(%Query{is_raw: false} = query, session_id, method) do

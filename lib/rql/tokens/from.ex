@@ -13,13 +13,12 @@ defmodule Ravix.RQL.Tokens.From do
           document_or_index: String.t()
         }
 
-  @spec from(any, any) :: {:error, :collection_not_informed} | From.t()
-  def from(nil, _as_alias), do: {:error, :collection_not_informed}
+  @spec from(any) :: {:error, :collection_not_informed} | From.t()
+  def from(nil), do: {:error, :collection_not_informed}
 
-  def from(document, as_alias) do
+  def from(document) do
     %From{
       token: :from,
-      as_alias: as_alias,
       document_or_index: document
     }
   end

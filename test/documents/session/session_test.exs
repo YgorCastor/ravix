@@ -7,7 +7,7 @@ defmodule Ravix.Documents.SessionTest do
   alias Ravix.Documents.Store
 
   setup do
-    ravix =  %{ravix: start_supervised!(Ravix)}
+    ravix = %{ravix: start_supervised!(Ravix)}
     Store.create_database("test")
     ravix
   end

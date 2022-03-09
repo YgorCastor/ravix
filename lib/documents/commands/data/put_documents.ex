@@ -7,8 +7,8 @@ defmodule Ravix.Documents.Commands.Data.PutDocument do
   alias Ravix.Documents.Commands.Data.PutDocument
 
   @type t :: %PutDocument{
-    Id: binary(),
-    Document: map(),
-    Type: String.t()
-  }
+          Id: binary(),
+          Document: map(),
+          Type: String.t()
+        }
 end

@@ -9,7 +9,7 @@ defmodule Ravix.Documents.Session.SessionManager do
   alias Ravix.Connection.NetworkStateManager
   alias Ravix.Connection.RequestExecutor
 
-  @spec load_documents(SessionState.t(), list, any) :: {:ok, [{any, any}, ...]}
+  @spec load_documents(SessionState.t(), list, any) :: {:ok, [{any, any}, ...]} | {:error, any}
   def load_documents(%SessionState{} = state, document_ids, includes) do
     OK.try do
       already_loaded_ids = fetch_loaded_documents(state, document_ids)
@@ -92,9 +92,10 @@ defmodule Ravix.Documents.Session.SessionManager do
   defp fetch_loaded_documents(%SessionState{} = state, document_ids) do
     document_ids
     |> Enum.map(fn id ->
-      with {:ok, _} <- Validations.document_not_stored(state, id) do
-        nil
-      else
+      case Validations.document_not_stored(state, id) do
+        {:ok, _} ->
+          nil
+
         {:error, {:document_already_stored, stored_document}} ->
           stored_document["@metadata"]["@id"]
       end

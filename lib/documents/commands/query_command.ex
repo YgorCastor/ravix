@@ -23,8 +23,15 @@ defmodule Ravix.Documents.Commands.ExecuteQueryCommand do
       %ExecuteQueryCommand{
         command
         | url: url <> "/queries",
-          data: command |> ToJson.to_json()
+          data: fix_body(command)
       }
+    end
+
+    defp fix_body(command) do
+      case command.method do
+        "PATCH" -> %{Query: command} |> ToJson.to_json()
+        _ -> command |> ToJson.to_json()
+      end
     end
   end
 end

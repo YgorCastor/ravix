@@ -35,19 +35,7 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:load, [document_ids: [id], includes: includes]})
   end
 
-  @spec delete(
-          binary,
-          binary
-          | %{
-              :id =>
-                binary
-                | %{
-                    :id => binary | %{:id => binary | map, optional(any) => any},
-                    optional(any) => any
-                  },
-              optional(any) => any
-            }
-        ) :: any
+  @spec delete(binary, map()) :: any
   def delete(session_id, entity) when is_map_key(entity, :id) do
     delete(session_id, entity.id)
   end
@@ -95,9 +83,8 @@ defmodule Ravix.Documents.Session do
         _from,
         %SessionState{} = state
       ) do
-    with {:ok, result} <- SessionManager.load_documents(state, ids, includes) do
-      {:reply, {:ok, result[:response]}, result[:updated_state]}
-    else
+    case SessionManager.load_documents(state, ids, includes) do
+      {:ok, result} -> {:reply, {:ok, result[:response]}, result[:updated_state]}
       err -> {:reply, err, state}
     end
   end
@@ -144,17 +131,15 @@ defmodule Ravix.Documents.Session do
     do: {:reply, {:ok, state}, state}
 
   def handle_call({:save_changes}, _from, %SessionState{} = state) do
-    with {:ok, response} <- SessionManager.save_changes(state) do
-      {:reply, {:ok, response[:result]}, response[:updated_state]}
-    else
+    case SessionManager.save_changes(state) do
+      {:ok, response} -> {:reply, {:ok, response[:result]}, response[:updated_state]}
       {:error, err} -> {:reply, {:error, err}, state}
     end
   end
 
   def handle_call({:delete, id}, _from, %SessionState{} = state) do
-    with {:ok, updated_state} <- SessionManager.delete_document(state, id) do
-      {:reply, {:ok, id}, updated_state}
-    else
+    case SessionManager.delete_document(state, id) do
+      {:ok, updated_state} -> {:reply, {:ok, id}, updated_state}
       {:error, err} -> {:reply, {:error, err}, state}
     end
   end
