@@ -39,14 +39,11 @@ defmodule Ravix.RQL.Query do
   @spec from(nil | bitstring) :: {:error, :query_document_must_be_informed} | Query.t()
   def from(nil), do: {:error, :query_document_must_be_informed}
 
-  @spec from(String.t()) :: Query.t()
   def from(document) do
     %Query{
       from_token: From.from(document)
     }
   end
-
-  @spec from(String.t(), String.t()) :: Query.t()
   def from(document, as_alias) do
     %Query{
       from_token: From.from(document),
