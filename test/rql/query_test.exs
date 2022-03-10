@@ -1,5 +1,5 @@
 defmodule Ravix.RQL.QueryTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   require OK
 
   import Ravix.RQL.Query
@@ -22,6 +22,7 @@ defmodule Ravix.RQL.QueryTest do
           session_id <- Store.open_session("test")
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
+
           :timer.sleep(500)
 
           query_response <-
@@ -56,6 +57,69 @@ defmodule Ravix.RQL.QueryTest do
 
       assert results == []
     end
+
+    test "Should be able to run with a raw query" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session("test")
+          _ <- Session.store(session_id, any_entity)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            raw("from @all_docs where cat_name = \"#{any_entity.cat_name}\"")
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      results = response["Results"]
+      saved_cat = Enum.find(results, nil, fn entity -> entity["id"] == any_entity.id end)
+
+      assert saved_cat["id"] == any_entity.id
+      assert saved_cat["cat_name"] == any_entity.cat_name
+    end
+
+    test "Should be able to run with a parametrized raw query" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session("test")
+          _ <- Session.store(session_id, any_entity)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            raw("from @all_docs where cat_name = $p1", %{p1: any_entity.cat_name})
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      results = response["Results"]
+      saved_cat = Enum.find(results, nil, fn entity -> entity["id"] == any_entity.id end)
+
+      assert saved_cat["id"] == any_entity.id
+      assert saved_cat["cat_name"] == any_entity.cat_name
+    end
+
+    test "A invalid query should return an error" do
+      {:error, "1:1 Expected FROM clause but got: never\nQuery: \nnever gonna give you up"} =
+        OK.for do
+          session_id <- Store.open_session("test")
+
+          query_response <-
+            raw("never gonna give you up")
+            |> list_all(session_id)
+        after
+          query_response
+        end
+    end
   end
 
   describe "delete_for/2" do
@@ -70,14 +134,14 @@ defmodule Ravix.RQL.QueryTest do
           _ <- Session.store(session_id, any_entity_2)
           _ <- Session.save_changes(session_id)
 
-          :timer.sleep(1000)
+          :timer.sleep(500)
 
           delete_response <-
             from("@all_docs")
             |> where(equal_to("cat_name", any_entity.cat_name))
             |> delete_for(session_id)
 
-          :timer.sleep(1000)
+          :timer.sleep(500)
 
           query_response <-
             from("@all_docs")
@@ -105,7 +169,7 @@ defmodule Ravix.RQL.QueryTest do
           _ <- Session.store(session_id, any_entity_2)
           _ <- Session.save_changes(session_id)
 
-          :timer.sleep(1000)
+          :timer.sleep(500)
 
           update_response <-
             from("@all_docs", "a")
@@ -113,7 +177,7 @@ defmodule Ravix.RQL.QueryTest do
             |> where(equal_to("cat_name", any_entity.cat_name))
             |> update_for(session_id)
 
-          :timer.sleep(1000)
+          :timer.sleep(500)
 
           query_response <-
             from("@all_docs")

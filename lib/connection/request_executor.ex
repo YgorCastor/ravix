@@ -5,9 +5,10 @@ defmodule Ravix.Connection.RequestExecutor do
 
   alias Ravix.Connection.Network
   alias Ravix.Connection.NodeSelector
+  alias Ravix.Connection.Response
   alias Ravix.Documents.Protocols.CreateRequest
 
-  @spec execute(map(), Network.State.t()) :: {:error, any} | {:ok, map()}
+  @spec execute(map(), Network.State.t()) :: {:error, any} | {:ok, Response.t()}
   def execute(command, %Network.State{} = network_state) do
     OK.for do
       current_node = NodeSelector.current_node(network_state.node_selector)
@@ -25,7 +26,9 @@ defmodule Ravix.Connection.RequestExecutor do
           case Mint.HTTP.stream(conn, message) do
             {:ok, _conn, responses} ->
               case parse_response(responses) do
-                %{headers: _, status: 404} -> {:error, :document_not_found}
+                %{status: 404} -> {:error, :document_not_found}
+                {:error, err} -> {:error, err}
+                %{data: data} when is_map_key(data, "Error") -> {:error, data["Message"]}
                 parsed_response -> {:ok, parsed_response}
               end
 
@@ -64,5 +67,15 @@ defmodule Ravix.Connection.RequestExecutor do
     |> Enum.reduce(fn x, y ->
       Map.merge(x, y, fn _k, v1, v2 -> v2 ++ v1 end)
     end)
+    |> decode_body()
   end
+
+  defp decode_body(raw_response) when is_map_key(raw_response, :data) do
+    case Jason.decode(raw_response.data) do
+      {:ok, body} -> Map.replace(raw_response, :data, body)
+      {:error, %Jason.DecodeError{}} -> {:error, :invalid_response_payload}
+    end
+  end
+
+  defp decode_body(raw_response), do: raw_response
 end

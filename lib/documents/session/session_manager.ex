@@ -104,16 +104,12 @@ defmodule Ravix.Documents.Session.SessionManager do
   end
 
   defp execute_load_request(%NetworkState{} = network_state, ids, includes) when is_list(ids) do
-    OK.try do
-      response <-
-        %GetDocumentsCommand{ids: ids, includes: includes}
-        |> RequestExecutor.execute(network_state)
-
-      decoded_response <- Jason.decode(response.data)
-    after
-      {:ok, decoded_response}
-    rescue
-      err -> {:error, err}
+    case RequestExecutor.execute(
+           %GetDocumentsCommand{ids: ids, includes: includes},
+           network_state
+         ) do
+      {:ok, response} -> {:ok, response.data}
+      {:error, err} -> {:error, err}
     end
   end
 
@@ -129,15 +125,13 @@ defmodule Ravix.Documents.Session.SessionManager do
         %BatchCommand{Commands: data_to_save.commands}
         |> RequestExecutor.execute(network_state)
 
-      parsed_response <- Jason.decode(response.data)
-
       updated_state =
         state
         |> SessionState.increment_request_count()
         |> SessionState.clear_deferred_commands()
         |> SessionState.clear_deleted_entities()
     after
-      [request_response: parsed_response, updated_state: updated_state]
+      [request_response: response.data, updated_state: updated_state]
     end
   end
 end

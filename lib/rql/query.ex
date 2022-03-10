@@ -20,7 +20,6 @@ defmodule Ravix.RQL.Query do
   alias Ravix.Connection.RequestExecutor
   alias Ravix.Documents.Commands.ExecuteQueryCommand
   alias Ravix.Connection.NetworkStateManager
-  alias Ravix.Connection.Network.State, as: NetworkState
 
   @type t :: %Query{
           from_token: From.t() | nil,
@@ -44,6 +43,7 @@ defmodule Ravix.RQL.Query do
       from_token: From.from(document)
     }
   end
+
   def from(document, as_alias) do
     %Query{
       from_token: From.from(document),
@@ -91,6 +91,15 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @spec raw(String.t(), map()) :: Query.t()
+  def raw(raw_query, params) do
+    %Query{
+      query_string: raw_query,
+      query_params: params,
+      is_raw: true
+    }
+  end
+
   @spec list_all(Query.t(), binary) :: {:error, any} | {:ok, any}
   def list_all(%Query{} = query, session_id) do
     execute_for(query, session_id, "POST")
@@ -107,25 +116,17 @@ defmodule Ravix.RQL.Query do
   end
 
   defp execute_for(%Query{is_raw: false} = query, session_id, method) do
-    OK.for do
-      parsed_query <- QueryParser.parse(query)
-      session_state <- Session.fetch_state(session_id)
-      {pid, _} <- NetworkStateManager.find_existing_network(session_state.database)
-      network_state = Agent.get(pid, fn ns -> ns end)
-
-      command = %ExecuteQueryCommand{
-        Query: parsed_query.query_string,
-        QueryParameters: parsed_query.query_params,
-        method: method
-      }
-
-      result <- execute_query(command, network_state)
-    after
-      result
+    case QueryParser.parse(query) do
+      {:ok, parsed_query} -> execute_query(parsed_query, session_id, method)
+      {:error, err} -> {:error, err}
     end
   end
 
   defp execute_for(%Query{is_raw: true} = query, session_id, method) do
+    execute_query(query, session_id, method)
+  end
+
+  defp execute_query(query, session_id, method) do
     OK.for do
       session_state <- Session.fetch_state(session_id)
       {pid, _} <- NetworkStateManager.find_existing_network(session_state.database)
@@ -133,21 +134,13 @@ defmodule Ravix.RQL.Query do
 
       command = %ExecuteQueryCommand{
         Query: query.query_string,
+        QueryParameters: query.query_params,
         method: method
       }
 
-      result <- execute_query(command, network_state)
+      result <- RequestExecutor.execute(command, network_state)
     after
-      result
-    end
-  end
-
-  defp execute_query(%ExecuteQueryCommand{} = command, %NetworkState{} = state) do
-    OK.for do
-      response <- RequestExecutor.execute(command, state)
-      result <- Jason.decode(response.data)
-    after
-      result
+      result.data
     end
   end
 end
