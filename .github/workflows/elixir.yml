@@ -20,7 +20,6 @@ jobs:
         ports:
           - 8080:8080
         env:
-          RAVEN_ARGS: '--log-to-console'
           RAVEN_Setup_Mode: 'None'
           RAVEN_License_Eula_Accepted: 'true'
           RAVEN_Security_UnsecuredAccessAllowed: 'PublicNetwork'
@@ -32,6 +31,12 @@ jobs:
           path: deps
           key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
           restore-keys: ${{ runner.os }}-mix-
+      - name: Restore dialyzer cache
+        uses: actions/cache@v2
+        with:
+          path: priv/plts/dialyzer.plt
+          key: ${{ runner.os }}-dlx-${{ hashFiles('priv/plts/dialyzer.plt.hash') }}
+          restore-keys: ${{ runner.os }}-dlx-
       - name: Install Git
         run: apk add --no-cache git curl
       - name: Instal Mix and Rebar
