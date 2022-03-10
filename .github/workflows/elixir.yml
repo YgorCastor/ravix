@@ -25,20 +25,28 @@ jobs:
           RAVEN_Security_UnsecuredAccessAllowed: 'PublicNetwork'
     steps:
       - uses: actions/checkout@v2
-      - name: Restore dependencies cache
+      - name: Cache build, deps
         uses: actions/cache@v2
+        id: mix-deps
         with:
-          path: deps
-          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-
-      - name: Restore dialyzer cache
+          path: |
+            _build
+            deps
+          key: ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
+            ${{ runner.os }}-01-build-
+      - name: Cache build, deps
         uses: actions/cache@v2
+        id: mix-dialyzer
         with:
-          path: priv/plts/dialyzer.plt
-          key: ${{ runner.os }}-dlx-${{ hashFiles('priv/plts/dialyzer.plt.hash') }}
-          restore-keys: ${{ runner.os }}-dlx-
-      - name: Install Git
-        run: apk add --no-cache git curl
+          path: priv/plts
+          key: ${{ runner.os }}-01-dialyzer-${{ hashFiles('priv/plts/dialyzer.plt.hash') }}
+          restore-keys: |
+            ${{ runner.os }}-01-dialyzer-${{ hashFiles('priv/plts/dialyzer.plt.hash') }}
+            ${{ runner.os }}-01-dialyzer-
+      - name: Install Git/Curl/GNU Tar
+        run: apk add --no-cache git curl tar
       - name: Instal Mix and Rebar
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
