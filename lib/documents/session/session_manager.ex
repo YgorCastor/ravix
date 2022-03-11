@@ -9,14 +9,16 @@ defmodule Ravix.Documents.Session.SessionManager do
   alias Ravix.Connection.NetworkStateManager
   alias Ravix.Connection.RequestExecutor
 
-  @spec load_documents(SessionState.t(), list, any) :: {:ok, [{any, any}, ...]} | {:error, any}
-  def load_documents(%SessionState{} = state, document_ids, includes) do
+  def load_documents(%SessionState{} = state, document_ids, includes, nil),
+    do: load_documents(state, document_ids, includes, [])
+
+  def load_documents(%SessionState{} = state, document_ids, includes, opts) do
     OK.try do
       already_loaded_ids = fetch_loaded_documents(state, document_ids)
       ids_to_load <- Validations.all_ids_are_not_already_loaded(document_ids, already_loaded_ids)
       {pid, _} <- NetworkStateManager.find_existing_network(state.database)
       network_state = Agent.get(pid, fn ns -> ns end)
-      response <- execute_load_request(network_state, ids_to_load, includes)
+      response <- execute_load_request(network_state, ids_to_load, includes, opts)
       parsed_response = GetDocumentsCommand.parse_response(state, response)
       updated_state = SessionState.update_session(state, parsed_response[:results])
       updated_state = SessionState.update_session(updated_state, parsed_response[:includes])
@@ -103,9 +105,20 @@ defmodule Ravix.Documents.Session.SessionManager do
     |> Enum.reject(fn item -> item == nil end)
   end
 
-  defp execute_load_request(%NetworkState{} = network_state, ids, includes) when is_list(ids) do
+  defp execute_load_request(%NetworkState{} = network_state, ids, includes, opts)
+       when is_list(ids) do
+    start = Keyword.get(opts, :start)
+    page_size = Keyword.get(opts, :page_size)
+    metadata_only = Keyword.get(opts, :metadata_only)
+
     case RequestExecutor.execute(
-           %GetDocumentsCommand{ids: ids, includes: includes},
+           %GetDocumentsCommand{
+             ids: ids,
+             includes: includes,
+             start: start,
+             page_size: page_size,
+             metadata_only: metadata_only
+           },
            network_state
          ) do
       {:ok, response} -> {:ok, response.data}

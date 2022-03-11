@@ -8,8 +8,13 @@ defmodule Ravix.Connection.RequestExecutor do
   alias Ravix.Connection.Response
   alias Ravix.Documents.Protocols.CreateRequest
 
-  @spec execute(map(), Network.State.t()) :: {:error, any} | {:ok, Response.t()}
-  def execute(command, %Network.State{} = network_state) do
+  @spec execute(map(), NetworkState.t(), map) :: {:ok, Response.t()} | {:error, any}
+  def execute(command, network_state, headers \\ nil)
+
+  def execute(command, %Network.State{} = network_state, nil),
+    do: execute(command, network_state, {})
+
+  def execute(command, %Network.State{} = network_state, headers) do
     OK.for do
       current_node = NodeSelector.current_node(network_state.node_selector)
       request = CreateRequest.create_request(command, current_node)
@@ -19,7 +24,13 @@ defmodule Ravix.Connection.RequestExecutor do
         Mint.HTTP.connect(current_node.protocol, current_node.url, current_node.port, conn_params)
 
       {:ok, conn, _ref} =
-        Mint.HTTP.request(conn, request.method, request.url, @default_headers, request.data)
+        Mint.HTTP.request(
+          conn,
+          request.method,
+          request.url,
+          @default_headers ++ [headers],
+          request.data
+        )
     after
       receive do
         message ->

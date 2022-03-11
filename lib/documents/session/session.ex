@@ -20,19 +20,19 @@ defmodule Ravix.Documents.Session do
   end
 
   @spec load(binary, binary() | list(binary()), list() | nil) :: any
-  def load(session_id, ids, includes \\ nil)
-  def load(_session_id, nil, _includes), do: {:error, :document_ids_not_informed}
+  def load(session_id, ids, includes \\ nil, opts \\ nil)
+  def load(_session_id, nil, _includes, _opts), do: {:error, :document_ids_not_informed}
 
-  def load(session_id, ids, includes) when is_list(ids) do
+  def load(session_id, ids, includes, opts) when is_list(ids) do
     session_id
     |> session_id()
-    |> GenServer.call({:load, [document_ids: ids, includes: includes]})
+    |> GenServer.call({:load, [document_ids: ids, includes: includes, opts: opts]})
   end
 
-  def load(session_id, id, includes) do
+  def load(session_id, id, includes, opts) do
     session_id
     |> session_id()
-    |> GenServer.call({:load, [document_ids: [id], includes: includes]})
+    |> GenServer.call({:load, [document_ids: [id], includes: includes, opts: opts]})
   end
 
   @spec delete(binary, map()) :: any
@@ -79,11 +79,11 @@ defmodule Ravix.Documents.Session do
   #     Handlers     #
   ####################
   def handle_call(
-        {:load, [document_ids: ids, includes: includes]},
+        {:load, [document_ids: ids, includes: includes, opts: opts]},
         _from,
         %SessionState{} = state
       ) do
-    case SessionManager.load_documents(state, ids, includes) do
+    case SessionManager.load_documents(state, ids, includes, opts) do
       {:ok, result} -> {:reply, {:ok, result[:response]}, result[:updated_state]}
       err -> {:reply, err, state}
     end
