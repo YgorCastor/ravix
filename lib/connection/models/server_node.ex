@@ -27,6 +27,19 @@ defmodule Ravix.Connection.ServerNode do
     }
   end
 
+  @spec from_api_response(map) :: ServerNode.t()
+  def from_api_response(node_response) do
+    parsed_url = URI.new!(node_response["Url"])
+
+    %ServerNode{
+      url: parsed_url.host,
+      port: parsed_url.port,
+      protocol: String.to_atom(parsed_url.scheme),
+      database: node_response["Database"],
+      cluster_tag: node_response["ClusterTag"]
+    }
+  end
+
   @spec node_url(ServerNode.t()) :: String.t()
   def node_url(%ServerNode{} = server_node),
     do: "/databases/#{server_node.database}"

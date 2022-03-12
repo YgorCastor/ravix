@@ -2,7 +2,7 @@ defmodule Ravix.Helpers.UrlBuilderTest do
   use ExUnit.Case
   alias Ravix.Helpers.UrlBuilder
 
-  describe "A request builder" do
+  describe "A url builder" do
     test "should generate a valid url using simple values" do
       url =
         "http://base_url/docs?"

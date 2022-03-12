@@ -11,9 +11,8 @@ defmodule Ravix.Connection.Network.State do
             topology_nodes: []
 
   alias Ravix.Connection.Network.State, as: NetworkState
-  alias Ravix.Connection.Topology
-  alias Ravix.Connection.ServerNode
-  alias Ravix.Connection.NodeSelector
+  alias Ravix.Connection.{Topology, ServerNode, NodeSelector, RequestExecutor}
+  alias Ravix.Connection.Commands.GetTopology
   alias Ravix.Documents.Conventions
 
   @type t :: %NetworkState{
@@ -31,8 +30,8 @@ defmodule Ravix.Connection.Network.State do
 
   @spec initial_state([binary], binary, Conventions.t(), nil | binary) :: NetworkState.t()
   def initial_state(urls, database, %Conventions{} = conventions, certificate) do
-    topology = initial_topology(urls, database)
     parsed_certificate = parse_certificate(certificate)
+    topology = initial_topology(urls, database, parsed_certificate)
 
     %NetworkState{
       database_name: database,
@@ -48,26 +47,35 @@ defmodule Ravix.Connection.Network.State do
     }
   end
 
-  @spec initial_topology(list(String.t()), String.t()) :: Topology.t()
-  defp initial_topology(urls, database) do
-    nodes = urls |> Enum.map(fn url -> ServerNode.from_url(url, database) end)
+  defp initial_topology(urls, database, certificate) do
+    topology =
+      urls
+      |> Enum.map(fn url -> ServerNode.from_url(url, database) end)
+      |> Enum.map(fn node ->
+        RequestExecutor.execute_for_node(
+          %GetTopology{database_name: node.database},
+          %{certificate: certificate[:castore], certificate_file: certificate[:castorefile]},
+          node
+        )
+      end)
+      |> Enum.find(fn topology_response -> elem(topology_response, 0) == :ok end)
 
-    %Topology{
-      etag: -1,
-      nodes: nodes
-    }
+    case topology do
+      {:ok, response} ->
+        %Topology{
+          etag: response.data["Etag"],
+          nodes: response.data["Nodes"] |> Enum.map(&ServerNode.from_api_response/1)
+        }
+
+      _ ->
+        raise "Invalid cluster topology"
+    end
   end
 
-  @spec parse_certificate(String.t() | nil) :: [
-          castore: binary() | nil,
-          castorefile: binary() | nil
-        ]
   defp parse_certificate(nil), do: [castore: nil, castorefile: nil]
 
   defp parse_certificate(certificate) do
-    uri = URI.parse(certificate)
-
-    case uri do
+    case URI.parse(certificate) do
       %URI{path: nil} -> [castore: certificate, castorefile: nil]
       _ -> [castore: nil, castorefile: certificate]
     end

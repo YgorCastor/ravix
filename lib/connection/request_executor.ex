@@ -3,25 +3,39 @@ defmodule Ravix.Connection.RequestExecutor do
 
   @default_headers [{"content-type", "application/json"}, {"accept", "application/json"}]
 
-  alias Ravix.Connection.Network
-  alias Ravix.Connection.NodeSelector
-  alias Ravix.Connection.Response
+  alias Ravix.Connection.{Network, NodeSelector, Response, ServerNode}
   alias Ravix.Documents.Protocols.CreateRequest
 
-  @spec execute(map(), NetworkState.t(), map) :: {:ok, Response.t()} | {:error, any}
+  @spec execute(map(), Ravix.Connection.Network.State.t(), any) ::
+          {:error, any} | {:ok, Response.t()}
   def execute(command, network_state, headers \\ nil)
 
   def execute(command, %Network.State{} = network_state, nil),
     do: execute(command, network_state, {})
 
   def execute(command, %Network.State{} = network_state, headers) do
+    current_node = NodeSelector.current_node(network_state.node_selector)
+    execute_for_node(command, network_state, current_node, headers)
+  end
+
+  @spec execute_for_node(
+          map(),
+          %{:certificate => any, :certificate_file => any, optional(any) => any},
+          Ravix.Connection.ServerNode.t(),
+          any
+        ) :: {:error, any} | {:ok, any}
+  def execute_for_node(
+        command,
+        %{certificate: _, certificate_file: _} = certificate,
+        %ServerNode{} = node,
+        headers \\ {}
+      ) do
     OK.for do
-      current_node = NodeSelector.current_node(network_state.node_selector)
-      request = CreateRequest.create_request(command, current_node)
-      conn_params <- build_params(network_state, current_node.protocol)
+      request = CreateRequest.create_request(command, node)
+      conn_params <- build_params(certificate, node.protocol)
 
       conn <-
-        Mint.HTTP.connect(current_node.protocol, current_node.url, current_node.port, conn_params)
+        Mint.HTTP.connect(node.protocol, node.url, node.port, conn_params)
 
       {:ok, conn, _ref} =
         Mint.HTTP.request(
@@ -56,14 +70,14 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
-  defp build_params(_network_state, :http), do: {:ok, []}
+  defp build_params(_, :http), do: {:ok, []}
 
-  defp build_params(%Network.State{} = network_state, :https) do
-    case network_state do
-      %Network.State{certificate: nil, certificate_file: file} ->
+  defp build_params(certificate, :https) do
+    case certificate do
+      %{certificate: nil, certificate_file: file} ->
         {:ok, transport_opts: [cacertfile: file]}
 
-      %Network.State{certificate: cert, certificate_file: nil} ->
+      %{certificate: cert, certificate_file: nil} ->
         {:ok, transport_opts: [cacert: cert]}
 
       _ ->
