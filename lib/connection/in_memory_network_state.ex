@@ -4,7 +4,7 @@ defmodule Ravix.Connection.InMemoryNetworkState do
   require OK
 
   alias Ravix.Connection.Network.State, as: NetworkState
-  alias Ravix.Connection.{NetworkStateSupervisor, NetworkStateManager, NodeSelector}
+  alias Ravix.Connection.{NetworkStateSupervisor, NetworkStateManager, NodeSelector, ServerNode}
 
   def init(network_state) do
     {:ok, network_state}
@@ -27,7 +27,7 @@ defmodule Ravix.Connection.InMemoryNetworkState do
   def update_topology(database_name) do
     database_name
     |> NetworkStateSupervisor.network_state_for_database()
-    |> GenServer.call({:update_topology})
+    |> GenServer.cast({:update_topology})
   end
 
   def fetch_state(database_name) do
@@ -36,10 +36,16 @@ defmodule Ravix.Connection.InMemoryNetworkState do
     |> GenServer.call({:fetch_state})
   end
 
+  def handle_server_failure(database_name, %ServerNode{} = node) do
+    database_name
+    |> NetworkStateSupervisor.network_state_for_database()
+    |> GenServer.cast({:handle_server_failure, node})
+  end
+
   ####################
   #     Handlers     #
   ####################
-  def handle_call(
+  def handle_cast(
         {:update_topology},
         _from,
         %NetworkState{
@@ -61,9 +67,18 @@ defmodule Ravix.Connection.InMemoryNetworkState do
           }
       }
     after
-      {:reply, {:ok, updated_topology}, updated_state}
+      {:noreply, updated_state}
     rescue
-      err -> {:reply, {:error, err}, state}
+      _ -> {:noreply, state}
+    end
+  end
+
+  def handle_cast({:handle_server_failure, %ServerNode{} = node}, _from, %NetworkState{} = state) do
+    state_with_unhealthy_node = NetworkStateManager.set_node_as_unhealthy(state, node)
+
+    case NetworkStateManager.change_to_next_healthy_node(state_with_unhealthy_node) do
+      {:ok, updated_state} -> {:noreply, updated_state}
+      {:error, _} -> raise "Unable to fetch next healthy node!"
     end
   end
 

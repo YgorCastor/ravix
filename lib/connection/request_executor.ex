@@ -3,7 +3,7 @@ defmodule Ravix.Connection.RequestExecutor do
 
   @default_headers [{"content-type", "application/json"}, {"accept", "application/json"}]
 
-  alias Ravix.Connection.{Network, NodeSelector, Response, ServerNode}
+  alias Ravix.Connection.{Network, NodeSelector, Response, ServerNode, InMemoryNetworkState}
   alias Ravix.Documents.Protocols.CreateRequest
 
   @spec execute(map(), Ravix.Connection.Network.State.t(), any) ::
@@ -57,6 +57,7 @@ defmodule Ravix.Connection.RequestExecutor do
                 {:error, err} -> {:error, err}
                 parsed_response -> {:ok, parsed_response}
               end
+              |> check_if_needs_topology_update(node.database)
 
             {:error, _conn, error, _headers} when is_struct(error, Mint.HTTPError) ->
               {:error, error.reason}
@@ -70,6 +71,19 @@ defmodule Ravix.Connection.RequestExecutor do
       end
     end
   end
+
+  defp check_if_needs_topology_update({:ok, response}, database_name) do
+    case Enum.find(response.headers, fn header -> elem(header, 0) == "Refresh-Topology" end) do
+      nil ->
+        response
+
+      _ ->
+        InMemoryNetworkState.update_topology(database_name)
+        response
+    end
+  end
+
+  defp check_if_needs_topology_update({:error, err}, _), do: {:error, err}
 
   defp build_params(_, :http), do: {:ok, []}
 

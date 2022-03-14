@@ -3,6 +3,7 @@ defmodule Ravix.Connection.ServerNode do
             port: nil,
             protocol: nil,
             database: nil,
+            status: :healthy,
             cluster_tag: nil
 
   alias Ravix.Connection.ServerNode
@@ -12,6 +13,7 @@ defmodule Ravix.Connection.ServerNode do
           port: non_neg_integer(),
           protocol: atom(),
           database: String.t(),
+          status: atom(),
           cluster_tag: String.t() | nil
         }
 
