@@ -2,14 +2,14 @@ defmodule Ravix do
   use Supervisor
 
   alias Ravix.Documents.Session.SessionsSupervisor
-  alias Ravix.Connection.NetworkStateManager
+  alias Ravix.Connection.NetworkStateSupervisor
   alias Ravix.Documents.Store
 
   def init(opts) do
     children = [
       ## Supervisor for the session and the Unique Application Store Server
       %{id: SessionsSupervisor, start: {SessionsSupervisor, :start_link, [%{}]}},
-      %{id: NetworkStateManager, start: {NetworkStateManager, :start_link, [%{}]}},
+      %{id: NetworkStateSupervisor, start: {NetworkStateSupervisor, :start_link, [%{}]}},
       %{id: Store, start: {Store, :start_link, opts}},
       ## Registry so we can easily fetch the sessions by it's id
       {Registry, [keys: :unique, name: :sessions]},

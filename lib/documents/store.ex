@@ -7,7 +7,7 @@ defmodule Ravix.Documents.Store do
   alias Ravix.Documents.DatabaseManager
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.SessionsSupervisor
-  alias Ravix.Connection.NetworkStateManager
+  alias Ravix.Connection.NetworkStateSupervisor
 
   @spec init(any) :: {:ok, any}
   def init(opts) do
@@ -61,7 +61,7 @@ defmodule Ravix.Documents.Store do
     session_id = create_new_session(database, state)
 
     {:ok, _pid} =
-      NetworkStateManager.create_network_state(
+      NetworkStateSupervisor.create_network_state(
         state.urls,
         database,
         state.document_conventions,
@@ -73,15 +73,13 @@ defmodule Ravix.Documents.Store do
 
   def handle_call({:create_database, database, opts}, _from, %StoreState{} = state) do
     OK.try do
-      _pid <-
-        NetworkStateManager.create_network_state(
-          state.urls,
+      response <-
+        DatabaseManager.create_database(
           database,
-          state.document_conventions,
-          nil
+          Enum.at(state.urls, 0),
+          %{certificate: nil, certificate_file: nil},
+          opts
         )
-
-      response <- DatabaseManager.create_database(database, opts)
     after
       {:reply, {:ok, response}, state}
     rescue

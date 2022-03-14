@@ -1,62 +1,32 @@
 defmodule Ravix.Connection.NetworkStateManager do
-  use DynamicSupervisor
+  alias Ravix.Connection.{ServerNode, RequestExecutor, Topology}
+  alias Ravix.Connection.Commands.GetTopology
 
-  alias Ravix.Connection.InMemoryNetworkState
-
-  @spec init(any) ::
-          {:ok,
-           %{
-             extra_arguments: list,
-             intensity: non_neg_integer,
-             max_children: :infinity | non_neg_integer,
-             period: pos_integer,
-             strategy: :one_for_one
-           }}
-  def init(init_arg) do
-    DynamicSupervisor.init(
-      strategy: :one_for_one,
-      extra_arguments: [init_arg]
-    )
-  end
-
-  @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(attrs) do
-    DynamicSupervisor.start_link(__MODULE__, attrs, name: __MODULE__)
-  end
-
-  @spec create_network_state(any, binary, any, any) ::
-          :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
-  def create_network_state(urls, database_name, conventions, certificate \\ nil) do
-    case find_existing_network(database_name) do
-      network when network == {:error, :network_not_found} ->
-        DynamicSupervisor.start_child(
-          __MODULE__,
-          {InMemoryNetworkState,
-           [
-             urls: urls,
-             database_name: database_name,
-             document_conventions: conventions,
-             certificate: certificate
-           ]}
+  @spec request_topology(list(String.t()), String.t(), Keyword.t()) ::
+          {:error, :invalid_cluster_topology} | {:ok, Topology.t()}
+  def request_topology(urls, database, certificate) do
+    topology =
+      urls
+      |> Enum.map(fn url -> ServerNode.from_url(url, database) end)
+      |> Enum.map(fn node ->
+        RequestExecutor.execute_for_node(
+          %GetTopology{database_name: node.database},
+          %{certificate: certificate[:castore], certificate_file: certificate[:castorefile]},
+          node
         )
+      end)
+      |> Enum.find(fn topology_response -> elem(topology_response, 0) == :ok end)
 
-      existing_network ->
-        existing_network
+    case topology do
+      {:ok, response} ->
+        {:ok,
+         %Topology{
+           etag: response.data["Etag"],
+           nodes: response.data["Nodes"] |> Enum.map(&ServerNode.from_api_response/1)
+         }}
+
+      _ ->
+        {:error, :invalid_cluster_topology}
     end
   end
-
-  @spec network_exists?(binary) :: boolean
-  def network_exists?(database), do: find_existing_network(database) |> Enum.count() > 1
-
-  @spec find_existing_network(String.t()) :: {:ok, {pid, any}} | {:error, :network_not_found}
-  def find_existing_network(database) do
-    case Registry.lookup(:network_state, database) do
-      existing_network when existing_network != [] -> {:ok, Enum.at(existing_network, 0)}
-      _ -> {:error, :network_not_found}
-    end
-  end
-
-  @spec network_state_for_database(String.t()) :: {:via, Registry, {:network_state, String.t()}}
-  def network_state_for_database(database),
-    do: {:via, Registry, {:network_state, database}}
 end

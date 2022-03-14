@@ -52,8 +52,9 @@ defmodule Ravix.Connection.RequestExecutor do
             {:ok, _conn, responses} ->
               case parse_response(responses) do
                 %{status: 404} -> {:error, :document_not_found}
-                {:error, err} -> {:error, err}
+                %{status: 503} -> {:error, :database_not_found}
                 %{data: data} when is_map_key(data, "Error") -> {:error, data["Message"]}
+                {:error, err} -> {:error, err}
                 parsed_response -> {:ok, parsed_response}
               end
 

@@ -6,7 +6,7 @@ defmodule Ravix.Documents.Session.SessionManager do
   alias Ravix.Documents.Commands.{BatchCommand, GetDocumentsCommand}
   alias Ravix.Documents.Conventions
   alias Ravix.Connection.Network.State, as: NetworkState
-  alias Ravix.Connection.NetworkStateManager
+  alias Ravix.Connection.InMemoryNetworkState
   alias Ravix.Connection.RequestExecutor
 
   def load_documents(%SessionState{} = state, document_ids, includes, nil),
@@ -16,8 +16,7 @@ defmodule Ravix.Documents.Session.SessionManager do
     OK.try do
       already_loaded_ids = fetch_loaded_documents(state, document_ids)
       ids_to_load <- Validations.all_ids_are_not_already_loaded(document_ids, already_loaded_ids)
-      {pid, _} <- NetworkStateManager.find_existing_network(state.database)
-      network_state = Agent.get(pid, fn ns -> ns end)
+      network_state <- InMemoryNetworkState.fetch_state(state.database)
       response <- execute_load_request(network_state, ids_to_load, includes, opts)
       parsed_response = GetDocumentsCommand.parse_response(state, response)
       updated_state = SessionState.update_session(state, parsed_response[:results])
@@ -62,8 +61,7 @@ defmodule Ravix.Documents.Session.SessionManager do
   @spec save_changes(SessionState.t()) :: {:error, any} | {:ok, any}
   def save_changes(%SessionState{} = state) do
     OK.for do
-      {pid, _} <- NetworkStateManager.find_existing_network(state.database)
-      network_state = Agent.get(pid, fn ns -> ns end)
+      network_state <- InMemoryNetworkState.fetch_state(state.database)
       result <- execute_save_request(state, network_state)
 
       parsed_updates =

@@ -19,7 +19,7 @@ defmodule Ravix.RQL.Query do
   alias Ravix.Documents.Session
   alias Ravix.Connection.RequestExecutor
   alias Ravix.Documents.Commands.ExecuteQueryCommand
-  alias Ravix.Connection.NetworkStateManager
+  alias Ravix.Connection.InMemoryNetworkState
 
   @type t :: %Query{
           from_token: From.t() | nil,
@@ -129,8 +129,7 @@ defmodule Ravix.RQL.Query do
   defp execute_query(query, session_id, method) do
     OK.for do
       session_state <- Session.fetch_state(session_id)
-      {pid, _} <- NetworkStateManager.find_existing_network(session_state.database)
-      network_state = Agent.get(pid, fn ns -> ns end)
+      network_state <- InMemoryNetworkState.fetch_state(session_state.database)
 
       command = %ExecuteQueryCommand{
         Query: query.query_string,
