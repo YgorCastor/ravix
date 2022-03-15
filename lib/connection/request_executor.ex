@@ -5,27 +5,26 @@ defmodule Ravix.Connection.RequestExecutor do
 
   @default_headers [{"content-type", "application/json"}, {"accept", "application/json"}]
 
-  alias Ravix.Connection.{Network, NodeSelector, Response, ServerNode, InMemoryNetworkState}
+  alias Ravix.Connection.Network.State, as: NetworkState
+  alias Ravix.Connection.{NodeSelector, Response, ServerNode, InMemoryNetworkState}
   alias Ravix.Documents.Protocols.CreateRequest
 
+  @spec execute(any, Ravix.Connection.NetworkState.t(), any, keyword) ::
+          {:ok, Response.t()} | {:error, any}
   def execute(command, network_state, headers \\ nil, opts \\ [])
 
-  def execute(command, %Network.State{} = network_state, nil, opts),
-    do: execute(command, network_state, {}, opts)
+  def execute(command, %NetworkState{} = network_state, headers, opts) do
+    opts =
+      case network_state.disable_topology_updates do
+        true -> opts
+        false -> [{:topology_etag, network_state.node_selector.topology.etag} | opts]
+      end
 
-  def execute(command, %Network.State{} = network_state, headers, opts) do
-    current_node = NodeSelector.current_node(network_state.node_selector)
+    node = NodeSelector.current_node(network_state.node_selector)
 
-    execute_for_node(command, network_state, current_node, headers, opts)
+    execute_for_node(command, network_state, node, headers, opts)
   end
 
-  @spec execute_for_node(
-          map,
-          %{:certificate => any, :certificate_file => any, optional(any) => any},
-          ServerNode.t(),
-          any,
-          keyword
-        ) :: {:ok, Response.t()} | {:error, any}
   def execute_for_node(
         command,
         %{certificate: _, certificate_file: _} = certificate,
@@ -33,7 +32,9 @@ defmodule Ravix.Connection.RequestExecutor do
         headers \\ {},
         opts \\ []
       ) do
+    topology_etag = Keyword.get(opts, :topology_etag, nil)
     should_retry = Keyword.get(opts, :should_retry, false)
+    retry_backoff = Keyword.get(opts, :retry_backoff, 100)
 
     retry_count =
       case should_retry do
@@ -41,7 +42,11 @@ defmodule Ravix.Connection.RequestExecutor do
         false -> 0
       end
 
-    retry_backoff = Keyword.get(opts, :retry_backoff, 100)
+    headers =
+      case topology_etag do
+        nil -> headers
+        _ -> [{"Topology-Etag", topology_etag}]
+      end
 
     retry with: constant_backoff(retry_backoff) |> Stream.take(retry_count) do
       call_raven(command, certificate, node, headers)
