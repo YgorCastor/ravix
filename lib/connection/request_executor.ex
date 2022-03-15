@@ -1,4 +1,6 @@
 defmodule Ravix.Connection.RequestExecutor do
+  use Retry
+
   require OK
 
   @default_headers [{"content-type", "application/json"}, {"accept", "application/json"}]
@@ -6,30 +8,61 @@ defmodule Ravix.Connection.RequestExecutor do
   alias Ravix.Connection.{Network, NodeSelector, Response, ServerNode, InMemoryNetworkState}
   alias Ravix.Documents.Protocols.CreateRequest
 
-  @spec execute(map(), Ravix.Connection.Network.State.t(), any) ::
-          {:error, any} | {:ok, Response.t()}
-  def execute(command, network_state, headers \\ nil)
+  def execute(command, network_state, headers \\ nil, opts \\ [])
 
-  def execute(command, %Network.State{} = network_state, nil),
-    do: execute(command, network_state, {})
+  def execute(command, %Network.State{} = network_state, nil, opts),
+    do: execute(command, network_state, {}, opts)
 
-  def execute(command, %Network.State{} = network_state, headers) do
+  def execute(command, %Network.State{} = network_state, headers, opts) do
     current_node = NodeSelector.current_node(network_state.node_selector)
-    execute_for_node(command, network_state, current_node, headers)
+
+    execute_for_node(command, network_state, current_node, headers, opts)
   end
 
   @spec execute_for_node(
-          map(),
+          map,
           %{:certificate => any, :certificate_file => any, optional(any) => any},
-          Ravix.Connection.ServerNode.t(),
-          any
-        ) :: {:error, any} | {:ok, any}
+          ServerNode.t(),
+          any,
+          keyword
+        ) :: {:ok, Response.t()} | {:error, any}
   def execute_for_node(
         command,
         %{certificate: _, certificate_file: _} = certificate,
         %ServerNode{} = node,
-        headers \\ {}
+        headers \\ {},
+        opts \\ []
       ) do
+    should_retry = Keyword.get(opts, :should_retry, false)
+
+    retry_count =
+      case should_retry do
+        true -> Keyword.get(opts, :retry_count, 3)
+        false -> 0
+      end
+
+    retry_backoff = Keyword.get(opts, :retry_backoff, 100)
+
+    retry with: constant_backoff(retry_backoff) |> Stream.take(retry_count) do
+      call_raven(command, certificate, node, headers)
+    after
+      {:ok, result} ->
+        case result do
+          {:non_retryable_error, response} -> {:error, response}
+          {:error, error_response} -> {:error, error_response}
+          response -> {:ok, response}
+        end
+    else
+      err -> err
+    end
+  end
+
+  defp call_raven(
+         command,
+         %{certificate: _, certificate_file: _} = certificate,
+         %ServerNode{} = node,
+         headers
+       ) do
     OK.for do
       request = CreateRequest.create_request(command, node)
       conn_params <- build_params(certificate, node.protocol)
@@ -51,11 +84,26 @@ defmodule Ravix.Connection.RequestExecutor do
           case Mint.HTTP.stream(conn, message) do
             {:ok, _conn, responses} ->
               case parse_response(responses) do
-                %{status: 404} -> {:error, :document_not_found}
-                %{status: 503} -> {:error, :database_not_found}
-                %{data: data} when is_map_key(data, "Error") -> {:error, data["Message"]}
-                {:error, err} -> {:error, err}
-                parsed_response -> {:ok, parsed_response}
+                %{status: 404} ->
+                  {:non_retryable_error, :document_not_found}
+
+                %{status: 403} ->
+                  {:non_retryable_error, :unauthorized}
+
+                %{status: 410} ->
+                  {:error, :node_gone}
+
+                %{data: data} when is_map_key(data, "Error") ->
+                  {:non_retryable_error, data["Message"]}
+
+                error_response when error_response.status in [408, 502, 503, 504] ->
+                  parse_error(error_response)
+
+                {:error, err} ->
+                  {:non_retryable_error, err}
+
+                parsed_response ->
+                  {:ok, parsed_response}
               end
               |> check_if_needs_topology_update(node.database)
 
@@ -63,10 +111,11 @@ defmodule Ravix.Connection.RequestExecutor do
               {:error, error.reason}
 
             {:error, _conn, error, _headers} when is_struct(error, Mint.TransportError) ->
+              InMemoryNetworkState.handle_node_failure(node)
               {:error, error.reason}
 
             _ ->
-              {:error, :unexpected_request_error}
+              {:non_retryable_error, :unexpected_request_error}
           end
       end
     end
@@ -83,7 +132,17 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
-  defp check_if_needs_topology_update({:error, err}, _), do: {:error, err}
+  defp check_if_needs_topology_update({error_kind, err}, _), do: {error_kind, err}
+
+  defp parse_error(error_response) do
+    case Enum.find(error_response.headers, fn header -> elem(header, 0) == "Database-Missing" end) do
+      nil ->
+        {:retryable_error, error_response.data["Message"]}
+
+      _ ->
+        {:error, error_response.data["Message"]}
+    end
+  end
 
   defp build_params(_, :http), do: {:ok, []}
 

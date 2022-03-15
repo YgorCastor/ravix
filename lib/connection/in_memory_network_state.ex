@@ -36,10 +36,10 @@ defmodule Ravix.Connection.InMemoryNetworkState do
     |> GenServer.call({:fetch_state})
   end
 
-  def handle_server_failure(database_name, %ServerNode{} = node) do
-    database_name
+  def handle_node_failure(%ServerNode{} = node) do
+    node.database
     |> NetworkStateSupervisor.network_state_for_database()
-    |> GenServer.cast({:handle_server_failure, node})
+    |> GenServer.cast({:handle_node_failure, node})
   end
 
   ####################
@@ -73,8 +73,8 @@ defmodule Ravix.Connection.InMemoryNetworkState do
     end
   end
 
-  def handle_cast({:handle_server_failure, %ServerNode{} = node}, _from, %NetworkState{} = state) do
-    state_with_unhealthy_node = NetworkStateManager.set_node_as_unhealthy(state, node)
+  def handle_cast({:handle_node_failure, %ServerNode{} = node}, _from, %NetworkState{} = state) do
+    state_with_unhealthy_node = NetworkStateManager.set_node_as_unhealthy(node, state)
 
     case NetworkStateManager.change_to_next_healthy_node(state_with_unhealthy_node) do
       {:ok, updated_state} -> {:noreply, updated_state}
