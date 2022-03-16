@@ -3,7 +3,9 @@ defmodule Ravix.Documents.Store.State do
             default_database: nil,
             document_conventions: nil
 
-  alias Ravix.Documents.Store.{State, Configs}
+  use Vex.Struct
+
+  alias Ravix.Documents.Store.State
   alias Ravix.Documents.Conventions
 
   @type t :: %State{
@@ -12,22 +14,31 @@ defmodule Ravix.Documents.Store.State do
           document_conventions: Conventions.t()
         }
 
-  @spec from_map(Configs.t()) :: State.t()
-  def from_map(%Configs{} = ravix_configs) do
+  validates(
+    :urls,
+    presence: true,
+    length: [min: 1]
+  )
+
+  validates(
+    :default_database,
+    presence: true
+  )
+
+  @spec read_from_config_file :: {:error, list} | {:ok, State.t()}
+  def read_from_config_file() do
     %State{
-      urls: ravix_configs.urls,
-      default_database: ravix_configs.database,
-      document_conventions: %Conventions{
-        max_number_of_requests_per_session:
-          ravix_configs.document_conventions.max_number_of_requests_per_session,
-        max_ids_to_catch: ravix_configs.document_conventions.max_ids_to_catch,
-        timeout: ravix_configs.document_conventions.timeout,
-        use_optimistic_concurrency: ravix_configs.document_conventions.use_optimistic_concurrency,
-        max_length_of_query_using_get_url:
-          ravix_configs.document_conventions.max_length_of_query_using_get_url,
-        identity_parts_separator: ravix_configs.document_conventions.identity_parts_separator,
-        disable_topology_update: ravix_configs.document_conventions.disable_topology_update
-      }
+      urls: Application.fetch_env!(:ravix, :urls),
+      default_database: Application.fetch_env!(:ravix, :database),
+      document_conventions: struct(%Conventions{}, Application.fetch_env!(:ravix, :document_conventions))
     }
+    |> validate_configs()
+  end
+
+  defp validate_configs(%State{} = configs) do
+    case Vex.valid?(configs) do
+      true -> {:ok, configs}
+      false -> {:error, Vex.errors(configs)}
+    end
   end
 end

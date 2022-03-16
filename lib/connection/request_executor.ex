@@ -9,8 +9,7 @@ defmodule Ravix.Connection.RequestExecutor do
   alias Ravix.Connection.{NodeSelector, Response, ServerNode, InMemoryNetworkState}
   alias Ravix.Documents.Protocols.CreateRequest
 
-  @spec execute(any, Ravix.Connection.NetworkState.t(), any, keyword) ::
-          {:ok, Response.t()} | {:error, any}
+  @spec execute(map, NetworkState.t(), any, keyword) :: {:ok, Response.t()} | {:error, any()}
   def execute(command, network_state, headers \\ nil, opts \\ [])
 
   def execute(command, %NetworkState{} = network_state, headers, opts) do
@@ -25,6 +24,13 @@ defmodule Ravix.Connection.RequestExecutor do
     execute_for_node(command, network_state, node, headers, opts)
   end
 
+  @spec execute_for_node(
+          map(),
+          %{:certificate => any, :certificate_file => any, optional(any) => any},
+          ServerNode.t(),
+          any,
+          keyword
+        ) :: {:ok, Response.t()} | {:error, any()}
   def execute_for_node(
         command,
         %{certificate: _, certificate_file: _} = certificate,

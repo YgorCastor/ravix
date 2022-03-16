@@ -3,7 +3,6 @@ defmodule Ravix.Documents.Store do
   require OK
 
   alias Ravix.Documents.Store.State, as: StoreState
-  alias Ravix.Documents.Store.Configs
   alias Ravix.Documents.DatabaseManager
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.SessionsSupervisor
@@ -14,9 +13,8 @@ defmodule Ravix.Documents.Store do
     {:ok, opts}
   end
 
-  @spec start_link(Configs.t()) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(%Configs{} = opts) do
-    initial_state = StoreState.from_map(opts)
+  @spec start_link(StoreState.t()) :: :ignore | {:error, any} | {:ok, pid}
+  def start_link(%StoreState{} = initial_state) do
     GenServer.start_link(__MODULE__, initial_state, name: __MODULE__)
   end
 
@@ -36,8 +34,8 @@ defmodule Ravix.Documents.Store do
   end
 
   defp from_configs_file() do
-    {:ok, ravix_configs} = Configs.read_from_config_file()
-    StoreState.from_map(ravix_configs)
+    {:ok, ravix_configs} = StoreState.read_from_config_file()
+    ravix_configs
   end
 
   defp create_new_session(database, %StoreState{} = store_state) do
