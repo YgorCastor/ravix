@@ -40,7 +40,9 @@ defmodule Ravix.Connection.NetworkStateManager do
     do: set_node_state(node, state, :healthy)
 
   def nodes_healthcheck(%NetworkState{} = state) do
-    updated_nodes = state.node_selector.topology.nodes |> update_node_health(state)
+    updated_nodes =
+      state.node_selector.topology.nodes
+      |> Enum.map(fn node -> update_node_health(node, state) end)
 
     put_in(state.node_selector.topology.nodes, updated_nodes)
   end
@@ -72,7 +74,7 @@ defmodule Ravix.Connection.NetworkStateManager do
   def change_to_next_healthy_node(%NetworkState{} = state) do
     healthy_node_index =
       state.node_selector.topology.nodes
-      |> Enum.find_index(fn node -> node.healthy end)
+      |> Enum.find_index(fn node -> node.status == :healthy end)
 
     case healthy_node_index do
       nil ->
