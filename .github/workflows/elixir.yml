@@ -24,8 +24,10 @@ jobs:
           RAVEN_License_Eula_Accepted: 'true'
           RAVEN_Security_UnsecuredAccessAllowed: 'PublicNetwork'
     steps:
+      - name: Install Git/Curl/GNU Tar
+        run: apk add --no-cache git curl tar
       - uses: actions/checkout@v2
-      - name: Cache build, deps
+      - name: Build & Deps Cache
         uses: actions/cache@v2
         id: mix-deps
         with:
@@ -36,17 +38,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
             ${{ runner.os }}-01-build-
-      - name: Cache build, deps
+      - name: Dyalizer Cache
         uses: actions/cache@v2
         id: mix-dialyzer
         with:
           path: priv/plts
-          key: ${{ runner.os }}-01-dialyzer-${{ hashFiles('priv/plts/dialyzer.plt.hash') }}
+          key: ${{ runner.os }}-01-dialyzer
           restore-keys: |
-            ${{ runner.os }}-01-dialyzer-${{ hashFiles('priv/plts/dialyzer.plt.hash') }}
-            ${{ runner.os }}-01-dialyzer-
-      - name: Install Git/Curl/GNU Tar
-        run: apk add --no-cache git curl tar
+            ${{ runner.os }}-01-dialyzer
       - name: Instal Mix and Rebar
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies

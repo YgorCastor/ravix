@@ -3,6 +3,7 @@ defmodule Ravix.Connection.ServerNode do
             port: nil,
             protocol: nil,
             database: nil,
+            status: :healthy,
             cluster_tag: nil
 
   alias Ravix.Connection.ServerNode
@@ -12,6 +13,7 @@ defmodule Ravix.Connection.ServerNode do
           port: non_neg_integer(),
           protocol: atom(),
           database: String.t(),
+          status: atom(),
           cluster_tag: String.t() | nil
         }
 
@@ -24,6 +26,19 @@ defmodule Ravix.Connection.ServerNode do
       port: parsed_url.port,
       protocol: String.to_atom(parsed_url.scheme),
       database: database
+    }
+  end
+
+  @spec from_api_response(map) :: ServerNode.t()
+  def from_api_response(node_response) do
+    parsed_url = URI.new!(node_response["Url"])
+
+    %ServerNode{
+      url: parsed_url.host,
+      port: parsed_url.port,
+      protocol: String.to_atom(parsed_url.scheme),
+      database: node_response["Database"],
+      cluster_tag: node_response["ClusterTag"]
     }
   end
 

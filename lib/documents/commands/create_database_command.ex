@@ -26,7 +26,7 @@ defmodule Ravix.Documents.Commands.CreateDatabaseCommand do
       %CreateDatabaseCommand{
         command
         | url:
-            "/admin/databases"
+            "/admin/databases?"
             |> append_param("name", Map.get(command, "DatabaseName"))
             |> append_param("replicationFactor", Map.get(command, "ReplicationFactor")),
           method: "PUT",

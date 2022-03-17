@@ -1,62 +1,87 @@
 defmodule Ravix.Connection.NetworkStateManager do
-  use DynamicSupervisor
+  require OK
 
-  alias Ravix.Connection.InMemoryNetworkState
+  alias Ravix.Connection.Network.State, as: NetworkState
+  alias Ravix.Connection.{ServerNode, RequestExecutor, Topology}
+  alias Ravix.Connection.Commands.{GetTopology, GetStatistics}
 
-  @spec init(any) ::
-          {:ok,
-           %{
-             extra_arguments: list,
-             intensity: non_neg_integer,
-             max_children: :infinity | non_neg_integer,
-             period: pos_integer,
-             strategy: :one_for_one
-           }}
-  def init(init_arg) do
-    DynamicSupervisor.init(
-      strategy: :one_for_one,
-      extra_arguments: [init_arg]
-    )
-  end
-
-  @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(attrs) do
-    DynamicSupervisor.start_link(__MODULE__, attrs, name: __MODULE__)
-  end
-
-  @spec create_network_state(any, binary, any, any) ::
-          :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
-  def create_network_state(urls, database_name, conventions, certificate \\ nil) do
-    case find_existing_network(database_name) do
-      network when network == {:error, :network_not_found} ->
-        DynamicSupervisor.start_child(
-          __MODULE__,
-          {InMemoryNetworkState,
-           [
-             urls: urls,
-             database_name: database_name,
-             document_conventions: conventions,
-             certificate: certificate
-           ]}
+  @spec request_topology(list(String.t()), String.t(), Keyword.t()) ::
+          {:error, :invalid_cluster_topology} | {:ok, Topology.t()}
+  def request_topology(urls, database, certificate) do
+    topology =
+      urls
+      |> Enum.map(fn url -> ServerNode.from_url(url, database) end)
+      |> Enum.map(fn node ->
+        RequestExecutor.execute_for_node(
+          %GetTopology{database_name: node.database},
+          %{certificate: certificate[:castore], certificate_file: certificate[:castorefile]},
+          node
         )
+      end)
+      |> Enum.find(fn topology_response -> elem(topology_response, 0) == :ok end)
 
-      existing_network ->
-        existing_network
+    case topology do
+      {:ok, response} ->
+        {:ok,
+         %Topology{
+           etag: response.data["Etag"],
+           nodes: response.data["Nodes"] |> Enum.map(&ServerNode.from_api_response/1)
+         }}
+
+      _ ->
+        {:error, :invalid_cluster_topology}
     end
   end
 
-  @spec network_exists?(binary) :: boolean
-  def network_exists?(database), do: find_existing_network(database) |> Enum.count() > 1
+  def set_node_as_unhealthy(%ServerNode{} = node, %NetworkState{} = state),
+    do: set_node_state(node, state, :unhealthy)
 
-  @spec find_existing_network(String.t()) :: {:ok, {pid, any}} | {:error, :network_not_found}
-  def find_existing_network(database) do
-    case Registry.lookup(:network_state, database) do
-      existing_network when existing_network != [] -> {:ok, Enum.at(existing_network, 0)}
-      _ -> {:error, :network_not_found}
+  def set_node_as_healthy(%ServerNode{} = node, %NetworkState{} = state),
+    do: set_node_state(node, state, :healthy)
+
+  def nodes_healthcheck(%NetworkState{} = state) do
+    updated_nodes =
+      state.node_selector.topology.nodes
+      |> Enum.map(fn node -> update_node_health(node, state) end)
+
+    put_in(state.node_selector.topology.nodes, updated_nodes)
+  end
+
+  defp update_node_health(%ServerNode{} = node, certificate) do
+    case RequestExecutor.execute_for_node(
+           %GetStatistics{},
+           certificate,
+           node
+         ) do
+      {:ok, _} -> %ServerNode{node | status: :healthy}
+      {:error, _} -> %ServerNode{node | status: :unhealthy}
     end
   end
 
-  @spec network_state_for_database(String.t()) :: {:via, Registry, {:network_state, String.t()}}
-  def network_state_for_database(database),
-    do: {:via, Registry, {:network_state, database}}
+  defp set_node_state(%ServerNode{} = node, %NetworkState{} = state, status) do
+    updated_node = %ServerNode{
+      node
+      | status: status
+    }
+
+    updated_nodes = [updated_node | List.delete(state.node_selector.topology.nodes, node)]
+    updated_state = put_in(state.node_selector.topology.nodes, updated_nodes)
+    updated_state = put_in(updated_state.node_selector.current_node_index, 0)
+
+    updated_state
+  end
+
+  def change_to_next_healthy_node(%NetworkState{} = state) do
+    healthy_node_index =
+      state.node_selector.topology.nodes
+      |> Enum.find_index(fn node -> node.status == :healthy end)
+
+    case healthy_node_index do
+      nil ->
+        {:error, :no_healthy_nodes_found}
+
+      node_index ->
+        {:ok, put_in(state.node_selector.current_node_index, node_index)}
+    end
+  end
 end

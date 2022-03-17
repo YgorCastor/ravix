@@ -3,20 +3,18 @@ defmodule Ravix.Documents.Store do
   require OK
 
   alias Ravix.Documents.Store.State, as: StoreState
-  alias Ravix.Documents.Store.Configs
   alias Ravix.Documents.DatabaseManager
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.SessionsSupervisor
-  alias Ravix.Connection.NetworkStateManager
+  alias Ravix.Connection.{NetworkStateSupervisor, RequestExecutorHelper}
 
   @spec init(any) :: {:ok, any}
   def init(opts) do
     {:ok, opts}
   end
 
-  @spec start_link(Configs.t()) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(%Configs{} = opts) do
-    initial_state = StoreState.from_map(opts)
+  @spec start_link(StoreState.t()) :: :ignore | {:error, any} | {:ok, pid}
+  def start_link(%StoreState{} = initial_state) do
     GenServer.start_link(__MODULE__, initial_state, name: __MODULE__)
   end
 
@@ -35,9 +33,13 @@ defmodule Ravix.Documents.Store do
     GenServer.call(__MODULE__, {:create_database, database, opts})
   end
 
+  def fetch_configs() do
+    GenServer.call(__MODULE__, {:fetch_configs})
+  end
+
   defp from_configs_file() do
-    {:ok, ravix_configs} = Configs.read_from_config_file()
-    StoreState.from_map(ravix_configs)
+    {:ok, ravix_configs} = StoreState.read_from_config_file()
+    ravix_configs
   end
 
   defp create_new_session(database, %StoreState{} = store_state) do
@@ -61,7 +63,7 @@ defmodule Ravix.Documents.Store do
     session_id = create_new_session(database, state)
 
     {:ok, _pid} =
-      NetworkStateManager.create_network_state(
+      NetworkStateSupervisor.create_network_state(
         state.urls,
         database,
         state.document_conventions,
@@ -73,19 +75,23 @@ defmodule Ravix.Documents.Store do
 
   def handle_call({:create_database, database, opts}, _from, %StoreState{} = state) do
     OK.try do
-      _pid <-
-        NetworkStateManager.create_network_state(
-          state.urls,
-          database,
-          state.document_conventions,
-          nil
-        )
+      opts = [RequestExecutorHelper.parse_retry_options(state) | opts]
 
-      response <- DatabaseManager.create_database(database, opts)
+      response <-
+        DatabaseManager.create_database(
+          database,
+          Enum.at(state.urls, 0),
+          %{certificate: nil, certificate_file: nil},
+          opts
+        )
     after
       {:reply, {:ok, response}, state}
     rescue
       error -> {:reply, {:error, error}, state}
     end
+  end
+
+  def handle_call({:fetch_configs}, _from, %StoreState{} = state) do
+    {:reply, state, state}
   end
 end
