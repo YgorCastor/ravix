@@ -1,7 +1,9 @@
 defmodule Ravix.Connection.NetworkStateManager do
+  require OK
+
   alias Ravix.Connection.Network.State, as: NetworkState
   alias Ravix.Connection.{ServerNode, RequestExecutor, Topology}
-  alias Ravix.Connection.Commands.GetTopology
+  alias Ravix.Connection.Commands.{GetTopology, GetStatistics}
 
   @spec request_topology(list(String.t()), String.t(), Keyword.t()) ::
           {:error, :invalid_cluster_topology} | {:ok, Topology.t()}
@@ -36,6 +38,23 @@ defmodule Ravix.Connection.NetworkStateManager do
 
   def set_node_as_healthy(%ServerNode{} = node, %NetworkState{} = state),
     do: set_node_state(node, state, :healthy)
+
+  def nodes_healthcheck(%NetworkState{} = state) do
+    updated_nodes = state.node_selector.topology.nodes |> update_node_health(state)
+
+    put_in(state.node_selector.topology.nodes, updated_nodes)
+  end
+
+  defp update_node_health(%ServerNode{} = node, certificate) do
+    case RequestExecutor.execute_for_node(
+           %GetStatistics{},
+           certificate,
+           node
+         ) do
+      {:ok, _} -> %ServerNode{node | status: :healthy}
+      {:error, _} -> %ServerNode{node | status: :unhealthy}
+    end
+  end
 
   defp set_node_state(%ServerNode{} = node, %NetworkState{} = state, status) do
     updated_node = %ServerNode{

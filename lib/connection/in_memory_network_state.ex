@@ -6,8 +6,8 @@ defmodule Ravix.Connection.InMemoryNetworkState do
   alias Ravix.Connection.Network.State, as: NetworkState
   alias Ravix.Connection.{NetworkStateSupervisor, NetworkStateManager, NodeSelector, ServerNode}
 
-  def init(network_state) do
-    {:ok, network_state}
+  def init(%NetworkState{} = network_state) do
+    {:ok, network_state, {:continue, :schedule_next_healthcheck}}
   end
 
   @spec start_link(any, map) :: {:error, any} | {:ok, pid}
@@ -84,5 +84,16 @@ defmodule Ravix.Connection.InMemoryNetworkState do
 
   def handle_call({:fetch_state}, _from, %NetworkState{} = state) do
     {:reply, {:ok, state}, state}
+  end
+
+  def handle_info(:nodes_healthcheck, _from, state) do
+    updated_state = NetworkStateManager.nodes_healthcheck(state)
+    {:noreply, updated_state}
+  end
+
+  def handle_continue(:schedule_next_healthcheck, %NetworkState{} = state) do
+    Process.send_after(self(), :nodes_healthcheck, 5000)
+
+    {:noreply, state}
   end
 end
