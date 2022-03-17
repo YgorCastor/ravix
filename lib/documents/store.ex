@@ -6,7 +6,7 @@ defmodule Ravix.Documents.Store do
   alias Ravix.Documents.DatabaseManager
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.SessionsSupervisor
-  alias Ravix.Connection.NetworkStateSupervisor
+  alias Ravix.Connection.{NetworkStateSupervisor, RequestExecutorHelper}
 
   @spec init(any) :: {:ok, any}
   def init(opts) do
@@ -31,6 +31,10 @@ defmodule Ravix.Documents.Store do
   @spec create_database(String.t(), maybe_improper_list()) :: {:ok, map()} | {:error, any()}
   def create_database(database, opts \\ []) do
     GenServer.call(__MODULE__, {:create_database, database, opts})
+  end
+
+  def fetch_configs() do
+    GenServer.call(__MODULE__, {:fetch_configs})
   end
 
   defp from_configs_file() do
@@ -71,6 +75,8 @@ defmodule Ravix.Documents.Store do
 
   def handle_call({:create_database, database, opts}, _from, %StoreState{} = state) do
     OK.try do
+      opts = [RequestExecutorHelper.parse_retry_options(state) | opts]
+
       response <-
         DatabaseManager.create_database(
           database,
@@ -83,5 +89,9 @@ defmodule Ravix.Documents.Store do
     rescue
       error -> {:reply, {:error, error}, state}
     end
+  end
+
+  def handle_call({:fetch_configs}, _from, %StoreState{} = state) do
+    {:reply, state, state}
   end
 end

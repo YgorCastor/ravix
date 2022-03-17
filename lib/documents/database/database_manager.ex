@@ -19,7 +19,12 @@ defmodule Ravix.Documents.DatabaseManager do
           Disabled: Keyword.get(opts, :disabled, false),
           ReplicationFactor: Keyword.get(opts, :replication_factor, 1)
         }
-        |> RequestExecutor.execute_for_node(certificate, ServerNode.from_url(url, database_name))
+        |> RequestExecutor.execute_for_node(
+          certificate,
+          ServerNode.from_url(url, database_name),
+          {},
+          opts
+        )
     after
       response.data
     end
