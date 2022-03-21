@@ -1,7 +1,7 @@
 import Config
 
 config :ravix, Ravix.TestStore,
-  urls: ["http://localhost:8080"],
+  urls: [System.get_env("RAVENDB_URL", "http://localhost:8080")],
   database: "test",
   retry_on_failure: true,
   retry_backoff: 100,
@@ -18,7 +18,7 @@ config :ravix, Ravix.TestStore,
   }
 
 config :ravix, Ravix.TestStore2,
-  urls: ["http://localhost:8080"],
+  urls: [System.get_env("RAVENDB_URL", "http://localhost:8080")],
   database: "test2",
   retry_on_failure: true,
   retry_backoff: 100,
