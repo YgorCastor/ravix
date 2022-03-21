@@ -3,7 +3,7 @@ defmodule Ravix.Factory do
 
   alias Ravix.Documents.{Session, Conventions}
   alias Ravix.Connection.{ServerNode, Topology, NodeSelector}
-  alias Ravix.Connection.Network.State, as: NetworkState
+  alias Ravix.Connection.State, as: ConnectionState
 
   def session_document_factory do
     random_entity = %{id: UUID.uuid4(), something: Faker.Cat.breed()}
@@ -70,14 +70,10 @@ defmodule Ravix.Factory do
   end
 
   def network_state_factory do
-    %NetworkState{
-      database_name: "test",
+    %ConnectionState{
+      database: "test",
       certificate: "test" |> Base.encode64(),
       certificate_file: nil,
-      node_selector: %NodeSelector{
-        current_node_index: 1,
-        topology: build(:topology)
-      },
       conventions: build(:conventions)
     }
   end

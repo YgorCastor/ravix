@@ -1,8 +1,8 @@
 import Config
 
-config :ravix,
-  urls: [System.get_env("RAVENDB_URL", "http://localhost:8080")],
-  database: "default",
+config :ravix, Ravix.TestStore,
+  urls: ["http://localhost:8080"],
+  database: "test",
   retry_on_failure: true,
   retry_backoff: 100,
   retry_count: 3,

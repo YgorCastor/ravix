@@ -1,23 +1,22 @@
-defmodule Ravix.Documents.Session.SessionManager do
+defmodule Ravix.Documents.Session.Manager do
   require OK
 
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.{SaveChangesData, Validations}
   alias Ravix.Documents.Commands.{BatchCommand, GetDocumentsCommand}
-  alias Ravix.Documents.{Store, Conventions}
-  alias Ravix.Connection.Network.State, as: NetworkState
-  alias Ravix.Connection.{InMemoryNetworkState, RequestExecutor, RequestExecutorHelper}
+  alias Ravix.Documents.Conventions
+  alias Ravix.Connection
+  alias Ravix.Connection.State, as: ConnectionState
+  alias Ravix.Connection.RequestExecutor
 
   def load_documents(%SessionState{} = state, document_ids, includes, nil),
     do: load_documents(state, document_ids, includes, [])
 
   def load_documents(%SessionState{} = state, document_ids, includes, opts) do
     OK.try do
-      store_state = Store.fetch_configs()
-      opts = [RequestExecutorHelper.parse_retry_options(store_state) | opts]
       already_loaded_ids = fetch_loaded_documents(state, document_ids)
       ids_to_load <- Validations.all_ids_are_not_already_loaded(document_ids, already_loaded_ids)
-      network_state <- InMemoryNetworkState.fetch_state(state.database)
+      network_state <- Connection.fetch_state(state.database)
       response <- execute_load_request(network_state, ids_to_load, includes, opts)
       parsed_response = GetDocumentsCommand.parse_response(state, response)
       updated_state = SessionState.update_session(state, parsed_response[:results])
@@ -59,13 +58,10 @@ defmodule Ravix.Documents.Session.SessionManager do
     end
   end
 
-  @spec save_changes(SessionState.t()) :: {:error, any} | {:ok, any}
   def save_changes(%SessionState{} = state) do
     OK.for do
-      store_state = Store.fetch_configs()
-      opts = RequestExecutorHelper.parse_retry_options(store_state)
-      network_state <- InMemoryNetworkState.fetch_state(state.database)
-      result <- execute_save_request(state, network_state, opts)
+      network_state <- Connection.fetch_state(state.store)
+      result <- execute_save_request(state, network_state, [])
 
       parsed_updates =
         BatchCommand.parse_batch_response(
@@ -106,7 +102,7 @@ defmodule Ravix.Documents.Session.SessionManager do
     |> Enum.reject(fn item -> item == nil end)
   end
 
-  defp execute_load_request(%NetworkState{} = network_state, ids, includes, opts)
+  defp execute_load_request(%ConnectionState{} = network_state, ids, includes, opts)
        when is_list(ids) do
     start = Keyword.get(opts, :start)
     page_size = Keyword.get(opts, :page_size)
@@ -129,7 +125,7 @@ defmodule Ravix.Documents.Session.SessionManager do
     end
   end
 
-  defp execute_save_request(%SessionState{} = state, %NetworkState{} = network_state, opts) do
+  defp execute_save_request(%SessionState{} = state, %ConnectionState{} = network_state, opts) do
     OK.for do
       data_to_save =
         %SaveChangesData{}

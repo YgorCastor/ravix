@@ -5,12 +5,12 @@ defmodule Ravix.RQL.QueryTest do
   import Ravix.RQL.Query
   import Ravix.RQL.Tokens.Condition
 
-  alias Ravix.Documents.{Store, Session}
+  alias Ravix.Documents.Session
+  alias Ravix.TestStore, as: Store
 
   setup do
-    ravix = %{ravix: start_supervised!(Ravix)}
-    Store.create_database("test")
-    ravix
+    %{ravix: start_supervised!(Ravix)}
+    :ok
   end
 
   describe "list_all/2" do
@@ -19,7 +19,7 @@ defmodule Ravix.RQL.QueryTest do
 
       {:ok, response} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
 
@@ -43,7 +43,7 @@ defmodule Ravix.RQL.QueryTest do
     test "If no results, it should be a valid response with empty results" do
       {:ok, response} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
 
           query_response <-
             from("@all_docs")
@@ -63,7 +63,7 @@ defmodule Ravix.RQL.QueryTest do
 
       {:ok, response} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
 
@@ -88,7 +88,7 @@ defmodule Ravix.RQL.QueryTest do
 
       {:ok, response} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
 
@@ -111,7 +111,7 @@ defmodule Ravix.RQL.QueryTest do
     test "A invalid query should return an error" do
       {:error, "1:1 Expected FROM clause but got: never\nQuery: \nnever gonna give you up"} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
 
           query_response <-
             raw("never gonna give you up")
@@ -129,7 +129,7 @@ defmodule Ravix.RQL.QueryTest do
 
       {:ok, [delete_response, query_response]} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.store(session_id, any_entity_2)
           _ <- Session.save_changes(session_id)
@@ -164,7 +164,7 @@ defmodule Ravix.RQL.QueryTest do
 
       {:ok, [update_response, query_response]} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.store(session_id, any_entity_2)
           _ <- Session.save_changes(session_id)
