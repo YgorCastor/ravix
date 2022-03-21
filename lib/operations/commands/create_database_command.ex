@@ -1,4 +1,4 @@
-defmodule Ravix.Database.Commands.CreateDatabaseCommand do
+defmodule Ravix.Operations.Database.Commands.CreateDatabaseCommand do
   @derive {Jason.Encoder, only: [:Disabled, :Encrypted, :DatabaseName]}
   use Ravix.Documents.Commands.RavenCommand,
     Disabled: false,
@@ -9,7 +9,7 @@ defmodule Ravix.Database.Commands.CreateDatabaseCommand do
   import Ravix.Documents.Commands.RavenCommand
   import Ravix.Helpers.UrlBuilder
 
-  alias Ravix.Database.Commands.CreateDatabaseCommand
+  alias Ravix.Operations.Database.Commands.CreateDatabaseCommand
   alias Ravix.Documents.Protocols.{ToJson, CreateRequest}
   alias Ravix.Connection.ServerNode
 

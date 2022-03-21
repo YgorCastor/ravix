@@ -4,12 +4,27 @@ defmodule Ravix.Connection.State.Manager do
   alias Ravix.Connection.State, as: ConnectionState
   alias Ravix.Connection.{ServerNode, RequestExecutor, Topology, NodeSelector}
   alias Ravix.Connection.Commands.GetTopology
+  alias Ravix.Connection.RequestExecutor.Supervisor, as: ExecutorSupervisor
+  alias Ravix.Operations.Database.Maintenance, as: DatabaseMaintenance
 
   @spec initialize(ConnectionState.t()) :: ConnectionState.t()
   def initialize(%ConnectionState{} = state) do
     OK.try do
       node_pids <- register_nodes(state)
-      _ <- ConnectionState.Manager.request_topology(node_pids, state.database)
+
+      _ =
+        case state.force_create_database do
+          true ->
+            node_pids
+            |> Enum.at(0)
+            |> DatabaseMaintenance.create_database(state.database)
+
+          false ->
+            :ok
+        end
+
+      topology <- ConnectionState.Manager.request_topology(node_pids, state.database)
+      _ = ExecutorSupervisor.update_topology(state.store, topology)
       state = put_in(state.node_selector, %NodeSelector{current_node_index: 0})
     after
       state

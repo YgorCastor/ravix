@@ -38,6 +38,7 @@ defmodule Ravix.Connection.RequestExecutor do
     )
   end
 
+  @spec execute(map, ConnectionState.t(), any, keyword) :: {:error, any} | {:ok, Response.t()}
   def execute(
         command,
         %ConnectionState{} = network_state,
@@ -89,6 +90,20 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
+  @spec update_topology(String.t(), String.t()) :: :ok
+  def update_topology(url, cluster_tag) do
+    GenServer.cast(executor_id(url), {:update_cluster_tag, cluster_tag})
+  end
+
+  @spec fetch_node_state(bitstring | pid) :: {:ok, ServerNode.t()}
+  def fetch_node_state(pid) when is_pid(pid) do
+    GenServer.call(pid, :fetch_state)
+  end
+
+  def fetch_node_state(url) when is_bitstring(url) do
+    GenServer.call(executor_id(url), :fetch_state)
+  end
+
   defp executor_id(url), do: {:via, Registry, {:request_executors, url}}
 
   ####################
@@ -115,6 +130,10 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
+  def handle_call(:fetch_state, _from, %ServerNode{} = node) do
+    {:reply, {:ok, node}, node}
+  end
+
   def handle_info(message, %ServerNode{} = node) do
     case Mint.HTTP.stream(node.conn, message) do
       :unknown ->
@@ -132,6 +151,10 @@ defmodule Ravix.Connection.RequestExecutor do
       {:error, _conn, error, _headers} when is_struct(error, Mint.TransportError) ->
         {:error, error.reason}
     end
+  end
+
+  def handle_cast({:update_cluster_tag, cluster_tag}, %ServerNode{} = node) do
+    {:noreply, %ServerNode{node | cluster_tag: cluster_tag}}
   end
 
   defp process_response({:status, request_ref, status}, state) do
