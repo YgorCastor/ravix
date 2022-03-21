@@ -19,7 +19,7 @@ defmodule Ravix.Connection.State do
           certificate: String.t() | nil,
           certificate_file: String.t() | nil,
           conventions: Ravix.Documents.Conventions.t(),
-          node_selector: NodeSelector.t(),
+          node_selector: Ravix.Connection.NodeSelector.t(),
           urls: list(String.t()),
           topology_etag: String.t() | nil,
           disable_topology_updates: boolean(),

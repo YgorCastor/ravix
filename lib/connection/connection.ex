@@ -9,6 +9,7 @@ defmodule Ravix.Connection do
     {:ok, network_state}
   end
 
+  @spec start_link(atom(), ConnectionState.t()) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(store, %ConnectionState{} = conn_state) do
     conn_state = put_in(conn_state.store, store)
     conn_state = ConnectionState.Manager.initialize(conn_state)
@@ -18,12 +19,13 @@ defmodule Ravix.Connection do
     )
   end
 
+  @spec update_topology(atom()) :: :ok
   def update_topology(store) do
     ConnectionState.Manager.connection_id(store)
     |> GenServer.cast({:update_topology})
   end
 
-  @spec fetch_state(any) :: {:ok, ConnectionState.t()} | {:error, any}
+  @spec fetch_state(atom()) :: {:ok, ConnectionState.t()} | {:error, any}
   def fetch_state(store) do
     ConnectionState.Manager.connection_id(store)
     |> GenServer.call({:fetch_state})
