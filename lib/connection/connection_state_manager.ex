@@ -26,6 +26,7 @@ defmodule Ravix.Connection.State.Manager do
       topology <- ConnectionState.Manager.request_topology(node_pids, state.database)
       _ = ExecutorSupervisor.update_topology(state.store, topology)
       state = put_in(state.node_selector, %NodeSelector{current_node_index: 0})
+      state = put_in(state.topology_etag, topology.etag)
     after
       state
     rescue
@@ -42,7 +43,8 @@ defmodule Ravix.Connection.State.Manager do
       |> Enum.map(fn node ->
         RequestExecutor.execute_for_node(
           %GetTopology{database_name: database},
-          node
+          node,
+          database
         )
       end)
       |> Enum.find(fn topology_response -> elem(topology_response, 0) == :ok end)

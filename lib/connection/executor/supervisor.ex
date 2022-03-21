@@ -3,6 +3,15 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
 
   alias Ravix.Connection.{RequestExecutor, ServerNode, Topology}
 
+  @spec init(any) ::
+          {:ok,
+           %{
+             extra_arguments: list,
+             intensity: non_neg_integer,
+             max_children: :infinity | non_neg_integer,
+             period: pos_integer,
+             strategy: :one_for_one
+           }}
   def init(init_arg) do
     DynamicSupervisor.init(
       strategy: :one_for_one,
@@ -10,6 +19,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
     )
   end
 
+  @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(store) do
     DynamicSupervisor.start_link(__MODULE__, %{}, name: supervisor_name(store))
   end
@@ -45,10 +55,14 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   defp update_existing_nodes(nodes, %Topology{} = topology) do
     nodes
     |> Enum.map(fn node ->
-      [url: node.url, cluster_tag: Topology.cluster_tag_for_node(topology, node.url)]
+      [
+        url: node.url,
+        database: node.database,
+        cluster_tag: Topology.cluster_tag_for_node(topology, node.url)
+      ]
     end)
-    |> Enum.map(fn [url: url, cluster_tag: cluster_tag] ->
-      %{url: url, updated: RequestExecutor.update_topology(url, cluster_tag)}
+    |> Enum.map(fn [url: url, database: database, cluster_tag: cluster_tag] ->
+      %{url: url, updated: RequestExecutor.update_topology(url, database, cluster_tag)}
     end)
   end
 

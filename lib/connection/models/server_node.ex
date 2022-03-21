@@ -6,7 +6,6 @@ defmodule Ravix.Connection.ServerNode do
             requests: %{},
             protocol: nil,
             database: nil,
-            status: :healthy,
             cluster_tag: nil
 
   alias Ravix.Connection.ServerNode
@@ -19,7 +18,6 @@ defmodule Ravix.Connection.ServerNode do
           requests: map(),
           protocol: atom(),
           database: String.t(),
-          status: atom(),
           cluster_tag: String.t() | nil
         }
 

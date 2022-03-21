@@ -6,6 +6,7 @@ defmodule Ravix.Connection.State do
             conventions: %Ravix.Documents.Conventions{},
             node_selector: nil,
             urls: [],
+            topology_etag: nil,
             disable_topology_updates: false,
             force_create_database: false,
             cluster_token: nil
@@ -20,6 +21,7 @@ defmodule Ravix.Connection.State do
           conventions: Ravix.Documents.Conventions.t(),
           node_selector: NodeSelector.t(),
           urls: list(String.t()),
+          topology_etag: String.t() | nil,
           disable_topology_updates: boolean(),
           force_create_database: boolean(),
           cluster_token: String.t() | nil

@@ -44,5 +44,5 @@ defmodule Ravix.Documents.Store do
               | {:error, {:already_started, pid}}
               | {:error, term}
 
-  @callback open_session() :: pid
+  @callback open_session() :: {:ok, binary()}
 end

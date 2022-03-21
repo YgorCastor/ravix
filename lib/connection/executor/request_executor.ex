@@ -34,7 +34,7 @@ defmodule Ravix.Connection.RequestExecutor do
     GenServer.start_link(
       __MODULE__,
       node,
-      name: executor_id(node.url)
+      name: executor_id(node.database, node.url)
     )
   end
 
@@ -47,19 +47,18 @@ defmodule Ravix.Connection.RequestExecutor do
       ) do
     node_pid = NodeSelector.current_node(network_state)
 
-    execute_for_node(command, node_pid, headers, opts)
+    execute_for_node(command, node_pid, nil, headers, opts)
   end
 
-  @spec execute_for_node(map(), bitstring | pid, any, keyword()) ::
-          {:ok, Response.t()} | {:error, any}
-  def execute_for_node(command, pid_or_url, headers \\ {}, opts \\ [])
+  def execute_for_node(command, pid_or_url, database, headers \\ {}, opts \\ [])
 
-  def execute_for_node(command, pid_or_url, headers, opts) when is_pid(pid_or_url) do
+  def execute_for_node(command, pid_or_url, _database, headers, opts) when is_pid(pid_or_url) do
     call_raven(pid_or_url, command, headers, opts)
   end
 
-  def execute_for_node(command, pid_or_url, headers, opts) when is_bitstring(pid_or_url) do
-    call_raven(executor_id(pid_or_url), command, headers, opts)
+  def execute_for_node(command, pid_or_url, database, headers, opts)
+      when is_bitstring(pid_or_url) do
+    call_raven(executor_id(database, pid_or_url), command, headers, opts)
   end
 
   defp call_raven(executor, command, headers, opts) do
@@ -90,9 +89,8 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
-  @spec update_topology(String.t(), String.t()) :: :ok
-  def update_topology(url, cluster_tag) do
-    GenServer.cast(executor_id(url), {:update_cluster_tag, cluster_tag})
+  def update_topology(url, database, cluster_tag) do
+    GenServer.cast(executor_id(url, database), {:update_cluster_tag, cluster_tag})
   end
 
   @spec fetch_node_state(bitstring | pid) :: {:ok, ServerNode.t()}
@@ -100,11 +98,12 @@ defmodule Ravix.Connection.RequestExecutor do
     GenServer.call(pid, :fetch_state)
   end
 
-  def fetch_node_state(url) when is_bitstring(url) do
-    GenServer.call(executor_id(url), :fetch_state)
+  def fetch_node_state(url, database) when is_bitstring(url) do
+    GenServer.call(executor_id(url, database), :fetch_state)
   end
 
-  defp executor_id(url), do: {:via, Registry, {:request_executors, url}}
+  defp executor_id(url, database),
+    do: {:via, Registry, {:request_executors, url <> "/" <> database}}
 
   ####################
   #     Handlers     #

@@ -4,8 +4,15 @@ defmodule Ravix.Operations.Database.Maintenance do
   alias Ravix.Operations.Database.Commands.CreateDatabaseCommand
   alias Ravix.Connection.RequestExecutor
 
-  @spec create_database(bitstring | pid, String.t(), keyword) :: {:error, any} | {:ok, any}
-  def create_database(node_pid, database_name, opts \\ []) do
+  def create_database(store_or_pid, database_name, opts \\ [])
+
+  def create_database(store, database_name, opts) when is_atom(store) do
+    node_pid = RequestExecutor.Supervisor.fetch_nodes(store) |> Enum.at(0)
+
+    create_database(node_pid, database_name, opts)
+  end
+
+  def create_database(node_pid, database_name, opts) when is_pid(node_pid) do
     OK.for do
       response <-
         %CreateDatabaseCommand{
