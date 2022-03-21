@@ -2,21 +2,25 @@ defmodule Ravix.Connection.State.Manager do
   require OK
 
   alias Ravix.Connection.State, as: ConnectionState
-  alias Ravix.Connection.{ServerNode, RequestExecutor, Topology}
+  alias Ravix.Connection.{ServerNode, RequestExecutor, Topology, NodeSelector}
   alias Ravix.Connection.Commands.GetTopology
 
+  @spec initialize(ConnectionState.t()) :: ConnectionState.t()
   def initialize(%ConnectionState{} = state) do
-    node_pids = register_nodes(state) |> IO.inspect()
-
-    # topology =
-    #   case ConnectionState.Manager.request_topology(node_pids, state.database) do
-    #     {:ok, server_topology} -> server_topology
-    #     _ -> raise "Invalid server topology"
-    #   end
-
-    state
+    OK.try do
+      node_pids <- register_nodes(state)
+      _ <- ConnectionState.Manager.request_topology(node_pids, state.database)
+      state = put_in(state.node_selector, %NodeSelector{current_node_index: 0})
+    after
+      state
+    rescue
+      :invalid_cluster_topology -> raise "Unable to fetch the cluster topology"
+      :no_node_registered -> raise "No nodes were registered successfully"
+    end
   end
 
+  @spec request_topology(list(pid()), String.t()) ::
+          {:error, :invalid_cluster_topology} | {:ok, Ravix.Connection.Topology.t()}
   def request_topology(node_pids, database) do
     topology =
       node_pids
@@ -44,10 +48,18 @@ defmodule Ravix.Connection.State.Manager do
   def connection_id(state), do: {:via, Registry, {:sessions, state}}
 
   defp register_nodes(%ConnectionState{} = state) do
-    state.urls
-    |> Enum.map(fn url -> ServerNode.from_url(url, state.database, state.certificate) end)
-    |> Enum.map(fn node ->
-      RequestExecutor.Supervisor.register_node_executor(state.store, node)
-    end)
+    registered_nodes =
+      state.urls
+      |> Enum.map(fn url -> ServerNode.from_url(url, state.database, state.certificate) end)
+      |> Enum.map(fn node ->
+        RequestExecutor.Supervisor.register_node_executor(state.store, node)
+      end)
+      |> Enum.filter(fn pids -> elem(pids, 0) == :ok end)
+      |> Enum.map(fn pid -> elem(pid, 1) end)
+
+    case registered_nodes do
+      pids when is_nil(pids) or pids == [] -> {:error, :no_node_registered}
+      pids -> {:ok, pids}
+    end
   end
 end

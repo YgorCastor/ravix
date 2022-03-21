@@ -9,7 +9,7 @@ defmodule Ravix.RQL.QueryTest do
   alias Ravix.TestStore, as: Store
 
   setup do
-    %{ravix: start_supervised!(Ravix)}
+    %{ravix: start_supervised!(Ravix.TestApplication)}
     :ok
   end
 

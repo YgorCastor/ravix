@@ -11,6 +11,15 @@ defmodule Ravix.Connection.RequestExecutor do
   alias Ravix.Connection.{ServerNode, NodeSelector, Response}
   alias Ravix.Documents.Protocols.CreateRequest
 
+  @spec init(ServerNode.t()) ::
+          {:ok, ServerNode.t()}
+          | {:stop,
+             %{
+               :__exception__ => any,
+               :__struct__ => Mint.HTTPError | Mint.TransportError,
+               :reason => any,
+               optional(:module) => any
+             }}
   def init(%ServerNode{} = node) do
     {:ok, conn_params} = build_params(node.certificate, node.protocol)
 
@@ -20,8 +29,8 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
-  @spec start_link(ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(%ServerNode{} = node) do
+  @spec start_link(any, Ravix.Connection.ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}
+  def start_link(_attrs, %ServerNode{} = node) do
     GenServer.start_link(
       __MODULE__,
       node,
@@ -29,27 +38,55 @@ defmodule Ravix.Connection.RequestExecutor do
     )
   end
 
-  @spec execute(map, ConnectionState.t(), any, keyword()) :: Response.t()
   def execute(
         command,
         %ConnectionState{} = network_state,
         headers \\ {},
-        _opts \\ []
+        opts \\ []
       ) do
     node_pid = NodeSelector.current_node(network_state)
 
-    GenServer.call(node_pid, {:request, command, headers})
+    execute_for_node(command, node_pid, headers, opts)
   end
 
-  @spec execute_for_node(map(), bitstring | pid, any, keyword()) :: Response.t()
-  def execute_for_node(command, pid_or_url, headers \\ {}, _opts \\ [])
+  @spec execute_for_node(map(), bitstring | pid, any, keyword()) ::
+          {:ok, Response.t()} | {:error, any}
+  def execute_for_node(command, pid_or_url, headers \\ {}, opts \\ [])
 
-  def execute_for_node(command, pid_or_url, headers, _opts) when is_pid(pid_or_url) do
-    GenServer.call(pid_or_url, {:request, command, headers})
+  def execute_for_node(command, pid_or_url, headers, opts) when is_pid(pid_or_url) do
+    call_raven(pid_or_url, command, headers, opts)
   end
 
-  def execute_for_node(command, pid_or_url, headers, _opts) when is_bitstring(pid_or_url) do
-    GenServer.call(executor_id(pid_or_url), {:request, command, headers})
+  def execute_for_node(command, pid_or_url, headers, opts) when is_bitstring(pid_or_url) do
+    call_raven(executor_id(pid_or_url), command, headers, opts)
+  end
+
+  defp call_raven(executor, command, headers, opts) do
+    topology_etag = Keyword.get(opts, :topology_etag, nil)
+    should_retry = Keyword.get(opts, :should_retry, false)
+    retry_backoff = Keyword.get(opts, :retry_backoff, 100)
+
+    retry_count =
+      case should_retry do
+        true -> Keyword.get(opts, :retry_count, 3)
+        false -> 0
+      end
+
+    headers =
+      case topology_etag do
+        nil -> headers
+        _ -> [{"Topology-Etag", topology_etag}]
+      end
+
+    retry with: constant_backoff(retry_backoff) |> Stream.take(retry_count) do
+      GenServer.call(executor, {:request, command, headers})
+    after
+      {:ok, result} -> {:ok, result}
+      {:non_retryable_error, response} -> {:error, response}
+      {:error, error_response} -> {:error, error_response}
+    else
+      err -> err
+    end
   end
 
   defp executor_id(url), do: {:via, Registry, {:request_executors, url}}
@@ -123,6 +160,9 @@ defmodule Ravix.Connection.RequestExecutor do
         %{status: 410} ->
           {:error, :node_gone}
 
+        %{data: :invalid_response_payload} ->
+          {:non_retryable_error, "Unable to parse the response payload"}
+
         %{data: data} when is_map_key(data, "Error") ->
           {:non_retryable_error, data["Message"]}
 
@@ -145,7 +185,7 @@ defmodule Ravix.Connection.RequestExecutor do
   defp check_if_needs_topology_update({:ok, response}, %ServerNode{} = _node) do
     case Enum.find(response.headers, fn header -> elem(header, 0) == "Refresh-Topology" end) do
       nil ->
-        response
+        {:ok, response}
 
       _ ->
         response
@@ -180,9 +220,9 @@ defmodule Ravix.Connection.RequestExecutor do
   end
 
   defp decode_body(raw_response) do
-    case Jason.decode(raw_response.data) do
-      {:ok, body} -> Map.replace(raw_response, :data, body)
-      {:error, %Jason.DecodeError{}} -> {:error, :invalid_response_payload}
+    case Jason.decode(raw_response) do
+      {:ok, parsed_response} -> parsed_response
+      {:error, %Jason.DecodeError{}} -> :invalid_response_payload
     end
   end
 end

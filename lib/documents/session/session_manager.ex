@@ -16,7 +16,7 @@ defmodule Ravix.Documents.Session.Manager do
     OK.try do
       already_loaded_ids = fetch_loaded_documents(state, document_ids)
       ids_to_load <- Validations.all_ids_are_not_already_loaded(document_ids, already_loaded_ids)
-      network_state <- Connection.fetch_state(state.database)
+      network_state <- Connection.fetch_state(state.store)
       response <- execute_load_request(network_state, ids_to_load, includes, opts)
       parsed_response = GetDocumentsCommand.parse_response(state, response)
       updated_state = SessionState.update_session(state, parsed_response[:results])

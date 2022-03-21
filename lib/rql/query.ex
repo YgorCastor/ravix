@@ -129,7 +129,7 @@ defmodule Ravix.RQL.Query do
   defp execute_query(query, session_id, method) do
     OK.for do
       session_state <- Session.fetch_state(session_id)
-      network_state <- Connection.fetch_state(session_state.database)
+      network_state <- Connection.fetch_state(session_state.store)
 
       command = %ExecuteQueryCommand{
         Query: query.query_string,
