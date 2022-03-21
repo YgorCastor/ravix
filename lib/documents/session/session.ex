@@ -4,7 +4,7 @@ defmodule Ravix.Documents.Session do
   require OK
 
   alias Ravix.Documents.Session.State, as: SessionState
-  alias Ravix.Documents.Session.SessionManager
+  alias Ravix.Documents.Session.Manager, as: SessionManager
 
   def init(session_state) do
     {:ok, session_state}
@@ -19,7 +19,6 @@ defmodule Ravix.Documents.Session do
     )
   end
 
-  @spec load(binary, binary() | list(binary()), list() | nil) :: any
   def load(session_id, ids, includes \\ nil, opts \\ nil)
   def load(_session_id, nil, _includes, _opts), do: {:error, :document_ids_not_informed}
 

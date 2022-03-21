@@ -17,10 +17,9 @@ defmodule Ravix.RQL.Query do
   alias Ravix.RQL.QueryParser
   alias Ravix.RQL.Tokens.{Where, From, And, Or, Condition, Update}
   alias Ravix.Documents.Session
-  alias Ravix.Connection.{RequestExecutor, RequestExecutorHelper}
   alias Ravix.Documents.Commands.ExecuteQueryCommand
-  alias Ravix.Connection.InMemoryNetworkState
-  alias Ravix.Documents.Store
+  alias Ravix.Connection
+  alias Ravix.Connection.RequestExecutor
 
   @type t :: %Query{
           from_token: From.t() | nil,
@@ -129,10 +128,8 @@ defmodule Ravix.RQL.Query do
 
   defp execute_query(query, session_id, method) do
     OK.for do
-      store_state = Store.fetch_configs()
       session_state <- Session.fetch_state(session_id)
-      network_state <- InMemoryNetworkState.fetch_state(session_state.database)
-      request_opts = RequestExecutorHelper.parse_retry_options(store_state)
+      network_state <- Connection.fetch_state(session_state.store)
 
       command = %ExecuteQueryCommand{
         Query: query.query_string,
@@ -140,7 +137,7 @@ defmodule Ravix.RQL.Query do
         method: method
       }
 
-      result <- RequestExecutor.execute(command, network_state, {}, request_opts)
+      result <- RequestExecutor.execute(command, network_state, {}, [])
     after
       result.data
     end

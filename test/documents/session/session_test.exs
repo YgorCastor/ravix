@@ -4,11 +4,10 @@ defmodule Ravix.Documents.SessionTest do
   require OK
 
   alias Ravix.Documents.Session
-  alias Ravix.Documents.Store
+  alias Ravix.TestStore, as: Store
 
   setup do
-    %{ravix: start_supervised!(Ravix)}
-    Store.create_database("test")
+    %{ravix: start_supervised!(Ravix.TestApplication)}
     :ok
   end
 
@@ -18,7 +17,7 @@ defmodule Ravix.Documents.SessionTest do
 
       {:ok, result} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           stored_document <- Session.store(session_id, any_entity)
           session_state <- Session.fetch_state(session_id)
         after
@@ -36,7 +35,7 @@ defmodule Ravix.Documents.SessionTest do
 
       {:ok, result} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           stored_document <- Session.store(session_id, any_entity, "custom_key")
           session_state <- Session.fetch_state(session_id)
         after
@@ -52,7 +51,7 @@ defmodule Ravix.Documents.SessionTest do
     test "If the entity is null, an error should be returned" do
       {:error, :null_entity} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, nil)
         after
         end
@@ -63,7 +62,7 @@ defmodule Ravix.Documents.SessionTest do
 
       {:error, :no_valid_id_informed} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
         after
         end
@@ -74,7 +73,7 @@ defmodule Ravix.Documents.SessionTest do
 
       {:error, {:document_already_stored, _stored_entity}} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
 
           new_clashing_entity = %{
@@ -94,7 +93,7 @@ defmodule Ravix.Documents.SessionTest do
 
       {:ok, [result, state]} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           result <- Session.save_changes(session_id)
           session_state <- Session.fetch_state(session_id)
@@ -119,11 +118,11 @@ defmodule Ravix.Documents.SessionTest do
       {:ok, response} =
         OK.for do
           # Create a document and save it
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
           # Create a new session to fetch the document
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           result <- Session.load(session_id, any_entity.id)
           current_state <- Session.fetch_state(session_id)
         after
@@ -148,12 +147,12 @@ defmodule Ravix.Documents.SessionTest do
       {:ok, response} =
         OK.for do
           # Create a document and save it
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.store(session_id, any_entity_2)
           _ <- Session.save_changes(session_id)
           # Create a new session to fetch the document
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           result <- Session.load(session_id, [any_entity.id, any_entity_2.id])
           current_state <- Session.fetch_state(session_id)
         after
@@ -176,7 +175,7 @@ defmodule Ravix.Documents.SessionTest do
 
       {:ok, response} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
           result <- Session.load(session_id, any_entity.id)
@@ -196,7 +195,7 @@ defmodule Ravix.Documents.SessionTest do
     test "If a document does not exist, return an :document_not_found error" do
       {:error, :document_not_found} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           result <- Session.load(session_id, UUID.uuid4())
           current_state <- Session.fetch_state(session_id)
         after
@@ -209,11 +208,11 @@ defmodule Ravix.Documents.SessionTest do
 
       {:ok, response} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
           # Create a new session to fetch the document
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           result <- Session.load(session_id, [UUID.uuid4(), any_entity.id])
           current_state <- Session.fetch_state(session_id)
         after
@@ -240,12 +239,12 @@ defmodule Ravix.Documents.SessionTest do
       {:ok, response} =
         OK.for do
           # Create a document and save it
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.store(session_id, any_entity_to_include)
           _ <- Session.save_changes(session_id)
           # Create a new session to fetch the document
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           result <- Session.load(session_id, any_entity.id, ["owner_id"])
           current_state <- Session.fetch_state(session_id)
         after
@@ -272,7 +271,7 @@ defmodule Ravix.Documents.SessionTest do
 
       {:ok, result} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
           delete_response <- Session.delete(session_id, any_entity)
@@ -292,7 +291,7 @@ defmodule Ravix.Documents.SessionTest do
     test "If the document is not loaded, return an error" do
       {:error, :document_not_in_session} =
         OK.for do
-          session_id <- Store.open_session("test")
+          session_id <- Store.open_session()
           delete_response <- Session.delete(session_id, UUID.uuid4())
         after
           delete_response

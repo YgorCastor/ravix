@@ -2,8 +2,8 @@ defmodule Ravix.Factory do
   use ExMachina
 
   alias Ravix.Documents.{Session, Conventions}
-  alias Ravix.Connection.{ServerNode, Topology, NodeSelector}
-  alias Ravix.Connection.Network.State, as: NetworkState
+  alias Ravix.Connection.{ServerNode, Topology}
+  alias Ravix.Connection.State, as: ConnectionState
 
   def session_document_factory do
     random_entity = %{id: UUID.uuid4(), something: Faker.Cat.breed()}
@@ -33,30 +33,19 @@ defmodule Ravix.Factory do
     }
   end
 
-  def server_node_healthy_factory do
+  def server_node_factory do
     %ServerNode{
       url: Faker.Internet.url(),
       port: Enum.random(1024..65535),
       protocol: :http,
       database: "test",
-      status: :healthy
-    }
-  end
-
-  def server_node_unhealthy_factory do
-    %ServerNode{
-      url: Faker.Internet.url(),
-      port: Enum.random(1024..65535),
-      protocol: :http,
-      database: "test",
-      status: :unhealthy
     }
   end
 
   def topology_factory do
     %Topology{
       etag: Faker.Internet.slug(),
-      nodes: [build(:server_node_healthy), build(:server_node_unhealthy)]
+      nodes: [build(:server_node)]
     }
   end
 
@@ -70,14 +59,10 @@ defmodule Ravix.Factory do
   end
 
   def network_state_factory do
-    %NetworkState{
-      database_name: "test",
+    %ConnectionState{
+      database: "test",
       certificate: "test" |> Base.encode64(),
       certificate_file: nil,
-      node_selector: %NodeSelector{
-        current_node_index: 1,
-        topology: build(:topology)
-      },
       conventions: build(:conventions)
     }
   end
