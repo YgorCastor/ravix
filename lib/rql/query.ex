@@ -17,9 +17,7 @@ defmodule Ravix.RQL.Query do
   alias Ravix.RQL.QueryParser
   alias Ravix.RQL.Tokens.{Where, From, And, Or, Condition, Update}
   alias Ravix.Documents.Session
-  alias Ravix.Documents.Commands.ExecuteQueryCommand
   alias Ravix.Connection
-  alias Ravix.Connection.RequestExecutor
 
   @type t :: %Query{
           from_token: From.t() | nil,
@@ -117,29 +115,12 @@ defmodule Ravix.RQL.Query do
 
   defp execute_for(%Query{is_raw: false} = query, session_id, method) do
     case QueryParser.parse(query) do
-      {:ok, parsed_query} -> execute_query(parsed_query, session_id, method)
+      {:ok, parsed_query} -> Session.execute_query(parsed_query, session_id, method)
       {:error, err} -> {:error, err}
     end
   end
 
   defp execute_for(%Query{is_raw: true} = query, session_id, method) do
-    execute_query(query, session_id, method)
-  end
-
-  defp execute_query(query, session_id, method) do
-    OK.for do
-      session_state <- Session.fetch_state(session_id)
-      network_state <- Connection.fetch_state(session_state.store)
-
-      command = %ExecuteQueryCommand{
-        Query: query.query_string,
-        QueryParameters: query.query_params,
-        method: method
-      }
-
-      result <- RequestExecutor.execute(command, network_state, {}, [])
-    after
-      result.data
-    end
+    Session.execute_query(query, session_id, method)
   end
 end

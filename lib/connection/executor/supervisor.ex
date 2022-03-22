@@ -62,7 +62,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
       ]
     end)
     |> Enum.map(fn [url: url, database: database, cluster_tag: cluster_tag] ->
-      %{url: url, updated: RequestExecutor.update_topology(url, database, cluster_tag)}
+      %{url: url, updated: RequestExecutor.update_cluster_tag(url, database, cluster_tag)}
     end)
   end
 

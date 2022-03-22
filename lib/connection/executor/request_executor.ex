@@ -41,15 +41,22 @@ defmodule Ravix.Connection.RequestExecutor do
   @spec execute(map, ConnectionState.t(), any, keyword) :: {:error, any} | {:ok, Response.t()}
   def execute(
         command,
-        %ConnectionState{} = network_state,
+        %ConnectionState{} = conn_state,
         headers \\ {},
         opts \\ []
       ) do
-    node_pid = NodeSelector.current_node(network_state)
+    node_pid = NodeSelector.current_node(conn_state)
+
+    headers =
+      case conn_state.disable_topology_updates do
+        false -> headers
+        true -> [{"Topology-Etag", conn_state.topology_etag}]
+      end
 
     execute_for_node(command, node_pid, nil, headers, opts)
   end
 
+  @spec execute_for_node(map(), binary | pid, String.t() | nil, any, keyword) :: any
   def execute_for_node(command, pid_or_url, database, headers \\ {}, opts \\ [])
 
   def execute_for_node(command, pid_or_url, _database, headers, opts) when is_pid(pid_or_url) do
@@ -62,7 +69,6 @@ defmodule Ravix.Connection.RequestExecutor do
   end
 
   defp call_raven(executor, command, headers, opts) do
-    topology_etag = Keyword.get(opts, :topology_etag, nil)
     should_retry = Keyword.get(opts, :should_retry, false)
     retry_backoff = Keyword.get(opts, :retry_backoff, 100)
 
@@ -70,12 +76,6 @@ defmodule Ravix.Connection.RequestExecutor do
       case should_retry do
         true -> Keyword.get(opts, :retry_count, 3)
         false -> 0
-      end
-
-    headers =
-      case topology_etag do
-        nil -> headers
-        _ -> [{"Topology-Etag", topology_etag}]
       end
 
     retry with: constant_backoff(retry_backoff) |> Stream.take(retry_count) do
@@ -89,17 +89,25 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
-  def update_topology(url, database, cluster_tag) do
+  @spec update_cluster_tag(String.t(), String.t(), String.t()) :: :ok
+  def update_cluster_tag(url, database, cluster_tag) do
     GenServer.cast(executor_id(url, database), {:update_cluster_tag, cluster_tag})
   end
 
   @spec fetch_node_state(bitstring | pid) :: {:ok, ServerNode.t()}
   def fetch_node_state(pid) when is_pid(pid) do
-    GenServer.call(pid, :fetch_state)
+    state =
+      pid
+      |> :sys.get_state()
+
+    {:ok, state}
   end
 
+  @spec fetch_node_state(binary, binary) :: {:ok, ServerNode.t()}
   def fetch_node_state(url, database) when is_bitstring(url) do
-    GenServer.call(executor_id(url, database), :fetch_state)
+    state = executor_id(url, database) |> :sys.get_state()
+
+    {:ok, state}
   end
 
   defp executor_id(url, database),
@@ -127,10 +135,6 @@ defmodule Ravix.Connection.RequestExecutor do
         state = put_in(node.conn, conn)
         {:reply, {:error, reason}, state}
     end
-  end
-
-  def handle_call(:fetch_state, _from, %ServerNode{} = node) do
-    {:reply, {:ok, node}, node}
   end
 
   def handle_info(message, %ServerNode{} = node) do
@@ -210,7 +214,7 @@ defmodule Ravix.Connection.RequestExecutor do
         {:ok, response}
 
       _ ->
-        response
+        {:ok, response}
     end
   end
 

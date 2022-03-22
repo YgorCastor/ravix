@@ -25,6 +25,7 @@ defmodule Ravix.Connection.State.Manager do
 
       topology <- ConnectionState.Manager.request_topology(node_pids, state.database)
       _ = ExecutorSupervisor.update_topology(state.store, topology)
+
       state = put_in(state.node_selector, %NodeSelector{current_node_index: 0})
       state = put_in(state.topology_etag, topology.etag)
     after
@@ -62,7 +63,8 @@ defmodule Ravix.Connection.State.Manager do
     end
   end
 
-  def connection_id(state), do: {:via, Registry, {:sessions, state}}
+  @spec connection_id(atom()) :: {:via, Registry, {:connections, atom()}}
+  def connection_id(state), do: {:via, Registry, {:connections, state}}
 
   defp register_nodes(%ConnectionState{} = state) do
     registered_nodes =

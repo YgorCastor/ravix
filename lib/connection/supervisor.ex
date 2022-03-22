@@ -10,6 +10,7 @@ defmodule Ravix.Connection.Supervisor do
     Supervisor.start_link(__MODULE__, {store, otp_app, opts})
   end
 
+  @spec compile_config(keyword) :: any
   def compile_config(opts) do
     Keyword.fetch!(opts, :otp_app)
   end
@@ -32,7 +33,7 @@ defmodule Ravix.Connection.Supervisor do
     end
   end
 
-  def connection_processes(store, configs) do
+  defp connection_processes(store, configs) do
     [
       %{id: ExecutorSupervisor, start: {ExecutorSupervisor, :start_link, [store]}},
       %{id: Connection, start: {Connection, :start_link, [store, configs]}},

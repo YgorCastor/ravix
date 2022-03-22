@@ -4,6 +4,7 @@ defmodule Ravix.Operations.Database.Maintenance do
   alias Ravix.Operations.Database.Commands.CreateDatabaseCommand
   alias Ravix.Connection.RequestExecutor
 
+  @spec create_database(atom | pid, nil | binary, keyword) :: {:error, any} | {:ok, any}
   def create_database(store_or_pid, database_name, opts \\ [])
 
   def create_database(store, database_name, opts) when is_atom(store) do
@@ -23,6 +24,7 @@ defmodule Ravix.Operations.Database.Maintenance do
         }
         |> RequestExecutor.execute_for_node(
           node_pid,
+          database_name,
           {},
           opts
         )

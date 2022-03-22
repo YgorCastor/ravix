@@ -19,30 +19,12 @@ defmodule Ravix.Connection do
     )
   end
 
-  @spec update_topology(atom()) :: :ok
-  def update_topology(store) do
-    ConnectionState.Manager.connection_id(store)
-    |> GenServer.cast({:update_topology})
-  end
-
-  @spec fetch_state(atom()) :: {:ok, ConnectionState.t()} | {:error, any}
+  @spec fetch_state(atom()) :: ConnectionState.t()
   def fetch_state(store) do
-    ConnectionState.Manager.connection_id(store)
-    |> GenServer.call({:fetch_state})
-  end
+    state =
+      ConnectionState.Manager.connection_id(store)
+      |> :sys.get_state()
 
-  ####################
-  #     Handlers     #
-  ####################
-  def handle_cast(
-        {:update_topology},
-        _from,
-        %ConnectionState{} = state
-      ) do
-    {:noreply, state}
-  end
-
-  def handle_call({:fetch_state}, _from, %ConnectionState{} = state) do
-    {:reply, {:ok, state}, state}
+    state
   end
 end

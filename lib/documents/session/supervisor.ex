@@ -21,6 +21,18 @@ defmodule Ravix.Documents.Session.Supervisor do
     DynamicSupervisor.start_child(supervisor_name(session_state.store), {Session, session_state})
   end
 
+  @spec close_session(atom(), binary()) :: :ok | {:error, :not_found}
+  def close_session(store, session_id) do
+    case Registry.lookup(:sessions, session_id) do
+      [] ->
+        {:error, :not_found}
+
+      sessions ->
+        {pid, _} = sessions |> Enum.at(0)
+        DynamicSupervisor.terminate_child(supervisor_name(store), pid)
+    end
+  end
+
   defp supervisor_name(store) do
     :"#{store}.Sessions"
   end

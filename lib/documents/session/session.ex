@@ -19,6 +19,7 @@ defmodule Ravix.Documents.Session do
     )
   end
 
+  @spec load(binary(), list() | bitstring(), any, keyword() | nil) :: any
   def load(session_id, ids, includes \\ nil, opts \\ nil)
   def load(_session_id, nil, _includes, _opts), do: {:error, :document_ids_not_informed}
 
@@ -64,11 +65,18 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:save_changes})
   end
 
-  @spec fetch_state(binary()) :: {:ok, SessionState.t()} | {:error, any}
+  @spec fetch_state(binary()) :: SessionState.t()
   def fetch_state(session_id) do
     session_id
     |> session_id()
-    |> GenServer.call({:fetch_state})
+    |> :sys.get_state()
+  end
+
+  @spec execute_query(any, binary, any) :: any
+  def execute_query(query, session_id, method) do
+    session_id
+    |> session_id()
+    |> GenServer.call({:execute_query, query, method})
   end
 
   @spec session_id(String.t()) :: {:via, Registry, {:sessions, String.t()}}
@@ -126,9 +134,6 @@ defmodule Ravix.Documents.Session do
       ),
       do: {:reply, {:error, :no_valid_id_informed}, state}
 
-  def handle_call({:fetch_state}, _from, %SessionState{} = state),
-    do: {:reply, {:ok, state}, state}
-
   def handle_call({:save_changes}, _from, %SessionState{} = state) do
     case SessionManager.save_changes(state) do
       {:ok, response} -> {:reply, {:ok, response[:result]}, response[:updated_state]}
@@ -141,5 +146,26 @@ defmodule Ravix.Documents.Session do
       {:ok, updated_state} -> {:reply, {:ok, id}, updated_state}
       {:error, err} -> {:reply, {:error, err}, state}
     end
+  end
+
+  def handle_call({:execute_query, query, method}, from, %SessionState{} = state) do
+    reference = make_ref()
+    self_pid = self()
+
+    Task.start(fn ->
+      response = SessionManager.execute_query(state, query, method)
+      GenServer.cast(self_pid, {:query_processed, reference, response})
+    end)
+
+    {:noreply,
+     %SessionState{state | running_queries: Map.put(state.running_queries, reference, from)}}
+  end
+
+  def handle_cast({:query_processed, reference, response}, %SessionState{} = state) do
+    {from, remaining_queries} = Map.pop(state.running_queries, reference)
+
+    GenServer.reply(from, response)
+
+    {:noreply, %SessionState{state | running_queries: remaining_queries}}
   end
 end

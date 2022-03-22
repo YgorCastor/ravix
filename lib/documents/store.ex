@@ -15,7 +15,7 @@ defmodule Ravix.Documents.Store do
 
       def open_session() do
         session_id = UUID.uuid4()
-        {:ok, conn_state} = Ravix.Connection.fetch_state(__MODULE__)
+        conn_state = Ravix.Connection.fetch_state(__MODULE__)
 
         session_initial_state = %Ravix.Documents.Session.State{
           store: __MODULE__,
@@ -27,6 +27,10 @@ defmodule Ravix.Documents.Store do
         {:ok, _} = Ravix.Documents.Session.Supervisor.create_session(session_initial_state)
 
         {:ok, session_id}
+      end
+
+      def close_session(session_id) do
+        Ravix.Documents.Session.Supervisor.close_session(__MODULE__, session_id)
       end
 
       def child_spec(opts) do
@@ -45,4 +49,6 @@ defmodule Ravix.Documents.Store do
               | {:error, term}
 
   @callback open_session() :: {:ok, binary()}
+
+  @callback close_session(session_id :: binary()) :: :ok | {:error, :not_found}
 end

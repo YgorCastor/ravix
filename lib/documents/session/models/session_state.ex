@@ -6,6 +6,7 @@ defmodule Ravix.Documents.Session.State do
             documents_by_id: %{},
             defer_commands: [],
             deleted_entities: [],
+            running_queries: %{},
             number_of_requests: 0
 
   require OK
@@ -16,13 +17,14 @@ defmodule Ravix.Documents.Session.State do
   alias Ravix.Documents.Conventions
 
   @type t :: %SessionState{
-          store: any(),
-          session_id: binary(),
+          store: atom() | nil,
+          session_id: bitstring(),
           database: String.t(),
           conventions: Conventions.t(),
           documents_by_id: map(),
           defer_commands: list(),
           deleted_entities: list(),
+          running_queries: map(),
           number_of_requests: non_neg_integer()
         }
 
@@ -34,6 +36,8 @@ defmodule Ravix.Documents.Session.State do
     }
   end
 
+  @spec register_document(SessionState.t(), binary, map(), any, map(), map() | nil, map() | nil) ::
+          {:error, any} | {:ok, any}
   def register_document(
         %SessionState{} = state,
         key,
@@ -63,7 +67,7 @@ defmodule Ravix.Documents.Session.State do
     end
   end
 
-  @spec mark_document_for_exclusion(SessionState.t(), binary) ::
+  @spec mark_document_for_exclusion(SessionState.t(), bitstring()) ::
           {:error, atom()} | {:ok, SessionState.t()}
   def mark_document_for_exclusion(
         %SessionState{} = state,
@@ -81,7 +85,6 @@ defmodule Ravix.Documents.Session.State do
     end
   end
 
-  @spec update_session(SessionState.t(), maybe_improper_list) :: SessionState.t()
   def update_session(%SessionState{} = session_state, []), do: session_state
 
   def update_session(%SessionState{} = session_state, updates) when is_list(updates) do

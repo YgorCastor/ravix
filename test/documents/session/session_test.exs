@@ -19,7 +19,7 @@ defmodule Ravix.Documents.SessionTest do
         OK.for do
           session_id <- Store.open_session()
           stored_document <- Session.store(session_id, any_entity)
-          session_state <- Session.fetch_state(session_id)
+          session_state = Session.fetch_state(session_id)
         after
           [stored_document: stored_document, session_state: session_state]
         end
@@ -37,7 +37,7 @@ defmodule Ravix.Documents.SessionTest do
         OK.for do
           session_id <- Store.open_session()
           stored_document <- Session.store(session_id, any_entity, "custom_key")
-          session_state <- Session.fetch_state(session_id)
+          session_state = Session.fetch_state(session_id)
         after
           [stored_document: stored_document, session_state: session_state]
         end
@@ -96,7 +96,7 @@ defmodule Ravix.Documents.SessionTest do
           session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           result <- Session.save_changes(session_id)
-          session_state <- Session.fetch_state(session_id)
+          session_state = Session.fetch_state(session_id)
         after
           [result, session_state]
         end
@@ -124,7 +124,7 @@ defmodule Ravix.Documents.SessionTest do
           # Create a new session to fetch the document
           session_id <- Store.open_session()
           result <- Session.load(session_id, any_entity.id)
-          current_state <- Session.fetch_state(session_id)
+          current_state = Session.fetch_state(session_id)
         after
           Map.put(result, "state", current_state)
         end
@@ -154,7 +154,7 @@ defmodule Ravix.Documents.SessionTest do
           # Create a new session to fetch the document
           session_id <- Store.open_session()
           result <- Session.load(session_id, [any_entity.id, any_entity_2.id])
-          current_state <- Session.fetch_state(session_id)
+          current_state = Session.fetch_state(session_id)
         after
           Map.put(result, "state", current_state)
         end
@@ -179,7 +179,7 @@ defmodule Ravix.Documents.SessionTest do
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
           result <- Session.load(session_id, any_entity.id)
-          current_state <- Session.fetch_state(session_id)
+          current_state = Session.fetch_state(session_id)
         after
           Map.put(result, "state", current_state)
         end
@@ -197,7 +197,7 @@ defmodule Ravix.Documents.SessionTest do
         OK.for do
           session_id <- Store.open_session()
           result <- Session.load(session_id, UUID.uuid4())
-          current_state <- Session.fetch_state(session_id)
+          current_state = Session.fetch_state(session_id)
         after
           Map.put(result, "state", current_state)
         end
@@ -214,7 +214,7 @@ defmodule Ravix.Documents.SessionTest do
           # Create a new session to fetch the document
           session_id <- Store.open_session()
           result <- Session.load(session_id, [UUID.uuid4(), any_entity.id])
-          current_state <- Session.fetch_state(session_id)
+          current_state = Session.fetch_state(session_id)
         after
           Map.put(result, "state", current_state)
         end
@@ -246,7 +246,7 @@ defmodule Ravix.Documents.SessionTest do
           # Create a new session to fetch the document
           session_id <- Store.open_session()
           result <- Session.load(session_id, any_entity.id, ["owner_id"])
-          current_state <- Session.fetch_state(session_id)
+          current_state = Session.fetch_state(session_id)
         after
           Map.put(result, "state", current_state)
         end
@@ -276,7 +276,7 @@ defmodule Ravix.Documents.SessionTest do
           _ <- Session.save_changes(session_id)
           delete_response <- Session.delete(session_id, any_entity)
           _ <- Session.save_changes(session_id)
-          current_state <- Session.fetch_state(session_id)
+          current_state = Session.fetch_state(session_id)
         after
           [response: delete_response, state: current_state]
         end

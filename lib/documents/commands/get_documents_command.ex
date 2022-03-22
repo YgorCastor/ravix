@@ -24,7 +24,7 @@ defmodule Ravix.Documents.Commands.GetDocumentsCommand do
     counter_includes: list(String.t()) | nil
   })
 
-  @spec parse_response(State.t(), map) :: [{:includes, list()} | {:results, list}, ...]
+  @spec parse_response(State.t(), map) :: [{:includes, list()} | {:results, list}]
   def parse_response(session_state, documents_response) do
     [
       results: extract_results(session_state, Map.get(documents_response, "Results")),
