@@ -24,7 +24,7 @@ defmodule Ravix.Documents.StoreTest do
     end
 
     test "If there's not a session, should return a :not_found error" do
-      {:error, :not_found} = Store.close_session(UUID.uuid4)
+      {:error, :not_found} = Store.close_session(UUID.uuid4())
     end
   end
 end

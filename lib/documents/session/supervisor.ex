@@ -18,10 +18,15 @@ defmodule Ravix.Documents.Session.Supervisor do
 
   @spec create_session(SessionState.t()) :: :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
   def create_session(%SessionState{} = session_state) do
+    session_state = session_state |> SessionState.update_last_session_call()
     DynamicSupervisor.start_child(supervisor_name(session_state.store), {Session, session_state})
   end
 
-  @spec close_session(atom(), binary()) :: :ok | {:error, :not_found}
+  @spec close_session(atom(), pid | bitstring()) :: :ok | {:error, :not_found}
+  def close_session(store, pid) when is_pid(pid) do
+    DynamicSupervisor.terminate_child(supervisor_name(store), pid)
+  end
+
   def close_session(store, session_id) do
     case Registry.lookup(:sessions, session_id) do
       [] ->

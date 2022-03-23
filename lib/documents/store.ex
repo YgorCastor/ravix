@@ -15,7 +15,7 @@ defmodule Ravix.Documents.Store do
 
       def open_session() do
         session_id = UUID.uuid4()
-        conn_state = Ravix.Connection.fetch_state(__MODULE__)
+        {:ok, conn_state} = Ravix.Connection.fetch_state(__MODULE__)
 
         session_initial_state = %Ravix.Documents.Session.State{
           store: __MODULE__,

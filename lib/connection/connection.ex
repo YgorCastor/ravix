@@ -19,12 +19,14 @@ defmodule Ravix.Connection do
     )
   end
 
-  @spec fetch_state(atom()) :: ConnectionState.t()
+  @spec fetch_state(atom()) :: {:error, :connection_not_found} | {:ok, ConnectionState.t()}
   def fetch_state(store) do
-    state =
-      ConnectionState.Manager.connection_id(store)
-      |> :sys.get_state()
-
-    state
+    try do
+      {:ok,
+       ConnectionState.Manager.connection_id(store)
+       |> :sys.get_state()}
+    catch
+      :exit, _ -> {:error, :connection_not_found}
+    end
   end
 end

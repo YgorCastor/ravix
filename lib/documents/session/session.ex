@@ -5,9 +5,10 @@ defmodule Ravix.Documents.Session do
 
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.Manager, as: SessionManager
+  alias Ravix.Documents.Session.Supervisor, as: SessionSupervisor
 
   def init(session_state) do
-    {:ok, session_state}
+    {:ok, session_state, {:continue, :session_ttl_checker}}
   end
 
   @spec start_link(any, SessionState.t()) :: :ignore | {:error, any} | {:ok, pid}
@@ -65,11 +66,16 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:save_changes})
   end
 
-  @spec fetch_state(binary()) :: SessionState.t()
+  @spec fetch_state(binary()) :: {:error, :session_not_found} | {:ok, SessionState.t()}
   def fetch_state(session_id) do
-    session_id
-    |> session_id()
-    |> :sys.get_state()
+    try do
+      {:ok,
+       session_id
+       |> session_id()
+       |> :sys.get_state()}
+    catch
+      :exit, _ -> {:error, :session_not_found}
+    end
   end
 
   @spec execute_query(any, binary, any) :: any
@@ -158,7 +164,8 @@ defmodule Ravix.Documents.Session do
     end)
 
     {:noreply,
-     %SessionState{state | running_queries: Map.put(state.running_queries, reference, from)}}
+     %SessionState{state | running_queries: Map.put(state.running_queries, reference, from)}
+     |> SessionState.update_last_session_call()}
   end
 
   def handle_cast({:query_processed, reference, response}, %SessionState{} = state) do
@@ -166,6 +173,27 @@ defmodule Ravix.Documents.Session do
 
     GenServer.reply(from, response)
 
-    {:noreply, %SessionState{state | running_queries: remaining_queries}}
+    {:noreply,
+     %SessionState{state | running_queries: remaining_queries}
+     |> SessionState.update_last_session_call()}
+  end
+
+  def handle_info(:check_session, %SessionState{} = state) do
+    self_pid = self()
+
+    Task.start(fn ->
+      if Timex.diff(Timex.now(), state.last_session_call, :seconds) >
+           state.conventions.session_idle_ttl do
+        SessionSupervisor.close_session(state.store, self_pid)
+      end
+    end)
+
+    {:noreply, state}
+  end
+
+  def handle_continue(:session_ttl_checker, %SessionState{} = state) do
+    Process.send_after(self(), :check_session, 5000)
+
+    {:noreply, state}
   end
 end

@@ -7,6 +7,7 @@ defmodule Ravix.Documents.Session.State do
             defer_commands: [],
             deleted_entities: [],
             running_queries: %{},
+            last_session_call: nil,
             number_of_requests: 0
 
   require OK
@@ -25,6 +26,7 @@ defmodule Ravix.Documents.Session.State do
           defer_commands: list(),
           deleted_entities: list(),
           running_queries: map(),
+          last_session_call: DateTime.t(),
           number_of_requests: non_neg_integer()
         }
 
@@ -33,6 +35,14 @@ defmodule Ravix.Documents.Session.State do
     %SessionState{
       session_state
       | number_of_requests: session_state.number_of_requests + 1
+    }
+  end
+
+  @spec update_last_session_call(SessionState.t()) :: SessionState.t()
+  def update_last_session_call(%SessionState{} = session_state) do
+    %SessionState{
+      session_state
+      | last_session_call: Timex.now()
     }
   end
 
@@ -85,6 +95,7 @@ defmodule Ravix.Documents.Session.State do
     end
   end
 
+  @spec update_session(SessionState.t(), maybe_improper_list) :: SessionState.t()
   def update_session(%SessionState{} = session_state, []), do: session_state
 
   def update_session(%SessionState{} = session_state, updates) when is_list(updates) do

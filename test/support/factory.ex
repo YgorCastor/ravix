@@ -38,7 +38,7 @@ defmodule Ravix.Factory do
       url: Faker.Internet.url(),
       port: Enum.random(1024..65535),
       protocol: :http,
-      database: "test",
+      database: "test"
     }
   end
 

@@ -19,11 +19,12 @@ defmodule Ravix.Documents.Session.Manager do
     OK.try do
       already_loaded_ids = fetch_loaded_documents(state, document_ids)
       ids_to_load <- Validations.all_ids_are_not_already_loaded(document_ids, already_loaded_ids)
-      network_state = Connection.fetch_state(state.store)
+      network_state <- Connection.fetch_state(state.store)
       response <- execute_load_request(network_state, ids_to_load, includes, opts)
       parsed_response = GetDocumentsCommand.parse_response(state, response)
       updated_state = SessionState.update_session(state, parsed_response[:results])
       updated_state = SessionState.update_session(updated_state, parsed_response[:includes])
+      updated_state = SessionState.update_last_session_call(updated_state)
     after
       {:ok,
        [
@@ -54,7 +55,9 @@ defmodule Ravix.Documents.Session.Manager do
       metadata = Conventions.build_default_metadata(entity)
 
       updated_state <-
-        SessionState.register_document(state, key, entity, change_vector, metadata, %{}, nil)
+        state
+        |> SessionState.update_last_session_call()
+        |> SessionState.register_document(key, entity, change_vector, metadata, %{}, nil)
     after
       {:ok, [entity, updated_state]}
     rescue
@@ -62,9 +65,10 @@ defmodule Ravix.Documents.Session.Manager do
     end
   end
 
+  @spec save_changes(SessionState.t()) :: {:error, any} | {:ok, keyword()}
   def save_changes(%SessionState{} = state) do
     OK.for do
-      network_state = Connection.fetch_state(state.store)
+      network_state <- Connection.fetch_state(state.store)
       result <- execute_save_request(state, network_state, [])
 
       parsed_updates =
@@ -87,15 +91,20 @@ defmodule Ravix.Documents.Session.Manager do
           {:error, atom()} | {:ok, SessionState.t()}
   def delete_document(%SessionState{} = state, document_id) do
     OK.for do
-      updated_state <- SessionState.mark_document_for_exclusion(state, document_id)
+      updated_state <-
+        state
+        |> SessionState.update_last_session_call()
+        |> SessionState.mark_document_for_exclusion(document_id)
     after
       updated_state
     end
   end
 
+  @spec execute_query(SessionState.t(), Query.t(), any) ::
+          {:error, any} | {:ok, Connection.Response.t()}
   def execute_query(%SessionState{} = session_state, %Query{} = query, method) do
     OK.for do
-      network_state = Connection.fetch_state(session_state.store)
+      network_state <- Connection.fetch_state(session_state.store)
 
       command = %ExecuteQueryCommand{
         Query: query.query_string,
@@ -161,6 +170,7 @@ defmodule Ravix.Documents.Session.Manager do
       updated_state =
         state
         |> SessionState.increment_request_count()
+        |> SessionState.update_last_session_call()
         |> SessionState.clear_deferred_commands()
         |> SessionState.clear_deleted_entities()
     after

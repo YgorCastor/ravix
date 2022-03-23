@@ -94,20 +94,22 @@ defmodule Ravix.Connection.RequestExecutor do
     GenServer.cast(executor_id(url, database), {:update_cluster_tag, cluster_tag})
   end
 
-  @spec fetch_node_state(bitstring | pid) :: {:ok, ServerNode.t()}
+  @spec fetch_node_state(bitstring | pid) :: {:ok, ServerNode.t()} | {:error, :node_not_found}
   def fetch_node_state(pid) when is_pid(pid) do
-    state =
-      pid
-      |> :sys.get_state()
-
-    {:ok, state}
+    try do
+      {:ok, pid |> :sys.get_state()}
+    catch
+      :exit, _ -> {:error, :node_not_found}
+    end
   end
 
-  @spec fetch_node_state(binary, binary) :: {:ok, ServerNode.t()}
+  @spec fetch_node_state(binary, binary) :: {:ok, ServerNode.t()} | {:error, :node_not_found}
   def fetch_node_state(url, database) when is_bitstring(url) do
-    state = executor_id(url, database) |> :sys.get_state()
-
-    {:ok, state}
+    try do
+      {:ok, executor_id(url, database) |> :sys.get_state()}
+    catch
+      :exit, _ -> {:error, :node_not_found}
+    end
   end
 
   defp executor_id(url, database),

@@ -5,6 +5,7 @@ defmodule Ravix.Connection.Supervisor do
   alias Ravix.Connection.State, as: ConnectionState
   alias Ravix.Connection.RequestExecutor.Supervisor, as: ExecutorSupervisor
   alias Ravix.Documents.Session.Supervisor, as: SessionSupervisor
+  alias Ravix.Documents.Conventions
 
   def start_link(store, otp_app, opts) do
     Supervisor.start_link(__MODULE__, {store, otp_app, opts})
@@ -17,9 +18,12 @@ defmodule Ravix.Connection.Supervisor do
 
   @spec runtime_configs(any(), atom) :: {:error, list} | {:ok, Ravix.Connection.State.t()}
   def runtime_configs(store, otp_app) do
-    Application.get_env(otp_app, store)
-    |> Enum.into(%{})
-    |> Mappable.to_struct(ConnectionState)
+    configs = Application.get_env(otp_app, store)
+    conventions = struct(%Conventions{}, configs[:document_conventions])
+    configs = struct(%ConnectionState{}, configs)
+    configs = put_in(configs.conventions, conventions)
+
+    configs
     |> ConnectionState.validate_configs()
   end
 

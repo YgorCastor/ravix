@@ -17,7 +17,6 @@ defmodule Ravix.RQL.Query do
   alias Ravix.RQL.QueryParser
   alias Ravix.RQL.Tokens.{Where, From, And, Or, Condition, Update}
   alias Ravix.Documents.Session
-  alias Ravix.Connection
 
   @type t :: %Query{
           from_token: From.t() | nil,
