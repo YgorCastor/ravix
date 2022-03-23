@@ -26,7 +26,7 @@ defmodule Ravix.Documents.Session.State do
           defer_commands: list(),
           deleted_entities: list(),
           running_queries: map(),
-          last_session_call: DateTime.t(),
+          last_session_call: DateTime.t() | nil,
           number_of_requests: non_neg_integer()
         }
 
