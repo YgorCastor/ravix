@@ -29,4 +29,21 @@ defmodule Ravix.Connection do
       :exit, _ -> {:error, :connection_not_found}
     end
   end
+
+  @spec update_topology(atom) :: :ok
+  def update_topology(store) do
+    store
+    |> ConnectionState.Manager.connection_id()
+    |> GenServer.cast(:update_topology)
+  end
+
+  ####################
+  #     Handlers     #
+  ####################
+  def handle_cast(:update_topology, %ConnectionState{} = state) do
+    case ConnectionState.Manager.update_topology(state) do
+      {:ok, updated_state} -> {:noreply, updated_state}
+      _ -> {:noreply, state}
+    end
+  end
 end

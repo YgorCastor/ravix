@@ -1,5 +1,6 @@
 defmodule Ravix.Connection.ServerNode do
-  defstruct url: nil,
+  defstruct store: nil,
+            url: nil,
             port: nil,
             conn: nil,
             certificate: nil,
@@ -11,6 +12,7 @@ defmodule Ravix.Connection.ServerNode do
   alias Ravix.Connection.ServerNode
 
   @type t :: %ServerNode{
+          store: atom(),
           url: String.t(),
           port: non_neg_integer(),
           conn: Mint.HTTP.t() | nil,
@@ -21,6 +23,7 @@ defmodule Ravix.Connection.ServerNode do
           cluster_tag: String.t() | nil
         }
 
+  @spec from_url(binary | URI.t(), any, any) :: ServerNode.t()
   def from_url(url, database, certificate) do
     parsed_url = URI.new!(url)
 

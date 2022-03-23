@@ -7,6 +7,7 @@ defmodule Ravix.Connection.RequestExecutor do
 
   @default_headers [{"content-type", "application/json"}, {"accept", "application/json"}]
 
+  alias Ravix.Connection
   alias Ravix.Connection.State, as: ConnectionState
   alias Ravix.Connection.{ServerNode, NodeSelector, Response}
   alias Ravix.Documents.Protocols.CreateRequest
@@ -29,7 +30,7 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
-  @spec start_link(any, Ravix.Connection.ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}
+  @spec start_link(any, ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(_attrs, %ServerNode{} = node) do
     GenServer.start_link(
       __MODULE__,
@@ -210,12 +211,13 @@ defmodule Ravix.Connection.RequestExecutor do
     state
   end
 
-  defp check_if_needs_topology_update({:ok, response}, %ServerNode{} = _node) do
+  defp check_if_needs_topology_update({:ok, response}, %ServerNode{} = node) do
     case Enum.find(response.headers, fn header -> elem(header, 0) == "Refresh-Topology" end) do
       nil ->
         {:ok, response}
 
       _ ->
+        Connection.update_topology(node.store)
         {:ok, response}
     end
   end

@@ -9,6 +9,7 @@ defmodule Ravix.Connection.NodeSelector do
           current_node_index: non_neg_integer()
         }
 
+  @spec current_node(ConnectionState.t()) :: pid()
   def current_node(%ConnectionState{} = state) do
     Enum.at(ExecutorSupervisor.fetch_nodes(state.store), state.node_selector.current_node_index)
   end

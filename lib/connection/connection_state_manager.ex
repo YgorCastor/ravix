@@ -23,7 +23,7 @@ defmodule Ravix.Connection.State.Manager do
             :ok
         end
 
-      topology <- ConnectionState.Manager.request_topology(node_pids, state.database)
+      topology <- __MODULE__.request_topology(node_pids, state.database)
       _ = ExecutorSupervisor.update_topology(state.store, topology)
 
       state = put_in(state.node_selector, %NodeSelector{current_node_index: 0})
@@ -33,6 +33,19 @@ defmodule Ravix.Connection.State.Manager do
     rescue
       :invalid_cluster_topology -> raise "Unable to fetch the cluster topology"
       :no_node_registered -> raise "No nodes were registered successfully"
+    end
+  end
+
+  def update_topology(%ConnectionState{} = state) do
+    OK.for do
+      current_node = NodeSelector.current_node(state.node_selector)
+      topology <- __MODULE__.request_topology([current_node], state.database)
+      _ = ExecutorSupervisor.update_topology(state.store, topology)
+
+      state = put_in(state.topology_etag, topology.etag)
+      state = put_in(state.node_selector, %NodeSelector{current_node_index: 0})
+    after
+      state
     end
   end
 
