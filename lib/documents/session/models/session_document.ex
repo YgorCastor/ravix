@@ -2,18 +2,15 @@ defmodule Ravix.Documents.Session.SessionDocument do
   defstruct entity: nil,
             key: nil,
             original_value: nil,
-            change_vector: "",
-            metadata: %{},
-            original_metadata: %{}
+            change_vector: ""
 
   alias Ravix.Documents.Session.{State, SessionDocument}
+  alias Ravix.Documents.Metadata
 
   @type t :: %SessionDocument{
           entity: map(),
           key: binary(),
-          original_metadata: map(),
           change_vector: binary(),
-          metadata: map(),
           original_value: map()
         }
 
@@ -36,53 +33,39 @@ defmodule Ravix.Documents.Session.SessionDocument do
           | entity: document_without_metadata,
             key: document["@id"],
             change_vector: document_metadata["@change-vector"],
-            metadata: document_metadata,
-            original_metadata: existing_document.metadata,
             original_value: existing_document.entity
         }
+
 
       _ ->
         %SessionDocument{
           key: document_metadata["@id"],
           entity: document_without_metadata,
-          change_vector: document_metadata["@change-vector"],
-          metadata: document_metadata
+          change_vector: document_metadata["@change-vector"]
         }
     end
   end
 
   @spec upsert_document(State.t(), any, any) :: nil | SessionDocument.t()
-  def upsert_document(session_state, document_id, document) do
+  def upsert_document(session_state, document_id, metadata) do
     case State.fetch_document(session_state, document_id) do
       {:ok, existing_document} ->
+        {:ok, updated_document} = Metadata.add_metadata(existing_document.entity, metadata)
+
         %SessionDocument{
           existing_document
-          | change_vector: document["@change-vector"],
+          | change_vector: metadata["@change-vector"],
             key: document_id,
-            metadata: %{
-              "@change-vector": document["@change-vector"],
-              "@collection": document["@collection"],
-              "@id": document_id,
-              "@last-modified": document["@last-modified"]
-            },
-            original_metadata: existing_document.metadata,
+            entity: updated_document,
             original_value: existing_document.entity
         }
 
       _ ->
         %SessionDocument{
           key: document_id,
-          entity: document,
-          change_vector: document["@metadata"]["@change-vector"],
-          metadata: document["@metadata"]
+          entity: metadata,
+          change_vector: metadata["@metadata"]["@change-vector"]
         }
     end
-  end
-
-  @spec merge_entity(SessionDocument.t()) :: map
-  def merge_entity(%SessionDocument{} = session_document) do
-    session_document.entity
-    |> Map.put("@metadata", session_document.metadata)
-    |> Morphix.stringmorphiform!()
   end
 end

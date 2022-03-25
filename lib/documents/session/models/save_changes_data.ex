@@ -27,7 +27,9 @@ defmodule Ravix.Documents.Session.SaveChangesData do
     delete_commands =
       Enum.map(
         deleted_entities,
-        fn entity -> %DeleteDocument{Id: entity["@metadata"]["@id"]} end
+        fn entity ->
+          %DeleteDocument{Id: entity.key}
+        end
       )
 
     %SaveChangesData{

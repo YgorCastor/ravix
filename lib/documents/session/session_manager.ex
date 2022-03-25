@@ -4,7 +4,7 @@ defmodule Ravix.Documents.Session.Manager do
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.{SaveChangesData, Validations}
   alias Ravix.Documents.Commands.{BatchCommand, GetDocumentsCommand, ExecuteQueryCommand}
-  alias Ravix.Documents.Conventions
+  alias Ravix.Documents.Metadata
   alias Ravix.Connection
   alias Ravix.Connection.State, as: ConnectionState
   alias Ravix.Connection.RequestExecutor
@@ -48,16 +48,28 @@ defmodule Ravix.Documents.Session.Manager do
     end
   end
 
-  @spec store_entity(Ravix.Documents.Session.State.t(), map, binary, any) ::
-          {:error, any} | {:ok, any()}
-  def store_entity(%SessionState{} = state, entity, key, change_vector) do
+  @spec store_entity(SessionState.t(), map, any, String.t()) :: {:error, any} | {:ok, [...]}
+  def store_entity(%SessionState{} = state, entity, key, change_vector) when is_struct(entity) do
+    entity
+    |> Map.reject(fn {_, v} -> is_nil(v) end)
+    |> do_store_entity(key, change_vector, state)
+  end
+
+  def store_entity(%SessionState{} = state, entity, key, change_vector) when is_map(entity) do
+    entity
+    |> Morphix.atomorphiform!()
+    |> do_store_entity(key, change_vector, state)
+  end
+
+  defp do_store_entity(entity, key, change_vector, %SessionState{} = state) do
     OK.try do
-      metadata = Conventions.build_default_metadata(entity)
+      metadata = Metadata.build_default_metadata(entity)
+      entity <- Metadata.add_metadata(entity, metadata)
 
       updated_state <-
         state
         |> SessionState.update_last_session_call()
-        |> SessionState.register_document(key, entity, change_vector, metadata, %{}, nil)
+        |> SessionState.register_document(key, entity, change_vector)
     after
       {:ok, [entity, updated_state]}
     rescue
@@ -122,11 +134,8 @@ defmodule Ravix.Documents.Session.Manager do
     document_ids
     |> Enum.map(fn id ->
       case Validations.document_not_stored(state, id) do
-        {:ok, _} ->
-          nil
-
-        {:error, {:document_already_stored, stored_document}} ->
-          stored_document["@metadata"]["@id"]
+        {:ok, _} -> nil
+        {:error, {:document_already_stored, stored_document}} -> stored_document.key
       end
     end)
     |> Enum.reject(fn item -> item == nil end)

@@ -2,6 +2,7 @@ defmodule Ravix.Factory do
   use ExMachina
 
   alias Ravix.Documents.{Session, Conventions}
+  alias Ravix.SampleModel.Cat
   alias Ravix.Connection.{ServerNode, Topology}
   alias Ravix.Connection.State, as: ConnectionState
 
@@ -11,11 +12,7 @@ defmodule Ravix.Factory do
     %Session.SessionDocument{
       entity: random_entity,
       key: UUID.uuid4(),
-      change_vector: "A:150-fGrQ73YexEqvOBc/0RrYUA",
-      metadata: %{
-        "@collection": "@empty",
-        "@last-modified": "2022-01-24T08:35:28.5915575Z"
-      }
+      change_vector: "A:150-fGrQ73YexEqvOBc/0RrYUA"
     }
   end
 
@@ -64,6 +61,14 @@ defmodule Ravix.Factory do
       certificate: "test" |> Base.encode64(),
       certificate_file: nil,
       conventions: build(:conventions)
+    }
+  end
+
+  def cat_entity_factory do
+    %Cat{
+      id: UUID.uuid4(),
+      name: Faker.Cat.name(),
+      breed: Faker.Cat.breed()
     }
   end
 end

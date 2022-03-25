@@ -46,16 +46,12 @@ defmodule Ravix.Documents.Session.State do
     }
   end
 
-  @spec register_document(SessionState.t(), binary, map(), any, map(), map() | nil, map() | nil) ::
-          {:error, any} | {:ok, any}
   def register_document(
         %SessionState{} = state,
         key,
         entity,
         change_vector,
-        metadata,
-        original_metadata,
-        original_document
+        original_document \\ nil
       ) do
     OK.for do
       _ <- Validations.document_not_in_deferred_command(state, key)
@@ -69,9 +65,7 @@ defmodule Ravix.Documents.Session.State do
               entity: entity,
               key: key,
               original_value: original_document,
-              change_vector: change_vector,
-              metadata: metadata,
-              original_metadata: original_metadata
+              change_vector: change_vector
             })
       }
     end
@@ -88,9 +82,12 @@ defmodule Ravix.Documents.Session.State do
       _ <- Validations.document_not_deleted(state, document_id)
       document <- Validations.document_in_session?(state, document_id)
     after
+      {_, updated_documents} = Map.pop(state.documents_by_id, document_id)
+
       %SessionState{
         state
-        | deleted_entities: state.deleted_entities ++ [document]
+        | deleted_entities: state.deleted_entities ++ [document],
+          documents_by_id: updated_documents
       }
     end
   end

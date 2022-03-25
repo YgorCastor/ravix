@@ -1,6 +1,8 @@
 defmodule Ravix.Documents.SessionTest do
   use ExUnit.Case
 
+  import Ravix.Factory
+
   require OK
 
   alias Ravix.Documents.Session
@@ -109,6 +111,29 @@ defmodule Ravix.Documents.SessionTest do
       {:ok, document_in_session} = Session.State.fetch_document(state, first_result["@id"])
 
       assert document_in_session.change_vector == first_result["@change-vector"]
+    end
+
+    test "Structs should be saved mapped to a collection" do
+      any_entity = build(:cat_entity)
+
+      {:ok, [result, state]} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, any_entity)
+          result <- Session.save_changes(session_id)
+          session_state <- Session.fetch_state(session_id)
+        after
+          [result, session_state]
+        end
+
+      assert result["Results"] != []
+      assert state.number_of_requests == 1
+
+      first_result = Enum.at(result["Results"], 0)
+      {:ok, document_in_session} = Session.State.fetch_document(state, first_result["@id"])
+
+      assert document_in_session.change_vector == first_result["@change-vector"]
+      assert document_in_session.entity."@metadata"["@collection"] == "Cat" # Ok, dis weird as fuck
     end
   end
 

@@ -22,20 +22,4 @@ defmodule Ravix.Documents.Conventions do
           session_idle_ttl: non_neg_integer(),
           disable_topology_update: boolean()
         }
-
-  @spec build_default_metadata(nil | map) :: {} | map
-  def build_default_metadata(entity) when entity == nil, do: {}
-
-  def build_default_metadata(entity) do
-    metadata = existing_metadata(entity)
-    Map.put(metadata, "@collection", collection_name(entity))
-  end
-
-  defp existing_metadata(entity) when not is_map_key(entity, "@metadata"), do: %{}
-
-  defp existing_metadata(entity), do: entity["@metadata"]
-
-  defp collection_name(entity) when not is_map_key(entity, "__struct__"), do: ""
-
-  defp collection_name(entity), do: entity.__struct__
 end

@@ -1,6 +1,5 @@
 defmodule Ravix.Documents.Session.Validations do
   alias Ravix.Documents.Session.State
-  alias Ravix.Documents.Session.SessionDocument
 
   @spec document_not_in_deferred_command(State.t(), binary()) ::
           {:ok, binary()} | {:error, :document_already_deferred}
@@ -24,7 +23,7 @@ defmodule Ravix.Documents.Session.Validations do
   def document_not_stored(%State{} = state, entity_id) do
     case Map.get(state.documents_by_id, entity_id) do
       nil -> {:ok, entity_id}
-      document -> {:error, {:document_already_stored, SessionDocument.merge_entity(document)}}
+      document -> {:error, {:document_already_stored, document}}
     end
   end
 
@@ -32,7 +31,7 @@ defmodule Ravix.Documents.Session.Validations do
   def document_in_session?(%State{} = state, entity_id) do
     case Map.get(state.documents_by_id, entity_id) do
       nil -> {:error, :document_not_in_session}
-      document -> {:ok, SessionDocument.merge_entity(document)}
+      document -> {:ok, document}
     end
   end
 
