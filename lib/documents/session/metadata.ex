@@ -1,7 +1,5 @@
 defmodule Ravix.Documents.Metadata do
-  @spec build_default_metadata(nil | map) :: {} | map
-  def build_default_metadata(entity) when entity == nil, do: {}
-
+  @spec build_default_metadata(map()) :: nil | %{:"@collection" => any, optional(any) => any}
   def build_default_metadata(entity) do
     case collection_name(entity) do
       nil ->
@@ -13,20 +11,11 @@ defmodule Ravix.Documents.Metadata do
     end
   end
 
-  @spec add_metadata(any, any) ::
-          {:error, :invalid_entity | :struct_without_metadata} | {:ok, map()}
-  def add_metadata(entity, nil), do: {:ok, entity}
+  @spec add_metadata(map(), nil | map) :: map()
+  def add_metadata(entity, nil), do: entity
 
   def add_metadata(entity, metadata) when is_map(metadata),
-    do: {:ok, Map.put(entity, :"@metadata", metadata)}
-
-  def add_metadata(entity, _) when is_struct(entity) and not is_map_key(entity, :"@metadata"),
-    do: {:error, :struct_without_metadata}
-
-  def add_metadata(entity, metadata) when is_struct(entity),
-    do: {:ok, put_in(entity[:"@metadata"], metadata)}
-
-  def add_metadata(_, _), do: {:error, :invalid_entity}
+    do: Map.put(entity, :"@metadata", metadata)
 
   defp existing_metadata(entity) when not is_map_key(entity, :"@metadata"), do: %{}
 
@@ -35,5 +24,9 @@ defmodule Ravix.Documents.Metadata do
   defp collection_name(entity) when not is_struct(entity), do: nil
 
   defp collection_name(entity),
-    do: entity.__struct__ |> Module.split() |> Enum.reverse() |> Enum.at(0)
+    do:
+      entity.__struct__
+      |> Module.split()
+      |> Enum.reverse()
+      |> Enum.at(0)
 end

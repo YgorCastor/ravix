@@ -1,8 +1,8 @@
 defmodule Ravix.Document do
-  @base_fields [:"@metadata"]
-
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
+      @base_fields [:"@metadata"]
+
       {fields, only, except} = compile_configs(opts)
 
       fields = @base_fields ++ fields

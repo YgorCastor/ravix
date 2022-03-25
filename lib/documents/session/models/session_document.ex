@@ -50,7 +50,7 @@ defmodule Ravix.Documents.Session.SessionDocument do
   def upsert_document(session_state, document_id, metadata) do
     case State.fetch_document(session_state, document_id) do
       {:ok, existing_document} ->
-        {:ok, updated_document} = Metadata.add_metadata(existing_document.entity, metadata)
+        updated_document = Metadata.add_metadata(existing_document.entity, metadata)
 
         %SessionDocument{
           existing_document

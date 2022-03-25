@@ -64,7 +64,7 @@ defmodule Ravix.Documents.Session.Manager do
   defp do_store_entity(entity, key, change_vector, %SessionState{} = state) do
     OK.try do
       metadata = Metadata.build_default_metadata(entity)
-      entity <- Metadata.add_metadata(entity, metadata)
+      entity = Metadata.add_metadata(entity, metadata)
 
       updated_state <-
         state
