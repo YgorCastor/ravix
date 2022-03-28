@@ -1,4 +1,7 @@
 defmodule Ravix.Documents.Session.Manager do
+  @moduledoc """
+  Functions to manage session changes
+  """
   require OK
 
   alias Ravix.Documents.Session.State, as: SessionState

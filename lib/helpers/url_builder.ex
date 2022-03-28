@@ -1,4 +1,12 @@
 defmodule Ravix.Helpers.UrlBuilder do
+  @moduledoc """
+  Helper to facilitate building url query params following the RavenDB API
+  """
+
+  @doc """
+  Receives a base url, param name and a (list of) param value and parses it to 
+  a valid RavenDB url
+  """
   @spec append_param(String.t(), String.t(), any()) :: String.t()
   def append_param(base_url, param_name, param_value)
 

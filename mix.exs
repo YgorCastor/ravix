@@ -18,6 +18,12 @@ defmodule Ravix.MixProject do
       ],
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      ],
+      source_url: "https://github.com/YgorCastor/ravix",
+      homepage_url: "https://github.com/YgorCastor/ravix",
+      docs: [
+        main: "Ravix",
+        extras: ["README.md"]
       ]
     ]
   end
@@ -44,6 +50,7 @@ defmodule Ravix.MixProject do
       {:retry, "~> 0.15.0"},
       {:gradient, github: "esl/gradient", only: [:dev, :test], runtime: false},
       {:elixir_sense, github: "elixir-lsp/elixir_sense", only: [:dev]},
+      {:ex_doc, "~> 0.28.3", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1.0", only: [:dev, :test], runtime: false},
       {:ex_machina, "~> 2.7", only: :test},
       {:faker, "~> 0.17.0", only: :test},

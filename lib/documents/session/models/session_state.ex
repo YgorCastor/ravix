@@ -90,10 +90,10 @@ defmodule Ravix.Documents.Session.State do
   - original_document: if it's a update, this is the document before the change
 
   ## Returns
-  - {:ok, updated_state}
-  - {:error, :document_already_deferred} if the document id is in a deferred command 
-  - {:error, :document_deleted} if the document is marked for delete
-  - {:error, :document_already_stored} if the document is already in the session
+  - `{:ok, updated_state}`
+  - `{:error, :document_already_deferred}` if the document id is in a deferred command
+  - `{:error, :document_deleted}` if the document is marked for delete
+  - `{:error, :document_already_stored}` if the document is already in the session
   """
   def register_document(
         %SessionState{} = state,
@@ -128,10 +128,10 @@ defmodule Ravix.Documents.Session.State do
   - document_id: the document id to be deleted
 
   ## Returns
-  - `{:ok, state}` 
+  - `{:ok, state}`
   - `{:error, :document_already_deferred}` if the document id is in a deferred command
-  - `{:error, :document_deleted}` if the document is already marked for delete 
-  - `{:error, :document_not_in_session}` is the document is not loaded in the session   
+  - `{:error, :document_deleted}` if the document is already marked for delete
+  - `{:error, :document_not_in_session}` is the document is not loaded in the session
   """
   @spec mark_document_for_exclusion(SessionState.t(), bitstring()) ::
           {:error, atom()} | {:ok, SessionState.t()}

@@ -50,11 +50,11 @@ defmodule Ravix.Connection.State.Manager do
   end
 
   @doc """
-     Updates the topology for the informed connection state. 
+     Updates the topology for the informed connection state.
 
-     Returns: 
+     Returns:
       - `{:ok, Ravix.Connection.State}` with the topology updated
-      - `{:error, cause}` if it was unable to update the topology      
+      - `{:error, cause}` if it was unable to update the topology
   """
   def update_topology(%ConnectionState{} = state) do
     OK.for do
@@ -73,9 +73,9 @@ defmodule Ravix.Connection.State.Manager do
   @doc """
     Request the topology for the informed database store, receives a list of the Executors PIDs and the database name.
 
-    Returns: 
-     - {:ok, Ravix.Connection.Topology} if the topology request was successful
-     - {:error, :invalid_cluster_topology} if it fails to pool the topology
+    Returns:
+     - `{:ok, Ravix.Connection.Topology}` if the topology request was successful
+     - `{:error, :invalid_cluster_topology}` if it fails to pool the topology
   """
   @spec request_topology(list(pid()), String.t()) ::
           {:error, :invalid_cluster_topology} | {:ok, Ravix.Connection.Topology.t()}
@@ -110,13 +110,6 @@ defmodule Ravix.Connection.State.Manager do
   @spec connection_id(atom()) :: {:via, Registry, {:connections, atom()}}
   def connection_id(state), do: {:via, Registry, {:connections, state}}
 
-  @doc """
-    Register and start the executors for the nodes informed in the connection state
-
-    Returns: 
-     - {:ok, [pid]} - List of PIDs for the executors processes
-     - {:error, :no_node_registered} - If none of the nodes are valid
-  """
   defp register_nodes(%ConnectionState{} = state) do
     registered_nodes =
       state.urls

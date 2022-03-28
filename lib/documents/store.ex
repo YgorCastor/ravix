@@ -1,4 +1,14 @@
 defmodule Ravix.Documents.Store do
+  @moduledoc """
+  Macro to define a RavenDB Repository Store
+
+  ## Example
+
+      `defmodule Ravix.TestRepo do
+         use Ravix.Documents.Store
+       end`
+  """
+
   defmacro __using__(opts) do
     require OK
 

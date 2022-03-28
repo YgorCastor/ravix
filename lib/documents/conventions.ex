@@ -1,4 +1,16 @@
 defmodule Ravix.Documents.Conventions do
+  @moduledoc """
+  Document conventions structure
+
+  ## Fields
+  - max_number_of_requests_per_session: How many requests can be done in a single session
+  - max_ids_to_catch: Maximum amount of ids that can be loaded
+  - timeout: How much time until an api call times out
+  - use_optimistic_concurrency: If optimistic concurrency should be used
+  - max_length_of_query_using_get_url: Maximum lenght of an api call url
+  - session_idle_ttl: How much time a session can live without interaction
+  - disable_topology_update: if true, no automatic topology updates will be executed
+  """
   defstruct max_number_of_requests_per_session: 30,
             max_ids_to_catch: 32,
             timeout: 30,

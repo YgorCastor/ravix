@@ -1,4 +1,13 @@
 defmodule Ravix.Operations.Database.Commands.CreateDatabaseCommand do
+  @moduledoc """
+  Command to create a RavenDB database
+
+  ## Fields
+  - Disabled: true/false - If the database is created disabled as default
+  - Encrypted: true/false - If the database is encrypted as default
+  - DatabaseName: Name - the database name
+  - ReplicationFactor: int - the replication factor of the database
+  """
   @derive {Jason.Encoder, only: [:Disabled, :Encrypted, :DatabaseName]}
   use Ravix.Documents.Commands.RavenCommand,
     Disabled: false,

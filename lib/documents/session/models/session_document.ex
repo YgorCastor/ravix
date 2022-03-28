@@ -31,7 +31,7 @@ defmodule Ravix.Documents.Session.SessionDocument do
   - document: the document to be upserted
 
   ## Returns
-  - {:error, :document_is_null} if the document is not informed
+  - `{:error, :document_is_null}` if the document is not informed
   - `Ravix.Documents.Session.SessionDocument` if the session was updated correctly
   """
   @spec upsert_document(State.t(), nil | map) ::
@@ -74,7 +74,7 @@ defmodule Ravix.Documents.Session.SessionDocument do
   - metadata: The metadata of the document
 
   ## Returns
-  - {:error, :document_is_null} if the document is not informed
+  - `{:error, :document_is_null}` if the document is not informed
   - `Ravix.Documents.Session.SessionDocument` if the session was updated correctly
   """
   @spec upsert_document(State.t(), any, any) :: nil | SessionDocument.t()

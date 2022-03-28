@@ -1,4 +1,7 @@
 defmodule Ravix.RQL.Query do
+  @moduledoc """
+  Detructurized Raven Query Language structure
+  """
   defstruct from_token: nil,
             where_token: nil,
             update_token: nil,
@@ -32,6 +35,9 @@ defmodule Ravix.RQL.Query do
           is_raw: boolean()
         }
 
+  @doc """
+  Adds a `Ravix.RQL.Tokens.From` to the query
+  """
   @spec from(nil | bitstring) :: {:error, :query_document_must_be_informed} | Query.t()
   def from(nil), do: {:error, :query_document_must_be_informed}
 
@@ -41,6 +47,9 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @doc """
+  Adds a `Ravix.RQL.Tokens.From` to the query with an alias
+  """
   def from(document, as_alias) do
     %Query{
       from_token: From.from(document),
@@ -48,6 +57,9 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @doc """
+  Adds a `Ravix.RQL.Tokens.Update` to the query
+  """
   @spec update(Query.t(), map()) :: Query.t()
   def update(%Query{} = query, document_updates) do
     %Query{
@@ -56,6 +68,9 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @doc """
+  Adds a `Ravix.RQL.Tokens.Where` to the query
+  """
   @spec where(Query.t(), Condition.t()) :: Query.t()
   def where(%Query{} = query, %Condition{} = condition) do
     %Query{
@@ -64,6 +79,9 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @doc """
+  Adds a `Ravix.RQL.Tokens.And` to the query
+  """
   @spec and?(Query.t(), Condition.t()) :: Query.t()
   def and?(%Query{} = query, %Condition{} = condition) do
     %Query{
@@ -72,6 +90,9 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @doc """
+  Adds a `Ravix.RQL.Tokens.Or` to the query
+  """
   @spec or?(Query.t(), Condition.t()) :: Query.t()
   def or?(%Query{} = query, %Condition{} = condition) do
     %Query{
@@ -80,6 +101,9 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @doc """
+  Create a Query using a raw RQL string
+  """
   @spec raw(String.t()) :: Query.t()
   def raw(raw_query) do
     %Query{
@@ -88,6 +112,9 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @doc """
+  Create a Query using a raw RQL string with parameters
+  """
   @spec raw(String.t(), map()) :: Query.t()
   def raw(raw_query, params) do
     %Query{
@@ -97,16 +124,25 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @doc """
+  Executes a list query in the informed session
+  """
   @spec list_all(Query.t(), binary) :: {:error, any} | {:ok, any}
   def list_all(%Query{} = query, session_id) do
     execute_for(query, session_id, "POST")
   end
 
+  @doc """
+  Delete all the documents that matches the informed query
+  """
   @spec delete_for(Query.t(), binary) :: {:error, any} | {:ok, any}
   def delete_for(%Query{} = query, session_id) do
     execute_for(query, session_id, "DELETE")
   end
 
+  @doc """
+  Updates all the documents that matches the informed query
+  """
   @spec update_for(Query.t(), binary) :: {:error, any} | {:ok, any}
   def update_for(%Query{} = query, session_id) do
     execute_for(query, session_id, "PATCH")

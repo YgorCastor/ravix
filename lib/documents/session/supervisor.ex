@@ -1,4 +1,7 @@
 defmodule Ravix.Documents.Session.Supervisor do
+  @moduledoc """
+  Supervisor for RavenDB Sessions
+  """
   use DynamicSupervisor
 
   alias Ravix.Documents.Session
@@ -16,17 +19,26 @@ defmodule Ravix.Documents.Session.Supervisor do
     DynamicSupervisor.start_link(__MODULE__, %{}, name: supervisor_name(store))
   end
 
+  @doc """
+  Creates a session with the informed initial state
+  """
   @spec create_session(SessionState.t()) :: :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
   def create_session(%SessionState{} = session_state) do
     session_state = session_state |> SessionState.update_last_session_call()
     DynamicSupervisor.start_child(supervisor_name(session_state.store), {Session, session_state})
   end
 
+  @doc """
+  Closes a session for the informed store using the session pid
+  """
   @spec close_session(atom(), pid | bitstring()) :: :ok | {:error, :not_found}
   def close_session(store, pid) when is_pid(pid) do
     DynamicSupervisor.terminate_child(supervisor_name(store), pid)
   end
 
+  @doc """
+  Closes a session for the informed store using the session id
+  """
   def close_session(store, session_id) do
     case Registry.lookup(:sessions, session_id) do
       [] ->

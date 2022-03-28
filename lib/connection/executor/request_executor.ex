@@ -2,9 +2,9 @@ defmodule Ravix.Connection.RequestExecutor do
   @moduledoc """
   A process responsible for executing requests to the RavenDB API
 
-  Each RavenDB cluster node has it's own stateful request executor, which 
-  holds how many requests this node executed, the address and infos from the Node and 
-  which requests are being executed in the moment. 
+  Each RavenDB cluster node has it's own stateful request executor, which
+  holds how many requests this node executed, the address and infos from the Node and
+  which requests are being executed in the moment.
   """
   use GenServer
   use Retry
@@ -62,7 +62,7 @@ defmodule Ravix.Connection.RequestExecutor do
   - headers: HTTP headers to send to RavenDB
   - opts: Request options
 
-  ## Returns 
+  ## Returns
   - `{:ok, Ravix.Connection.Response}` for a successful call
   - `{:error, cause}` if the request fails
   """
@@ -95,7 +95,7 @@ defmodule Ravix.Connection.RequestExecutor do
   - headers: HTTP headers to send to RavenDB
   - opts: Request options
 
-  ## Returns 
+  ## Returns
   - `{:ok, Ravix.Connection.Response}` for a successful call
   - `{:error, cause}` if the request fails
   """
@@ -141,7 +141,7 @@ defmodule Ravix.Connection.RequestExecutor do
   - cluster_tag: new cluster tag
 
   ## Returns
-  - :ok 
+  - :ok
   """
   @spec update_cluster_tag(String.t(), String.t(), String.t()) :: :ok
   def update_cluster_tag(url, database, cluster_tag) do
@@ -155,8 +155,8 @@ defmodule Ravix.Connection.RequestExecutor do
   pid = The PID of the node
 
   ## Returns
-  - {:ok, Ravix.Connection.ServerNode} if there's a node
-  - {:error, :node_not_found} if there's not a node with the informed pid
+  - `{:ok, Ravix.Connection.ServerNode}` if there's a node
+  - `{:error, :node_not_found}` if there's not a node with the informed pid
   """
   @spec fetch_node_state(bitstring | pid) :: {:ok, ServerNode.t()} | {:error, :node_not_found}
   def fetch_node_state(pid) when is_pid(pid) do
@@ -175,8 +175,8 @@ defmodule Ravix.Connection.RequestExecutor do
   database = the node database name
 
   ## Returns
-  - {:ok, Ravix.Connection.ServerNode} if there's a node
-  - {:error, :node_not_found} if there's not a node with the informed pid
+  - `{:ok, Ravix.Connection.ServerNode}` if there's a node
+  - `{:error, :node_not_found}` if there's not a node with the informed pid
   """
   @spec fetch_node_state(binary, binary) :: {:ok, ServerNode.t()} | {:error, :node_not_found}
   def fetch_node_state(url, database) when is_bitstring(url) do
@@ -226,10 +226,10 @@ defmodule Ravix.Connection.RequestExecutor do
         {:noreply, state}
 
       {:error, _conn, error, _headers} when is_struct(error, Mint.HTTPError) ->
-        {:error, error.reason}
+        {:noreply, error.reason}
 
       {:error, _conn, error, _headers} when is_struct(error, Mint.TransportError) ->
-        {:error, error.reason}
+        {:stop, :normal, node}
     end
   end
 

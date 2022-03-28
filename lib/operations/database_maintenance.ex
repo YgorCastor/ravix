@@ -1,9 +1,15 @@
 defmodule Ravix.Operations.Database.Maintenance do
+  @moduledoc """
+  Database maintenance operations module
+  """
   require OK
 
   alias Ravix.Operations.Database.Commands.CreateDatabaseCommand
   alias Ravix.Connection.RequestExecutor
 
+  @doc """
+  Creates a database using the informed request executor
+  """
   @spec create_database(atom | pid, nil | binary, keyword) :: {:error, any} | {:ok, any}
   def create_database(store_or_pid, database_name, opts \\ [])
 
