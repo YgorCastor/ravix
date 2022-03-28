@@ -1,4 +1,3 @@
 defmodule Ravix.SampleModel.Cat do
-  @derive {Jason.Encoder, only: [:id, :name, :breed, :"@metadata"]}
-  defstruct [:id, :name, :breed, :"@metadata"]
+  use Ravix.Document, fields: [:id, :name, :breed]
 end

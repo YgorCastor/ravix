@@ -1,4 +1,11 @@
 defmodule Ravix.Connection.RequestExecutor do
+  @moduledoc """
+  A process responsible for executing requests to the RavenDB API
+
+  Each RavenDB cluster node has it's own stateful request executor, which
+  holds how many requests this node executed, the address and infos from the Node and
+  which requests are being executed in the moment.
+  """
   use GenServer
   use Retry
 
@@ -12,6 +19,12 @@ defmodule Ravix.Connection.RequestExecutor do
   alias Ravix.Connection.{ServerNode, NodeSelector, Response}
   alias Ravix.Documents.Protocols.CreateRequest
 
+  @doc """
+  Initializes the connection for the informed ServerNode
+
+  The process will take care of the connection state, if the connection closes, the process
+  will die automatically
+  """
   @spec init(ServerNode.t()) ::
           {:ok, ServerNode.t()}
           | {:stop,
@@ -39,6 +52,20 @@ defmodule Ravix.Connection.RequestExecutor do
     )
   end
 
+  @doc """
+  Executes a RavenDB command for the informed connection
+
+  ## Parameters
+
+  - command: The command that will be executed, must be a RavenCommand
+  - conn_state: The connection state for which this execution will be linked
+  - headers: HTTP headers to send to RavenDB
+  - opts: Request options
+
+  ## Returns
+  - `{:ok, Ravix.Connection.Response}` for a successful call
+  - `{:error, cause}` if the request fails
+  """
   @spec execute(map, ConnectionState.t(), any, keyword) :: {:error, any} | {:ok, Response.t()}
   def execute(
         command,
@@ -57,6 +84,21 @@ defmodule Ravix.Connection.RequestExecutor do
     execute_for_node(command, node_pid, nil, headers, opts)
   end
 
+  @doc """
+  Executes a RavenDB command on the informed node
+
+  ## Parameters
+
+  - command: The command that will be executed, must be a RavenCommand
+  - pid_or_url: The PID or the Url of the node where the command will be executed
+  - database: The database name
+  - headers: HTTP headers to send to RavenDB
+  - opts: Request options
+
+  ## Returns
+  - `{:ok, Ravix.Connection.Response}` for a successful call
+  - `{:error, cause}` if the request fails
+  """
   @spec execute_for_node(map(), binary | pid, String.t() | nil, any, keyword) :: any
   def execute_for_node(command, pid_or_url, database, headers \\ {}, opts \\ [])
 
@@ -90,11 +132,32 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
+  @doc """
+  Asynchronously updates the cluster tag for the current node
+
+  ## Parameters
+  - url: Node url
+  - database:  Database name
+  - cluster_tag: new cluster tag
+
+  ## Returns
+  - :ok
+  """
   @spec update_cluster_tag(String.t(), String.t(), String.t()) :: :ok
   def update_cluster_tag(url, database, cluster_tag) do
     GenServer.cast(executor_id(url, database), {:update_cluster_tag, cluster_tag})
   end
 
+  @doc """
+  Fetches the current node executor state
+
+  ## Parameters
+  pid = The PID of the node
+
+  ## Returns
+  - `{:ok, Ravix.Connection.ServerNode}` if there's a node
+  - `{:error, :node_not_found}` if there's not a node with the informed pid
+  """
   @spec fetch_node_state(bitstring | pid) :: {:ok, ServerNode.t()} | {:error, :node_not_found}
   def fetch_node_state(pid) when is_pid(pid) do
     try do
@@ -104,6 +167,17 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
+  @doc """
+  Fetches the current node executor state
+
+  ## Parameters
+  url = The node url
+  database = the node database name
+
+  ## Returns
+  - `{:ok, Ravix.Connection.ServerNode}` if there's a node
+  - `{:error, :node_not_found}` if there's not a node with the informed pid
+  """
   @spec fetch_node_state(binary, binary) :: {:ok, ServerNode.t()} | {:error, :node_not_found}
   def fetch_node_state(url, database) when is_bitstring(url) do
     try do
@@ -152,10 +226,10 @@ defmodule Ravix.Connection.RequestExecutor do
         {:noreply, state}
 
       {:error, _conn, error, _headers} when is_struct(error, Mint.HTTPError) ->
-        {:error, error.reason}
+        {:noreply, error.reason}
 
       {:error, _conn, error, _headers} when is_struct(error, Mint.TransportError) ->
-        {:error, error.reason}
+        {:stop, :normal, node}
     end
   end
 

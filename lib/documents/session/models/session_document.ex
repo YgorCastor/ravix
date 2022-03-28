@@ -1,4 +1,13 @@
 defmodule Ravix.Documents.Session.SessionDocument do
+  @moduledoc """
+  Representation of a document inside the Store Session
+
+  ## Fields
+  - entity: The document itself
+  - key: The document key identity
+  - original_value: the document value as it is in the database
+  - change_vector: The change_vector string to deal with cluster concurrency
+  """
   defstruct entity: nil,
             key: nil,
             original_value: nil,
@@ -14,6 +23,17 @@ defmodule Ravix.Documents.Session.SessionDocument do
           original_value: map()
         }
 
+  @doc """
+  Upserts a document in the informed session state
+
+  ## Parameters
+  - session_state: the session to be updated
+  - document: the document to be upserted
+
+  ## Returns
+  - `{:error, :document_is_null}` if the document is not informed
+  - `Ravix.Documents.Session.SessionDocument` if the session was updated correctly
+  """
   @spec upsert_document(State.t(), nil | map) ::
           nil | {:error, :document_is_null} | SessionDocument.t()
   def upsert_document(_session_state, nil), do: {:error, :document_is_null}
@@ -45,6 +65,18 @@ defmodule Ravix.Documents.Session.SessionDocument do
     end
   end
 
+  @doc """
+  Upserts a document in the informed session state
+
+  ## Parameters
+  - session_state: the session to be updated
+  - document_id: the key of the document to be upserted
+  - metadata: The metadata of the document
+
+  ## Returns
+  - `{:error, :document_is_null}` if the document is not informed
+  - `Ravix.Documents.Session.SessionDocument` if the session was updated correctly
+  """
   @spec upsert_document(State.t(), any, any) :: nil | SessionDocument.t()
   def upsert_document(session_state, document_id, metadata) do
     case State.fetch_document(session_state, document_id) do

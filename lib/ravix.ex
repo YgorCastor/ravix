@@ -1,13 +1,19 @@
 defmodule Ravix do
+  @moduledoc """
+    Ravix is a RavenDB Driver written in Elixir
+  """
   use Supervisor
 
+  @doc """
+    Initializes three processes registers to facilitate grouping sessions, connections and nodes.
+    - :sessions = Stores sessions by their UUIDs 
+    - :connections = Stores the connections processes, based on the Repo Name
+    - :request_executors = Stores the node executors data
+  """
   def init(_opts) do
     children = [
-      ## Registry so we can easily fetch the sessions by it's id
       {Registry, [keys: :unique, name: :sessions]},
-      ## Registry for Connections
       {Registry, [keys: :unique, name: :connections]},
-      ## Registry for Node Executors
       {Registry, [keys: :unique, name: :request_executors]}
     ]
 

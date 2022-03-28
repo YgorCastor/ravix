@@ -1,4 +1,11 @@
 defmodule Ravix.Documents.Metadata do
+  @moduledoc """
+  Functions related to document metadata management
+  """
+
+  @doc """
+  Builds the metadata for the informed document
+  """
   @spec build_default_metadata(map()) :: nil | %{:"@collection" => any, optional(any) => any}
   def build_default_metadata(entity) do
     case collection_name(entity) do
@@ -11,6 +18,9 @@ defmodule Ravix.Documents.Metadata do
     end
   end
 
+  @doc """
+  Adds the metadata to the entity
+  """
   @spec add_metadata(map(), nil | map) :: map()
   def add_metadata(entity, nil), do: entity
 

@@ -1,4 +1,11 @@
 defmodule Ravix.Connection.Commands.GetTopology do
+  @moduledoc """
+  Command to fetch the topology data from RavenDB
+
+  ## Fields
+  - database_name: The name of the database 
+  - force_url: Forces the informed url to the new topology
+  """
   use Ravix.Documents.Commands.RavenCommand,
     database_name: nil,
     force_url: nil

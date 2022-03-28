@@ -1,4 +1,11 @@
 defmodule Ravix.Documents.Commands.ExecuteQueryCommand do
+  @moduledoc """
+  Command to execute a queryy on RavenDB
+
+  ## Fields
+  - Query: the RQL to be executed
+  - QueryParameters: The query parameters
+  """
   @derive {Jason.Encoder, only: [:Query, :QueryParameters]}
   use Ravix.Documents.Commands.RavenCommand,
     Query: nil,

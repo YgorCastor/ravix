@@ -8,6 +8,8 @@ defmodule Ravix.MixProject do
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      description: description(),
+      package: package(),
       elixirc_paths: elixirc_paths(Mix.env()),
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
@@ -18,6 +20,12 @@ defmodule Ravix.MixProject do
       ],
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      ],
+      source_url: "https://github.com/YgorCastor/ravix",
+      homepage_url: "https://github.com/YgorCastor/ravix",
+      docs: [
+        main: "readme",
+        extras: ["README.md"]
       ]
     ]
   end
@@ -44,6 +52,7 @@ defmodule Ravix.MixProject do
       {:retry, "~> 0.15.0"},
       {:gradient, github: "esl/gradient", only: [:dev, :test], runtime: false},
       {:elixir_sense, github: "elixir-lsp/elixir_sense", only: [:dev]},
+      {:ex_doc, "~> 0.28.3", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1.0", only: [:dev, :test], runtime: false},
       {:ex_machina, "~> 2.7", only: :test},
       {:faker, "~> 0.17.0", only: :test},
@@ -56,4 +65,15 @@ defmodule Ravix.MixProject do
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp description() do
+    "An Elixir driver for RavenDB"
+  end
+
+  defp package() do
+    [
+      licenses: ["Apache-2.0"],
+      links: %{"GitHub" => "https://github.com/YgorCastor/ravix"}
+    ]
+  end
 end

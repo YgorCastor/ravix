@@ -1,7 +1,14 @@
 defmodule Ravix.RQL.QueryParser do
+  @moduledoc """
+  Parsing tokens to RQL
+  """
+
   require OK
   alias Ravix.RQL.Query
 
+  @doc """
+  Receives a `Ravix.RQL.Query` object and parses it to a RQL query string
+  """
   @spec parse(Query.t()) :: {:error, any} | {:ok, Query.t()}
   def parse(%Query{} = query) do
     OK.for do

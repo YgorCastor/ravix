@@ -1,4 +1,7 @@
 defmodule Ravix.Connection.State.Manager do
+  @moduledoc """
+    Manages the state of a RavenDB Store connection
+  """
   require OK
 
   alias Ravix.Connection.State, as: ConnectionState
@@ -7,6 +10,16 @@ defmodule Ravix.Connection.State.Manager do
   alias Ravix.Connection.RequestExecutor.Supervisor, as: ExecutorSupervisor
   alias Ravix.Operations.Database.Maintenance, as: DatabaseMaintenance
 
+  @doc """
+    Initializes a Store Connection
+
+  First it register the nodes executors for the connection, then it pools
+  the RavenDB asking for a topology update.
+
+  Returns `Ravix.Connection.State`
+
+  Raises if it's unable to register at least one node and if the topology is invalid
+  """
   @spec initialize(ConnectionState.t()) :: ConnectionState.t()
   def initialize(%ConnectionState{} = state) do
     OK.try do
@@ -36,6 +49,13 @@ defmodule Ravix.Connection.State.Manager do
     end
   end
 
+  @doc """
+     Updates the topology for the informed connection state.
+
+     Returns:
+      - `{:ok, Ravix.Connection.State}` with the topology updated
+      - `{:error, cause}` if it was unable to update the topology
+  """
   def update_topology(%ConnectionState{} = state) do
     OK.for do
       current_node = NodeSelector.current_node(state)
@@ -50,6 +70,13 @@ defmodule Ravix.Connection.State.Manager do
     end
   end
 
+  @doc """
+    Request the topology for the informed database store, receives a list of the Executors PIDs and the database name.
+
+    Returns:
+     - `{:ok, Ravix.Connection.Topology}` if the topology request was successful
+     - `{:error, :invalid_cluster_topology}` if it fails to pool the topology
+  """
   @spec request_topology(list(pid()), String.t()) ::
           {:error, :invalid_cluster_topology} | {:ok, Ravix.Connection.Topology.t()}
   def request_topology(node_pids, database) do
@@ -77,6 +104,9 @@ defmodule Ravix.Connection.State.Manager do
     end
   end
 
+  @doc """
+   Helper method to wrap the Ravix.Store into it's connection identifier
+  """
   @spec connection_id(atom()) :: {:via, Registry, {:connections, atom()}}
   def connection_id(state), do: {:via, Registry, {:connections, state}}
 

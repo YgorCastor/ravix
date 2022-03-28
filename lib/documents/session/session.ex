@@ -1,4 +1,7 @@
 defmodule Ravix.Documents.Session do
+  @moduledoc """
+  A stateful session to execute ravendb commands
+  """
   use GenServer
 
   require OK
@@ -20,6 +23,19 @@ defmodule Ravix.Documents.Session do
     )
   end
 
+  @doc """
+  Loads the document from the database to the local session
+
+  ## Parameters
+  - session_id: the session_id
+  - ids: the document ids to be loaded
+  - includes: the document includes path
+  - opts: load options
+
+  ## Returns
+  - `{:ok, results}` 
+  - `{:errors, cause}`
+  """
   @spec load(binary(), list() | bitstring(), any, keyword() | nil) :: any
   def load(session_id, ids, includes \\ nil, opts \\ nil)
   def load(_session_id, nil, _includes, _opts), do: {:error, :document_ids_not_informed}
@@ -36,6 +52,17 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:load, [document_ids: [id], includes: includes, opts: opts]})
   end
 
+  @doc """
+  Marks the document for deletion
+
+  ## Parameters
+  - session_id: the session id
+  - entity: the document to be deleted
+
+  ## Returns
+  - `{:ok, updated_state}`
+  - `{:error, cause}`
+  """
   @spec delete(binary, map()) :: any
   def delete(session_id, entity) when is_map_key(entity, :id) do
     delete(session_id, entity.id)
@@ -47,6 +74,19 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:delete, id})
   end
 
+  @doc """
+  Add a document to the session to be created
+
+  ## Parameters
+  - session_id: the session id
+  - entity: the document to store
+  - key: the document key to be used
+  - change_vector: the concurrency change vector
+
+  ## Returns
+  - `{:ok, updated_session}` 
+  - `{:error, cause}`
+  """
   @spec store(binary(), map(), binary() | nil, binary() | nil) :: any
   def store(session_id, entity, key \\ nil, change_vector \\ nil)
 
@@ -59,6 +99,9 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:store, [entity: entity, key: key, change_vector: change_vector]})
   end
 
+  @doc """
+  Persists the session changes to the RavenDB database
+  """
   @spec save_changes(binary) :: any
   def save_changes(session_id) do
     session_id
@@ -66,6 +109,9 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:save_changes})
   end
 
+  @doc """
+  Fetches the current session state
+  """
   @spec fetch_state(binary()) :: {:error, :session_not_found} | {:ok, SessionState.t()}
   def fetch_state(session_id) do
     try do
@@ -78,6 +124,14 @@ defmodule Ravix.Documents.Session do
     end
   end
 
+  @doc """
+  Executes a query into the RavenDB 
+
+  ## Paremeters
+  - query: The `Ravix.RQL.Query` to be executed
+  - session_id: the session_id
+  - method: The http method
+  """
   @spec execute_query(any, binary, any) :: any
   def execute_query(query, session_id, method) do
     session_id

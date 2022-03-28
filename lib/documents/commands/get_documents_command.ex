@@ -1,4 +1,15 @@
 defmodule Ravix.Documents.Commands.GetDocumentsCommand do
+  @moduledoc """
+  Command to fetch documents from RavenDB
+
+  ## Fields
+  - ids: List of document ids
+  - includes: Path of the referenced documents that should be included
+  - metadata_only: If the response should contain only the metadata
+  - start: from which position should the returned documents start
+  - page_size: number of documents that should be returned
+  - counter_includes: List of counters to be returned
+  """
   use Ravix.Documents.Commands.RavenCommand,
     ids: [],
     includes: nil,
@@ -24,6 +35,16 @@ defmodule Ravix.Documents.Commands.GetDocumentsCommand do
     counter_includes: list(String.t()) | nil
   })
 
+  @doc """
+  Parses the response of the GetCommand
+
+  ## Parameters
+  - session_state: The session state where this command was called
+  - documents_response: Response from the database call
+
+  ## Returns
+  - List of results and includes
+  """
   @spec parse_response(State.t(), map) :: [{:includes, list()} | {:results, list}]
   def parse_response(session_state, documents_response) do
     [

@@ -1,4 +1,7 @@
 defmodule Ravix.Connection.Response do
+  @moduledoc """
+     Represents the response of a RavenDB API call
+  """
   defstruct [
     :status,
     :data,

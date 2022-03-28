@@ -1,4 +1,12 @@
 defmodule Ravix.Documents.Session.SaveChangesData do
+  @moduledoc """
+  Defines all changes that will be executed in a session when calling the save_changes function 
+
+  ## Fields
+  - deferred_commands_count: How many command will be executed
+  - commands: List of commands to be executed
+  - entities: Entities in the current session
+  """
   defstruct deferred_commands_count: 0,
             commands: [],
             entities: []
@@ -13,6 +21,16 @@ defmodule Ravix.Documents.Session.SaveChangesData do
           entities: list(map())
         }
 
+  @doc """
+  Add the commands that will be deferred to be executed together with the save_changes call
+
+  ## Parameters
+  - save_changes_data: this structure instance
+  - deferred_commands: Raven commands to be deferred
+
+  ## Returns
+  - Updated `Ravix.Documents.Session.SaveChangesData` 
+  """
   @spec add_deferred_commands(SaveChangesData.t(), list(map())) :: SaveChangesData.t()
   def add_deferred_commands(%SaveChangesData{} = save_changes_data, deferred_commands) do
     %SaveChangesData{
@@ -22,6 +40,16 @@ defmodule Ravix.Documents.Session.SaveChangesData do
     }
   end
 
+  @doc """
+  Add the entities that will be deleted
+
+  ## Parameters
+  - save_changes_data: this structure instance
+  - deleted_entities: Entities that will be deleted
+
+  ## Returns
+  - Updated `Ravix.Documents.Session.SaveChangesData` 
+  """
   @spec add_delete_commands(SaveChangesData.t(), list(map())) :: SaveChangesData.t()
   def add_delete_commands(%SaveChangesData{} = save_changes_data, deleted_entities) do
     delete_commands =
@@ -39,6 +67,16 @@ defmodule Ravix.Documents.Session.SaveChangesData do
     }
   end
 
+  @doc """
+  Adds the documents that will be created
+
+  ## Parameters
+  - save_changes_data: this structure instance
+  - documents_by_id: Map with the documents that will be created
+
+  ## Returns
+  - Updated `Ravix.Documents.Session.SaveChangesData` 
+  """
   @spec add_put_commands(SaveChangesData.t(), map()) :: SaveChangesData.t()
   def add_put_commands(%SaveChangesData{} = save_changes_data, documents_by_id) do
     put_commands =
