@@ -24,7 +24,7 @@ defmodule Ravix.MixProject do
       source_url: "https://github.com/YgorCastor/ravix",
       homepage_url: "https://github.com/YgorCastor/ravix",
       docs: [
-        main: "Ravix",
+        main: "readme",
         extras: ["README.md"]
       ]
     ]
