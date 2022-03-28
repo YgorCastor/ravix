@@ -38,12 +38,13 @@ defmodule Ravix.Connection.State.Manager do
 
   def update_topology(%ConnectionState{} = state) do
     OK.for do
-      current_node = NodeSelector.current_node(state.node_selector)
+      current_node = NodeSelector.current_node(state)
       topology <- __MODULE__.request_topology([current_node], state.database)
       _ = ExecutorSupervisor.update_topology(state.store, topology)
 
       state = put_in(state.topology_etag, topology.etag)
       state = put_in(state.node_selector, %NodeSelector{current_node_index: 0})
+      state = put_in(state.last_topology_update, Timex.now())
     after
       state
     end

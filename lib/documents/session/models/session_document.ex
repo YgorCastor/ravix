@@ -36,7 +36,6 @@ defmodule Ravix.Documents.Session.SessionDocument do
             original_value: existing_document.entity
         }
 
-
       _ ->
         %SessionDocument{
           key: document_metadata["@id"],

@@ -133,7 +133,8 @@ defmodule Ravix.Documents.SessionTest do
       {:ok, document_in_session} = Session.State.fetch_document(state, first_result["@id"])
 
       assert document_in_session.change_vector == first_result["@change-vector"]
-      assert document_in_session.entity."@metadata"["@collection"] == "Cat" # Ok, dis weird as fuck
+      # Ok, dis weird as fuck
+      assert document_in_session.entity."@metadata"["@collection"] == "Cat"
     end
   end
 

@@ -9,6 +9,7 @@ defmodule Ravix.Connection.State do
             topology_etag: nil,
             disable_topology_updates: false,
             force_create_database: false,
+            last_topology_update: nil,
             cluster_token: nil
 
   use Vex.Struct
@@ -24,6 +25,7 @@ defmodule Ravix.Connection.State do
           topology_etag: String.t() | nil,
           disable_topology_updates: boolean(),
           force_create_database: boolean(),
+          last_topology_update: DateTime.t() | nil,
           cluster_token: String.t() | nil
         }
 
