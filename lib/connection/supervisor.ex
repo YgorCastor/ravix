@@ -37,7 +37,7 @@ defmodule Ravix.Connection.Supervisor do
   end
 
   @doc """
-     Initializes the connections supervisor, if the configs are invalid, the 
+     Initializes the connections supervisor, if the configs are invalid, the
      supervisor will fail
   """
   def init({store, otp_app, _opts}) do
@@ -50,9 +50,6 @@ defmodule Ravix.Connection.Supervisor do
     end
   end
 
-  @doc """
-     Adds the required processes to the Store supervision tree
-  """
   defp connection_processes(store, configs) do
     [
       %{id: ExecutorSupervisor, start: {ExecutorSupervisor, :start_link, [store]}},

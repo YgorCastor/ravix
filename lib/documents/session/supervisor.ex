@@ -29,16 +29,13 @@ defmodule Ravix.Documents.Session.Supervisor do
   end
 
   @doc """
-  Closes a session for the informed store using the session pid
+  Closes a session for the informed store using the session pid or session_id
   """
   @spec close_session(atom(), pid | bitstring()) :: :ok | {:error, :not_found}
   def close_session(store, pid) when is_pid(pid) do
     DynamicSupervisor.terminate_child(supervisor_name(store), pid)
   end
 
-  @doc """
-  Closes a session for the informed store using the session id
-  """
   def close_session(store, session_id) do
     case Registry.lookup(:sessions, session_id) do
       [] ->
