@@ -1,4 +1,10 @@
 defmodule Ravix.Documents.Commands.BatchCommand do
+  @moduledoc """
+  Raven Command to execute actions in batches
+
+  ## Fields
+  - Commands: list of raven commands to be executed
+  """
   @derive {Jason.Encoder, only: [:Commands]}
   use Ravix.Documents.Commands.RavenCommand,
     Commands: []
@@ -14,6 +20,13 @@ defmodule Ravix.Documents.Commands.BatchCommand do
     Commands: list(map())
   })
 
+  @doc """
+  Parses the response of a batch request
+
+  ## Parameters
+  - batch_response: The RavenDB batch response. 
+  - session_state: The state of the session where the command was executed.
+  """
   @spec parse_batch_response(map(), State.t()) :: list
   def parse_batch_response(batch_response, session_state) do
     batch_response

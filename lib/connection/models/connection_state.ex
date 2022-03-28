@@ -1,4 +1,20 @@
 defmodule Ravix.Connection.State do
+  @moduledoc """
+  Represents the state of a RavenDB connection
+
+     - store: Store atom for this state. E.g: Ravix.TestStore
+     - database: Name of the database.
+     - certificate: RavenDB emmited SSL certificate for the database user in base64
+     - certificate_file: Same as above, but a path to the file in the disk
+     - conventions: Document Configuration conventions
+     - node_selector: Module that selects the nodes based on different strategies. E.g: Ravix.Connection.NodeSelector
+     - urls: List of the urls of RavenDB servers
+     - topology_etag: ETAG of the RavenDB cluster topology
+     - disable_topology_updates: If true, the topology will not be updated automatically when requested by the ravendb server
+     - force_create_database: If true, when the database does not exist, it will be created
+     - last_topology_update: DateTime when the topology was last updated
+     - cluster_token: Security Token for the members of the cluster
+  """
   defstruct store: nil,
             database: nil,
             certificate: nil,

@@ -1,4 +1,17 @@
 defmodule Ravix.Connection.ServerNode do
+  @moduledoc """
+  State of a RavenDB connection executor node
+
+      - store: Atom of the RavenDB Store, E.g: Ravix.TestStore
+      - url: URL of this node
+      - port: port of this node
+      - conn: TCP Connection State
+      - certificate: User SSL certificate for this node
+      - requests: Currently executing request calls to RavenDB
+      - protocol: http or https
+      - database: For which database is this executor
+      - cluster_tag: Tag of this node in the RavenDB cluster
+  """
   defstruct store: nil,
             url: nil,
             port: nil,
@@ -23,6 +36,9 @@ defmodule Ravix.Connection.ServerNode do
           cluster_tag: String.t() | nil
         }
 
+  @doc """
+    Creates a new node state from the url, database name and ssl certificate
+  """
   @spec from_url(binary | URI.t(), any, any) :: ServerNode.t()
   def from_url(url, database, certificate) do
     parsed_url = URI.new!(url)
@@ -36,6 +52,9 @@ defmodule Ravix.Connection.ServerNode do
     }
   end
 
+  @doc """
+    Create a new node state based on the RavenDB Topology response
+  """
   @spec from_api_response(map) :: ServerNode.t()
   def from_api_response(node_response) do
     parsed_url = URI.new!(node_response["Url"])
@@ -49,6 +68,9 @@ defmodule Ravix.Connection.ServerNode do
     }
   end
 
+  @doc """
+    Helper method to build the url for Database specific API requests
+  """
   @spec node_url(ServerNode.t()) :: String.t()
   def node_url(%ServerNode{} = server_node),
     do: "/databases/#{server_node.database}"

@@ -1,4 +1,10 @@
 defmodule Ravix.Connection.RequestExecutor.Supervisor do
+  @moduledoc """
+  Supervises the Requests Executors processes
+
+  Each node connection has it own supervised process, so they are completely isolated
+  from each other. All executors are registered under the :request_executors Registry. 
+  """
   use DynamicSupervisor
 
   alias Ravix.Connection.{RequestExecutor, ServerNode, Topology}
@@ -24,6 +30,13 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
     DynamicSupervisor.start_link(__MODULE__, %{}, name: supervisor_name(store))
   end
 
+  @doc """
+  Register a new RavenDB Database node for the informed store
+
+  ## Parameters
+  - store: the store module. E.g: Ravix.TestStore
+  - node: the node to be registered
+  """
   @spec register_node_executor(any, ServerNode.t()) ::
           :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
   def register_node_executor(store, %ServerNode{} = node) do
@@ -31,12 +44,31 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
     DynamicSupervisor.start_child(supervisor_name(store), {RequestExecutor, node})
   end
 
+  @doc """
+  Fetches the nodes running for a specific store
+
+  ## Parameters
+  - store: the store module: E.g: Ravix.TestStore
+
+  ## Returns
+  - List of PIDs
+  """
   @spec fetch_nodes(any) :: list(pid())
   def fetch_nodes(store) do
     DynamicSupervisor.which_children(supervisor_name(store))
     |> Enum.map(fn {_, pid, _kind, _modules} -> pid end)
   end
 
+  @doc """
+  Triggers a topology update for all nodes of a specific store
+
+  ## Parameters
+  - store: the store module. E.g: Ravix.TestStore
+  - topology: The `Ravix.Connection.Topology` to be used 
+
+  ## Returns
+  - List of nodes `[new_nodes: list(Ravix.Connection.ServerNode), updated_nodes: list(Ravix.Connection.ServerNode)]`
+  """
   @spec update_topology(any, Ravix.Connection.Topology.t()) :: [
           {:new_nodes, list} | {:updated_nodes, list}
         ]

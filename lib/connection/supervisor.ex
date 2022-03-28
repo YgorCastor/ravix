@@ -1,4 +1,7 @@
 defmodule Ravix.Connection.Supervisor do
+  @moduledoc """
+     Supervises and triggers the initialization of a Raven Store
+  """
   use Supervisor
 
   alias Ravix.Connection
@@ -11,11 +14,17 @@ defmodule Ravix.Connection.Supervisor do
     Supervisor.start_link(__MODULE__, {store, otp_app, opts})
   end
 
+  @doc """
+    Fetches the compile time configuration
+  """
   @spec compile_config(keyword) :: any
   def compile_config(opts) do
     Keyword.fetch!(opts, :otp_app)
   end
 
+  @doc """
+     Fetches runtime configurations and maps them to a initial connection state, validating the  configuration.
+  """
   @spec runtime_configs(any(), atom) :: {:error, list} | {:ok, Ravix.Connection.State.t()}
   def runtime_configs(store, otp_app) do
     configs = Application.get_env(otp_app, store)
@@ -27,6 +36,10 @@ defmodule Ravix.Connection.Supervisor do
     |> ConnectionState.validate_configs()
   end
 
+  @doc """
+     Initializes the connections supervisor, if the configs are invalid, the 
+     supervisor will fail
+  """
   def init({store, otp_app, _opts}) do
     case runtime_configs(store, otp_app) do
       {:ok, configs} ->
@@ -37,6 +50,9 @@ defmodule Ravix.Connection.Supervisor do
     end
   end
 
+  @doc """
+     Adds the required processes to the Store supervision tree
+  """
   defp connection_processes(store, configs) do
     [
       %{id: ExecutorSupervisor, start: {ExecutorSupervisor, :start_link, [store]}},

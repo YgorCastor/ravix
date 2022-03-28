@@ -1,4 +1,19 @@
 defmodule Ravix.Documents.Session.State do
+  @moduledoc """
+  A session state representation
+
+  ## Fields
+  - store: The Store module for which the session belongs
+  - session_id: The uuid of this session
+  - database: for which database this session belongs
+  - conventions: Document conventions for this session
+  - documents_by_id: Loaded documents in this session
+  - defer_commands: Commands that will be deferred when the session is persisted
+  - deleted_entities: Documents that will be deleted when the session is persisted
+  - running_queries: RQL queries running for this session
+  - last_session_call: When the last session call was executed
+  - number_of_requests: Number os requests that will be executed at this session persistence
+  """
   defstruct store: nil,
             session_id: nil,
             database: nil,
@@ -30,6 +45,15 @@ defmodule Ravix.Documents.Session.State do
           number_of_requests: non_neg_integer()
         }
 
+  @doc """
+  Increments the number of requests count
+
+  ## Parameters
+  - session_state: the session state
+
+  ## Returns
+  - updated session state
+  """
   @spec increment_request_count(SessionState.t()) :: SessionState.t()
   def increment_request_count(%SessionState{} = session_state) do
     %SessionState{
@@ -38,6 +62,15 @@ defmodule Ravix.Documents.Session.State do
     }
   end
 
+  @doc """
+  Updates the last session call time
+
+  ## Parameters
+  - session_state: the session state
+
+  ## Returns
+  - updated session state
+  """
   @spec update_last_session_call(SessionState.t()) :: SessionState.t()
   def update_last_session_call(%SessionState{} = session_state) do
     %SessionState{
@@ -46,6 +79,22 @@ defmodule Ravix.Documents.Session.State do
     }
   end
 
+  @doc """
+  Adds a document to the session
+
+  ## Parameters
+  - state: the session state
+  - key: the key where the document will be related to
+  - entity: the document to be persisted
+  - change_vector: the concurrency change vector string
+  - original_document: if it's a update, this is the document before the change
+
+  ## Returns
+  - {:ok, updated_state}
+  - {:error, :document_already_deferred} if the document id is in a deferred command 
+  - {:error, :document_deleted} if the document is marked for delete
+  - {:error, :document_already_stored} if the document is already in the session
+  """
   def register_document(
         %SessionState{} = state,
         key,
@@ -71,6 +120,19 @@ defmodule Ravix.Documents.Session.State do
     end
   end
 
+  @doc """
+  Marks a document to be deleted
+
+  ## Parameters
+  - state: the session state
+  - document_id: the document id to be deleted
+
+  ## Returns
+  - `{:ok, state}` 
+  - `{:error, :document_already_deferred}` if the document id is in a deferred command
+  - `{:error, :document_deleted}` if the document is already marked for delete 
+  - `{:error, :document_not_in_session}` is the document is not loaded in the session   
+  """
   @spec mark_document_for_exclusion(SessionState.t(), bitstring()) ::
           {:error, atom()} | {:ok, SessionState.t()}
   def mark_document_for_exclusion(
@@ -92,6 +154,16 @@ defmodule Ravix.Documents.Session.State do
     end
   end
 
+  @doc """
+  Updates the session with RavenDB responses
+
+  ## Parameters
+  - session_state: the session state
+  - updates: List of updates to be applied to the session
+
+  ## Returns
+  - the updated session
+  """
   @spec update_session(SessionState.t(), maybe_improper_list) :: SessionState.t()
   def update_session(%SessionState{} = session_state, []), do: session_state
 
@@ -115,6 +187,17 @@ defmodule Ravix.Documents.Session.State do
     update_session(updated_state, remaining_updates)
   end
 
+  @doc """
+  Fetches a document from the session
+
+  ## Paremeters
+  - state: the session state
+  - document_id: the document id
+
+  ## Returns
+  - `{:ok, document}`
+  - `{:error, :document_not_found}` if there is no document with the informed id on the session
+  """
   @spec fetch_document(SessionState.t(), any) :: {:error, :document_not_found} | {:ok, map()}
   def fetch_document(_state, document_id) when document_id == nil,
     do: {:error, :document_not_found}
@@ -126,6 +209,9 @@ defmodule Ravix.Documents.Session.State do
     end
   end
 
+  @doc """
+  Clear the deferred commands from the session
+  """
   @spec clear_deferred_commands(SessionState.t()) :: SessionState.t()
   def clear_deferred_commands(%SessionState{} = state) do
     %SessionState{
@@ -134,6 +220,9 @@ defmodule Ravix.Documents.Session.State do
     }
   end
 
+  @doc """
+  Clear the deleted entities from the session
+  """
   @spec clear_deleted_entities(SessionState.t()) :: SessionState.t()
   def clear_deleted_entities(%SessionState{} = state) do
     %SessionState{
