@@ -20,6 +20,7 @@ defmodule Ravix.RQL.QueryParser do
         |> parse_stmts(query.or_tokens)
         |> parse_stmt(query.projection_token)
         |> parse_stmt(query.update_token)
+        |> parse_stmt(query.limit_token)
     after
       parsed_query
     end
@@ -57,6 +58,7 @@ defmodule Ravix.RQL.QueryParser do
       :where -> parse_where(query, stmt)
       :and -> parse_and(query, stmt)
       :or -> parse_or(query, stmt)
+      :limit -> parse_limit(query, stmt)
       _ -> {:error, :invalid_statement}
     end
   end
@@ -161,6 +163,16 @@ defmodule Ravix.RQL.QueryParser do
 
   defp parse_or(%Query{} = query, or_token) do
     parse_locator_stmt(query, or_token, "or")
+  end
+
+  defp parse_limit(%Query{} = query, limit_token) do
+    {:ok,
+     %Query{
+       query
+       | query_string:
+           query.query_string <>
+             " limit #{limit_token.skip}, #{limit_token.next}"
+     }}
   end
 
   defp parse_locator_stmt(%Query{} = query, stmt, locator) do

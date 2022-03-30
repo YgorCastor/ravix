@@ -11,6 +11,7 @@ defmodule Ravix.RQL.Tokens.Update do
           fields: map()
         }
 
+  @spec update(map()) :: Update.t()
   def update(fields) do
     %Update{
       token: :update,

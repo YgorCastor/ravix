@@ -8,6 +8,7 @@ defmodule Ravix.RQL.Query do
             and_tokens: [],
             or_tokens: [],
             projection_token: nil,
+            limit_token: nil,
             query_string: "",
             query_params: %{},
             params_count: 0,
@@ -18,7 +19,7 @@ defmodule Ravix.RQL.Query do
 
   alias Ravix.RQL.Query
   alias Ravix.RQL.QueryParser
-  alias Ravix.RQL.Tokens.{Where, From, And, Or, Condition, Update}
+  alias Ravix.RQL.Tokens.{Where, From, And, Or, Condition, Update, Limit}
   alias Ravix.Documents.Session
 
   @type t :: %Query{
@@ -28,6 +29,7 @@ defmodule Ravix.RQL.Query do
           and_tokens: list(And.t()),
           or_tokens: list(Or.t()),
           projection_token: any(),
+          limit_token: Limit.t() | nil,
           query_string: String.t(),
           query_params: map(),
           params_count: non_neg_integer(),
@@ -98,6 +100,14 @@ defmodule Ravix.RQL.Query do
     %Query{
       query
       | or_tokens: query.or_tokens ++ [Or.condition(condition)]
+    }
+  end
+
+  @spec limit(Query.t(), non_neg_integer, non_neg_integer) :: Query.t()
+  def limit(%Query{} = query, skip, next) do
+    %Query{
+      query
+      | limit_token: Limit.limit(skip, next)
     }
   end
 

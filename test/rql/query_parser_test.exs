@@ -16,10 +16,11 @@ defmodule Ravix.RQL.QueryParserTest do
         |> or?(greater_than_or_equal_to("field3", 20))
         |> or?(in?("field4", ["a", "b", "c"]))
         |> and?(between("field5", [15, 25]))
+        |> limit(2, 3)
         |> QueryParser.parse()
 
       assert query_result.query_string ==
-               "from test where field > $p0 and field2 = $p1 and field5 between $p2 and $p3 or field3 >= $p4 or field4 in ($p5,$p6,$p7)"
+               "from test where field > $p0 and field2 = $p1 and field5 between $p2 and $p3 or field3 >= $p4 or field4 in ($p5,$p6,$p7) limit 2, 3"
 
       assert query_result.query_params["p0"] == 10
       assert query_result.query_params["p1"] == "asdf"
