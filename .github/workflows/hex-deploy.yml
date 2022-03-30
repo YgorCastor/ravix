@@ -1,4 +1,4 @@
-name: Elixir CI
+name: Deploy to Hex
 
 on:
   push:
