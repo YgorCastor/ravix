@@ -5,11 +5,11 @@ on:
     branches: [release/*]
 
 jobs:
-  run-test:
-    name: Build and test
+  run-deploy:
+    name: Deploy to Hex
     runs-on: ubuntu-latest
     env:
-      MIX_ENV: test
+      MIX_ENV: dev
     container:
       image: elixir:1.13.3-alpine
     steps:
