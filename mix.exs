@@ -59,7 +59,8 @@ defmodule Ravix.MixProject do
       {:fake_server, "~> 2.1", only: :test},
       {:assertions, "~> 0.19.0", only: :test},
       {:excoveralls, "~> 0.14.4", only: :test},
-      {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:version_tasks, "~> 0.12.0", only: [:dev, :test], runtime: false}
     ]
   end
 

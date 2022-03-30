@@ -2,9 +2,7 @@ name: Elixir CI
 
 on:
   push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+    branches: [release/*]
 
 jobs:
   run-test:
@@ -14,15 +12,6 @@ jobs:
       MIX_ENV: test
     container:
       image: elixir:1.13.3-alpine
-    services:
-      ravendb:
-        image: ravendb/ravendb
-        ports:
-          - 8080:8080
-        env:
-          RAVEN_Setup_Mode: 'None'
-          RAVEN_License_Eula_Accepted: 'true'
-          RAVEN_Security_UnsecuredAccessAllowed: 'PublicNetwork'
     steps:
       - name: Install Git/Curl/GNU Tar
         run: apk add --no-cache git curl tar
@@ -38,22 +27,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
             ${{ runner.os }}-01-build-
-      - name: Dyalizer Cache
-        uses: actions/cache@v2
-        id: mix-dialyzer
-        with:
-          path: priv/plts
-          key: ${{ runner.os }}-01-dialyzer
-          restore-keys: |
-            ${{ runner.os }}-01-dialyzer
       - name: Instal Mix and Rebar
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
         run: mix deps.get
-      - name: Run Dialyzer
-        run: mix dialyzer
-      - name: Run tests
-        env:
-          RAVENDB_URL: 'http://ravendb:8080'
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: mix coveralls.github
+      - name: Configure Bot Commiter
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+      - name: Set the new version
+        run: mix version.up
+      - name: Publish to hex.pm
+        run: HEX_API_KEY=${{ secrets.HEX_API_KEY }} mix hex.publish --yes
+      - name: Tag the version
+        run: mix version.tag
+      - name: Push Version Change
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: master
+          tags: true
