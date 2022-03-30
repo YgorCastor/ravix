@@ -3,6 +3,7 @@ defmodule Ravix.Connection.State.Manager do
     Manages the state of a RavenDB Store connection
   """
   require OK
+  require Logger
 
   alias Ravix.Connection.State, as: ConnectionState
   alias Ravix.Connection.{ServerNode, RequestExecutor, Topology, NodeSelector}
@@ -11,7 +12,7 @@ defmodule Ravix.Connection.State.Manager do
   alias Ravix.Operations.Database.Maintenance, as: DatabaseMaintenance
 
   @doc """
-    Initializes a Store Connection
+  Initializes a Store Connection
 
   First it register the nodes executors for the connection, then it pools
   the RavenDB asking for a topology update.
@@ -22,12 +23,22 @@ defmodule Ravix.Connection.State.Manager do
   """
   @spec initialize(ConnectionState.t()) :: ConnectionState.t()
   def initialize(%ConnectionState{} = state) do
+    Logger.info("[RAVIX] Initializing connection for the repository '#{inspect(state.store)}'")
+
     OK.try do
       node_pids <- register_nodes(state)
+
+      Logger.debug(
+        "[RAVIX] Nodes with PIDs '#{inspect(node_pids)}' were registered successfully for the repository '#{inspect(state.store)}'"
+      )
 
       _ =
         case state.force_create_database do
           true ->
+            Logger.debug(
+              "[RAVIX] Forcing the database creation is enabled, it will create the #{inspect(state.database)} if it does not exists"
+            )
+
             node_pids
             |> Enum.at(0)
             |> DatabaseMaintenance.create_database(state.database)
@@ -36,12 +47,10 @@ defmodule Ravix.Connection.State.Manager do
             :ok
         end
 
-      topology <- __MODULE__.request_topology(node_pids, state.database)
-      _ = ExecutorSupervisor.update_topology(state.store, topology)
-
       state = put_in(state.node_selector, %NodeSelector{current_node_index: 0})
-      state = put_in(state.topology_etag, topology.etag)
+      state <- __MODULE__.update_topology(state)
     after
+      Logger.info("[RAVIX] Connection stabilished for the Store '#{inspect(state.store)}'")
       state
     rescue
       :invalid_cluster_topology -> raise "Unable to fetch the cluster topology"
@@ -56,8 +65,10 @@ defmodule Ravix.Connection.State.Manager do
       - `{:ok, Ravix.Connection.State}` with the topology updated
       - `{:error, cause}` if it was unable to update the topology
   """
+  @spec update_topology(ConnectionState.t()) :: {:error, any} | {:ok, ConnectionState.t()}
   def update_topology(%ConnectionState{} = state) do
     OK.for do
+      Logger.debug("[RAVIX] Updating the topology for the store '#{inspect(state.store)}'")
       current_node = NodeSelector.current_node(state)
       topology <- __MODULE__.request_topology([current_node], state.database)
       _ = ExecutorSupervisor.update_topology(state.store, topology)
@@ -66,6 +77,10 @@ defmodule Ravix.Connection.State.Manager do
       state = put_in(state.node_selector, %NodeSelector{current_node_index: 0})
       state = put_in(state.last_topology_update, Timex.now())
     after
+      Logger.debug(
+        "[RAVIX] Topology for the store '#{inspect(state.store)}' was updated successfully"
+      )
+
       state
     end
   end
@@ -80,6 +95,10 @@ defmodule Ravix.Connection.State.Manager do
   @spec request_topology(list(pid()), String.t()) ::
           {:error, :invalid_cluster_topology} | {:ok, Ravix.Connection.Topology.t()}
   def request_topology(node_pids, database) do
+    Logger.debug(
+      "[RAVIX] Requesting the cluster topology for the database '#{inspect(database)}'"
+    )
+
     topology =
       node_pids
       |> Enum.map(fn node ->
@@ -93,13 +112,22 @@ defmodule Ravix.Connection.State.Manager do
 
     case topology do
       {:ok, response} ->
-        {:ok,
-         %Topology{
-           etag: response.data["Etag"],
-           nodes: response.data["Nodes"] |> Enum.map(&ServerNode.from_api_response/1)
-         }}
+        topology = %Topology{
+          etag: response.data["Etag"],
+          nodes: response.data["Nodes"] |> Enum.map(&ServerNode.from_api_response/1)
+        }
 
-      _ ->
+        Logger.info(
+          "[RAVIX] The topology for the database '#{inspect(database)}' has the etag '#{inspect(topology.etag)}'"
+        )
+
+        {:ok, topology}
+
+      err ->
+        Logger.error(
+          "[RAVIX] Failed to request the topology for the database '#{inspect(database)}, cause: #{inspect(err)}'"
+        )
+
         {:error, :invalid_cluster_topology}
     end
   end

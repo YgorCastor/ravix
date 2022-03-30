@@ -74,4 +74,14 @@ defmodule Ravix.Connection.ServerNode do
   @spec node_url(ServerNode.t()) :: String.t()
   def node_url(%ServerNode{} = server_node),
     do: "/databases/#{server_node.database}"
+
+  defimpl String.Chars, for: Ravix.Connection.ServerNode do
+    def to_string(nil) do
+      ""
+    end
+
+    def to_string(node) do
+      "#{node.protocol}://#{node.url}:#{node.port}"
+    end
+  end
 end

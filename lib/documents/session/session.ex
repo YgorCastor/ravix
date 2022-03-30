@@ -5,6 +5,7 @@ defmodule Ravix.Documents.Session do
   use GenServer
 
   require OK
+  require Logger
 
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.Manager, as: SessionManager
@@ -33,7 +34,7 @@ defmodule Ravix.Documents.Session do
   - opts: load options
 
   ## Returns
-  - `{:ok, results}` 
+  - `{:ok, results}`
   - `{:errors, cause}`
   """
   @spec load(binary(), list() | bitstring(), any, keyword() | nil) :: any
@@ -84,7 +85,7 @@ defmodule Ravix.Documents.Session do
   - change_vector: the concurrency change vector
 
   ## Returns
-  - `{:ok, updated_session}` 
+  - `{:ok, updated_session}`
   - `{:error, cause}`
   """
   @spec store(binary(), map(), binary() | nil, binary() | nil) :: any
@@ -125,7 +126,7 @@ defmodule Ravix.Documents.Session do
   end
 
   @doc """
-  Executes a query into the RavenDB 
+  Executes a query into the RavenDB
 
   ## Paremeters
   - query: The `Ravix.RQL.Query` to be executed
@@ -238,6 +239,10 @@ defmodule Ravix.Documents.Session do
     Task.start(fn ->
       if Timex.diff(Timex.now(), state.last_session_call, :seconds) >
            state.conventions.session_idle_ttl do
+        Logger.warn(
+          "[RAVIX] The session #{state.session_id} timed-out because it was inactive for more than #{inspect(state.conventions.session_idle_ttl)} seconds"
+        )
+
         SessionSupervisor.close_session(state.store, self_pid)
       end
     end)

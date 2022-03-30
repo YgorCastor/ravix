@@ -7,6 +7,8 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   """
   use DynamicSupervisor
 
+  require Logger
+
   alias Ravix.Connection.{RequestExecutor, ServerNode, Topology}
 
   @spec init(any) ::
@@ -40,6 +42,10 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   @spec register_node_executor(any, ServerNode.t()) ::
           :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
   def register_node_executor(store, %ServerNode{} = node) do
+    Logger.debug(
+      "[RAVIX] Registering cluster node '#{node}' for the store '#{inspect(store)}'"
+    )
+
     node = %ServerNode{node | store: store}
     DynamicSupervisor.start_child(supervisor_name(store), {RequestExecutor, node})
   end
@@ -95,6 +101,10 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
       ]
     end)
     |> Enum.map(fn [url: url, database: database, cluster_tag: cluster_tag] ->
+      Logger.debug(
+        "[RAVIX] Updating node '#{inspect(url)}' for the database '#{inspect(database)}' with cluster tag '#{inspect(cluster_tag)}'"
+      )
+
       %{url: url, updated: RequestExecutor.update_cluster_tag(url, database, cluster_tag)}
     end)
   end
@@ -105,6 +115,10 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
     topology.nodes
     |> Enum.reject(fn node -> Enum.member?(existing_nodes_urls, node.url) end)
     |> Enum.map(fn new_node ->
+      Logger.debug(
+        "[RAVIX] Registering new node '#{inspect(new_node)}' for the store '#{inspect(store)}'"
+      )
+
       RequestExecutor.Supervisor.register_node_executor(store, new_node)
     end)
   end

@@ -37,9 +37,20 @@ defmodule Ravix.Connection.RequestExecutor do
   def init(%ServerNode{} = node) do
     {:ok, conn_params} = build_params(node.certificate, node.protocol)
 
+    Logger.info(
+      "[RAVIX] Connecting to node '#{node}' for store '#{inspect(node.store)}'"
+    )
+
     case Mint.HTTP.connect(node.protocol, node.url, node.port, conn_params) do
-      {:ok, conn} -> {:ok, %ServerNode{node | conn: conn}}
-      {:error, reason} -> {:stop, reason}
+      {:ok, conn} ->
+        Logger.info(
+          "[RAVIX] Connected to node '#{node}' for store '#{inspect(node.store)}'"
+        )
+
+        {:ok, %ServerNode{node | conn: conn}}
+
+      {:error, reason} ->
+        {:stop, reason}
     end
   end
 
@@ -99,7 +110,8 @@ defmodule Ravix.Connection.RequestExecutor do
   - `{:ok, Ravix.Connection.Response}` for a successful call
   - `{:error, cause}` if the request fails
   """
-  @spec execute_for_node(map(), binary | pid, String.t() | nil, any, keyword) :: any
+  @spec execute_for_node(map(), binary | pid, String.t() | nil, any, keyword) ::
+          {:error, any} | {:ok, Response.t()}
   def execute_for_node(command, pid_or_url, database, headers \\ {}, opts \\ [])
 
   def execute_for_node(command, pid_or_url, _database, headers, opts) when is_pid(pid_or_url) do
@@ -204,6 +216,10 @@ defmodule Ravix.Connection.RequestExecutor do
            request.data
          ) do
       {:ok, conn, request_ref} ->
+        Logger.debug(
+          "[RAVIX] Executing command #{inspect(command)} under the request '#{inspect(request_ref)}' for the store #{inspect(node.store)}"
+        )
+
         node = put_in(node.conn, conn)
         node = put_in(node.requests[request_ref], %{from: from, response: %{}})
         {:noreply, node}
@@ -225,10 +241,15 @@ defmodule Ravix.Connection.RequestExecutor do
         state = Enum.reduce(responses, node, &process_response/2)
         {:noreply, state}
 
-      {:error, _conn, error, _headers} when is_struct(error, Mint.HTTPError) ->
-        {:noreply, error.reason}
+      {:error, conn, error, _headers} when is_struct(error, Mint.HTTPError) ->
+        node = put_in(node.conn, conn)
+        {:noreply, node}
 
       {:error, _conn, error, _headers} when is_struct(error, Mint.TransportError) ->
+        Logger.debug(
+          "The connection with the node #{inspect(node.url)} for the store #{inspect(node.store)} timed out gracefully"
+        )
+
         {:stop, :normal, node}
     end
   end
@@ -280,6 +301,10 @@ defmodule Ravix.Connection.RequestExecutor do
       end
       |> check_if_needs_topology_update(state)
 
+    Logger.debug(
+      "[RAVIX] Request #{inspect(request_ref)} finished with response #{inspect(parsed_response)}"
+    )
+
     GenServer.reply(from, parsed_response)
 
     state
@@ -291,6 +316,10 @@ defmodule Ravix.Connection.RequestExecutor do
         {:ok, response}
 
       _ ->
+        Logger.debug(
+          "[RAVIX] The database requested a topology refresh for the store '#{inspect(node.store)}'"
+        )
+
         Connection.update_topology(node.store)
         {:ok, response}
     end
