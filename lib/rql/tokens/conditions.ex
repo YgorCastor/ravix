@@ -9,7 +9,7 @@ defmodule Ravix.RQL.Tokens.Condition do
 
   @type t :: %Condition{
           token: atom(),
-          field: String.t(),
+          field: String.t() | Condition.t(),
           params: list()
         }
 
@@ -58,12 +58,39 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
+  @spec not_equal_to(String.t(), any) :: Condition.t()
+  def not_equal_to(field_name, value) do
+    %Condition{
+      token: :ne,
+      field: field_name,
+      params: [value]
+    }
+  end
+
   @spec in?(String.t(), any) :: Condition.t()
   def in?(field_name, values) do
     %Condition{
       token: :in,
       field: field_name,
       params: values
+    }
+  end
+
+  @spec not_in(String.t(), any) :: Condition.t()
+  def not_in(field_name, values) do
+    %Condition{
+      token: :nin,
+      field: field_name,
+      params: values
+    }
+  end
+
+  @spec not_condition(Condition.t()) :: Condition.t()
+  def not_condition(%Condition{} = condition) do
+    %Condition{
+      token: :not,
+      field: condition,
+      params: []
     }
   end
 

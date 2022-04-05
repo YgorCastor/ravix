@@ -39,4 +39,5 @@ defmodule Ravix.Documents.Metadata do
       |> Module.split()
       |> Enum.reverse()
       |> Enum.at(0)
+      |> Inflex.pluralize()
 end

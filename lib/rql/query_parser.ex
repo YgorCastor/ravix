@@ -90,6 +90,16 @@ defmodule Ravix.RQL.QueryParser do
           "#{parse_field(query, condition.field)} in " <>
             "(" <> parse_params_to_positional_string(query, condition.params) <> ")"
 
+        :nin ->
+          "#{parse_field(query, condition.field)} not in " <>
+            "(" <> parse_params_to_positional_string(query, condition.params) <> ")"
+
+        :ne ->
+          "#{parse_field(query, condition.field)} != $p#{query.params_count}"
+
+        :not ->
+          "not #{parse_condition_stmt(query, condition.field)}"
+
         _ ->
           {:error, :invalid_condition_param}
       end

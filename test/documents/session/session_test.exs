@@ -134,7 +134,7 @@ defmodule Ravix.Documents.SessionTest do
 
       assert document_in_session.change_vector == first_result["@change-vector"]
       # Ok, dis weird as fuck
-      assert document_in_session.entity."@metadata"["@collection"] == "Cat"
+      assert document_in_session.entity."@metadata"["@collection"] == "Cats"
     end
   end
 
