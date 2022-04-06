@@ -4,6 +4,7 @@ defmodule Ravix.RQL.QueryTest do
 
   import Ravix.RQL.Query
   import Ravix.RQL.Tokens.Condition
+  import Ravix.Factory
 
   alias Ravix.Documents.Session
   alias Ravix.TestStore, as: Store
@@ -119,6 +120,82 @@ defmodule Ravix.RQL.QueryTest do
         after
           query_response
         end
+    end
+
+    test "Should limit the responses if the limit function was applied" do
+      glaring = build_list(5, :cat_entity)
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session()
+
+          _ =
+            glaring
+            |> Enum.map(fn cat ->
+              Session.store(session_id, cat)
+            end)
+
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            from("Cats")
+            |> limit(1, 2)
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      assert [_, _] = response["Results"]
+    end
+
+    test "Should not return rows referenced in a 'not in' operation" do
+      el_cato = build(:cat_entity)
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, el_cato)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            from("Cats")
+            |> where(not_in("id", [el_cato.id]))
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      refute response["Results"] |> Enum.any?(fn cato -> cato["id"] == el_cato.id end)
+    end
+
+    test "The 'Not' operation works correctly with a binary op" do
+      [cat1, cat2, cat3] = build_list(3, :cat_entity)
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, cat1)
+          _ <- Session.store(session_id, cat2)
+          _ <- Session.store(session_id, cat3)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            from("Cats")
+            |> where(not_equal_to("id", cat1.id))
+            |> and_not(equal_to("id", cat2.id))
+            |> or?(equal_to("id", cat3.id))
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      assert response["Results"] |> Enum.any?(fn cat -> cat["id"] == cat3.id end)
     end
   end
 

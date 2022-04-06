@@ -52,3 +52,5 @@ config :ravix, Ravix.TestStoreInvalid,
     identity_parts_separator: "/",
     disable_topology_update: false
   }
+
+config :logger, level: :error

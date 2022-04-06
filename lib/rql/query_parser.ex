@@ -2,8 +2,8 @@ defmodule Ravix.RQL.QueryParser do
   @moduledoc """
   Parsing tokens to RQL
   """
-
   require OK
+
   alias Ravix.RQL.Query
 
   @doc """
@@ -58,6 +58,7 @@ defmodule Ravix.RQL.QueryParser do
       :where -> parse_where(query, stmt)
       :and -> parse_and(query, stmt)
       :or -> parse_or(query, stmt)
+      :not -> parse_not(query, stmt)
       :limit -> parse_limit(query, stmt)
       _ -> {:error, :invalid_statement}
     end
@@ -90,15 +91,14 @@ defmodule Ravix.RQL.QueryParser do
           "#{parse_field(query, condition.field)} in " <>
             "(" <> parse_params_to_positional_string(query, condition.params) <> ")"
 
+        # This one is weird yeah, RavenDB only accepts the NOT in binary operations (OR | AND), so we need
+        # to be a little hackish
         :nin ->
-          "#{parse_field(query, condition.field)} not in " <>
+          "#{parse_field(query, condition.field)} != null and not #{parse_field(query, condition.field)} in " <>
             "(" <> parse_params_to_positional_string(query, condition.params) <> ")"
 
         :ne ->
           "#{parse_field(query, condition.field)} != $p#{query.params_count}"
-
-        :not ->
-          "not #{parse_condition_stmt(query, condition.field)}"
 
         _ ->
           {:error, :invalid_condition_param}
@@ -164,15 +164,22 @@ defmodule Ravix.RQL.QueryParser do
   end
 
   defp parse_where(%Query{} = query, where_token) do
-    parse_locator_stmt(query, where_token, "where")
+    parse_locator_stmt(query, where_token, "where", false)
   end
 
-  defp parse_and(%Query{} = query, and_token) do
-    parse_locator_stmt(query, and_token, "and")
+  defp parse_and(%Query{} = query, and_token, negated \\ false) do
+    parse_locator_stmt(query, and_token, "and", negated)
   end
 
-  defp parse_or(%Query{} = query, or_token) do
-    parse_locator_stmt(query, or_token, "or")
+  defp parse_or(%Query{} = query, or_token, negated \\ false) do
+    parse_locator_stmt(query, or_token, "or", negated)
+  end
+
+  defp parse_not(%Query{} = query, not_token) do
+    case not_token.condition do
+      %Ravix.RQL.Tokens.And{} = and_token -> parse_and(query, and_token, true)
+      %Ravix.RQL.Tokens.Or{} = or_token -> parse_or(query, or_token, true)
+    end
   end
 
   defp parse_limit(%Query{} = query, limit_token) do
@@ -185,11 +192,17 @@ defmodule Ravix.RQL.QueryParser do
      }}
   end
 
-  defp parse_locator_stmt(%Query{} = query, stmt, locator) do
+  defp parse_locator_stmt(%Query{} = query, stmt, locator, negated) do
     OK.for do
       condition <- parse_condition_stmt(query, stmt.condition)
       positional_params = parse_params_to_positional(query, stmt.condition.params)
       params_count = query.params_count + length(stmt.condition.params)
+
+      negated =
+        case negated do
+          true -> " not "
+          false -> " "
+        end
 
       query_params =
         Map.merge(
@@ -199,7 +212,7 @@ defmodule Ravix.RQL.QueryParser do
     after
       %Query{
         query
-        | query_string: query.query_string <> " #{locator} #{condition}",
+        | query_string: query.query_string <> " #{locator}#{negated}#{condition}",
           query_params: query_params,
           params_count: params_count
       }

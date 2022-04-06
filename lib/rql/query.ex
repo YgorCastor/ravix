@@ -19,7 +19,7 @@ defmodule Ravix.RQL.Query do
 
   alias Ravix.RQL.Query
   alias Ravix.RQL.QueryParser
-  alias Ravix.RQL.Tokens.{Where, From, And, Or, Condition, Update, Limit}
+  alias Ravix.RQL.Tokens.{Where, From, And, Or, Condition, Update, Limit, Not}
   alias Ravix.Documents.Session
 
   @type t :: %Query{
@@ -89,6 +89,20 @@ defmodule Ravix.RQL.Query do
     %Query{
       query
       | and_tokens: query.and_tokens ++ [And.condition(condition)]
+    }
+  end
+
+  def and_not(%Query{} = query, %Condition{} = condition) do
+    %Query{
+      query
+      | and_tokens: query.and_tokens ++ [Not.condition(And.condition(condition))]
+    }
+  end
+
+  def or_not(%Query{} = query, %Condition{} = condition) do
+    %Query{
+      query
+      | or_tokens: query.and_tokens ++ [Not.condition(Or.condition(condition))]
     }
   end
 

@@ -85,15 +85,6 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
-  @spec not_condition(Condition.t()) :: Condition.t()
-  def not_condition(%Condition{} = condition) do
-    %Condition{
-      token: :not,
-      field: condition,
-      params: []
-    }
-  end
-
   @spec between(String.t(), any) :: Condition.t()
   def between(field_name, values) do
     %Condition{
