@@ -20,6 +20,7 @@ defmodule Ravix.RQL.QueryParser do
         |> parse_stmts(query.or_tokens)
         |> parse_stmt(query.update_token)
         |> parse_stmt(query.select_token)
+        |> parse_stmt(query.order_token)
         |> parse_stmt(query.limit_token)
     after
       parsed_query
@@ -60,6 +61,7 @@ defmodule Ravix.RQL.QueryParser do
       :and -> parse_and(query, stmt)
       :or -> parse_or(query, stmt)
       :not -> parse_not(query, stmt)
+      :order_by -> parse_ordering(query, stmt)
       :limit -> parse_limit(query, stmt)
       _ -> {:error, :invalid_statement}
     end
@@ -191,6 +193,19 @@ defmodule Ravix.RQL.QueryParser do
       %Ravix.RQL.Tokens.And{} = and_token -> parse_and(query, and_token, true)
       %Ravix.RQL.Tokens.Or{} = or_token -> parse_or(query, or_token, true)
     end
+  end
+
+  defp parse_ordering(%Query{} = query, order_by_token) do
+    {:ok,
+     %Query{
+       query
+       | query_string:
+           query.query_string <>
+             " order by " <>
+             Enum.map_join(order_by_token.fields, ",", fn {field, order} ->
+               "#{parse_field(query, field)} #{Atom.to_string(order)}"
+             end)
+     }}
   end
 
   defp parse_limit(%Query{} = query, limit_token) do

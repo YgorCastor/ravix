@@ -8,6 +8,7 @@ defmodule Ravix.RQL.Query do
             and_tokens: [],
             or_tokens: [],
             select_token: nil,
+            order_token: nil,
             limit_token: nil,
             query_string: "",
             query_params: %{},
@@ -19,7 +20,7 @@ defmodule Ravix.RQL.Query do
 
   alias Ravix.RQL.Query
   alias Ravix.RQL.QueryParser
-  alias Ravix.RQL.Tokens.{Where, Select, From, And, Or, Condition, Update, Limit, Not}
+  alias Ravix.RQL.Tokens.{Where, Select, From, And, Or, Condition, Update, Limit, Not, Order}
   alias Ravix.Documents.Session
 
   @type t :: %Query{
@@ -29,6 +30,7 @@ defmodule Ravix.RQL.Query do
           and_tokens: list(And.t()),
           or_tokens: list(Or.t()),
           select_token: Select.t() | nil,
+          order_token: Order.t() | nil,
           limit_token: Limit.t() | nil,
           query_string: String.t(),
           query_params: map(),
@@ -135,6 +137,19 @@ defmodule Ravix.RQL.Query do
     %Query{
       query
       | limit_token: Limit.limit(skip, next)
+    }
+  end
+
+  @spec order_by(
+          Query.t(),
+          [{:asc, String.t()} | {:desc, String.t()}, ...]
+          | {:asc, String.t()}
+          | {:desc, String.t()}
+        ) :: Query.t()
+  def order_by(%Query{} = query, orders) do
+    %Query{
+      query
+      | order_token: Order.by(orders)
     }
   end
 

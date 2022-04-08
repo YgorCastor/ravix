@@ -177,6 +177,61 @@ defmodule Ravix.RQL.QueryTest do
       refute Map.has_key?(found_cat, "id")
     end
 
+    test "Should order based on a single field" do
+      [cat1, cat2, cat3] = build_list(3, :cat_entity)
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, cat1)
+          _ <- Session.store(session_id, cat2)
+          _ <- Session.store(session_id, cat3)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            from("Cats")
+            |> where(in?("name", [cat1.name, cat2.name, cat3.name]))
+            |> order_by({"@metadata.@last-modified", :desc})
+            |> limit(1, 1)
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      found_cat = Enum.at(response["Results"], 0)
+
+      assert found_cat["name"] == cat3.name
+      assert found_cat["breed"] == cat3.breed
+    end
+
+    test "Should order based on multiple fields" do
+      [cat1, cat2, cat3] = build_list(3, :cat_entity)
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, cat1)
+          _ <- Session.store(session_id, cat2)
+          _ <- Session.store(session_id, cat3)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            from("Cats")
+            |> where(in?("name", [cat1.name, cat2.name, cat3.name]))
+            |> order_by([{"@metadata.@last-modified", :desc}, {"name", :asc}])
+            |> limit(1, 2)
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      assert [_, _] = response["Results"]
+    end
+
     test "Should limit the responses if the limit function was applied" do
       glaring = build_list(5, :cat_entity)
 
