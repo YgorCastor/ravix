@@ -18,8 +18,8 @@ defmodule Ravix.RQL.QueryParser do
         |> parse_stmt(query.where_token)
         |> parse_stmts(query.and_tokens)
         |> parse_stmts(query.or_tokens)
-        |> parse_stmt(query.projection_token)
         |> parse_stmt(query.update_token)
+        |> parse_stmt(query.select_token)
         |> parse_stmt(query.limit_token)
     after
       parsed_query
@@ -54,6 +54,7 @@ defmodule Ravix.RQL.QueryParser do
     case stmt.token do
       :from -> parse_from(query, stmt)
       :from_index -> parse_from_index(query, stmt)
+      :select -> parse_select(query, stmt)
       :update -> parse_update(query, stmt)
       :where -> parse_where(query, stmt)
       :and -> parse_and(query, stmt)
@@ -129,6 +130,16 @@ defmodule Ravix.RQL.QueryParser do
            query.query_string <>
              "from index #{from_token.document_or_index}" <>
              parse_alias(query, from_token.document_or_index)
+     }}
+  end
+
+  defp parse_select(%Query{} = query, select_token) do
+    {:ok,
+     %Query{
+       query
+       | query_string:
+           query.query_string <>
+             " select " <> Enum.map_join(select_token.fields, ",", &parse_field(query, &1))
      }}
   end
 

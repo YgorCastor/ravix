@@ -7,7 +7,7 @@ defmodule Ravix.RQL.Query do
             update_token: nil,
             and_tokens: [],
             or_tokens: [],
-            projection_token: nil,
+            select_token: nil,
             limit_token: nil,
             query_string: "",
             query_params: %{},
@@ -19,7 +19,7 @@ defmodule Ravix.RQL.Query do
 
   alias Ravix.RQL.Query
   alias Ravix.RQL.QueryParser
-  alias Ravix.RQL.Tokens.{Where, From, And, Or, Condition, Update, Limit, Not}
+  alias Ravix.RQL.Tokens.{Where, Select, From, And, Or, Condition, Update, Limit, Not}
   alias Ravix.Documents.Session
 
   @type t :: %Query{
@@ -28,7 +28,7 @@ defmodule Ravix.RQL.Query do
           update_token: Update.t() | nil,
           and_tokens: list(And.t()),
           or_tokens: list(Or.t()),
-          projection_token: any(),
+          select_token: Select.t() | nil,
           limit_token: Limit.t() | nil,
           query_string: String.t(),
           query_params: map(),
@@ -82,6 +82,17 @@ defmodule Ravix.RQL.Query do
   end
 
   @doc """
+  Adds a `Ravix.RQL.Tokens.Select` to the query
+  """
+  @spec select(Query.t(), String.t() | [String.t()]) :: Query.t()
+  def select(%Query{} = query, fields) do
+    %Query{
+      query
+      | select_token: Select.fields(fields)
+    }
+  end
+
+  @doc """
   Adds a `Ravix.RQL.Tokens.And` to the query
   """
   @spec and?(Query.t(), Condition.t()) :: Query.t()
@@ -92,6 +103,7 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @spec and_not(Query.t(), Condition.t()) :: Query.t()
   def and_not(%Query{} = query, %Condition{} = condition) do
     %Query{
       query
@@ -99,6 +111,7 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @spec or_not(Query.t(), Condition.t()) :: Query.t()
   def or_not(%Query{} = query, %Condition{} = condition) do
     %Query{
       query

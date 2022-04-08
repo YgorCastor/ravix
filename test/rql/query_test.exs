@@ -122,6 +122,61 @@ defmodule Ravix.RQL.QueryTest do
         end
     end
 
+    test "Should return only the selected field" do
+      cat = build(:cat_entity)
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, cat)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            from("Cats")
+            |> select("name")
+            |> where(equal_to("name", cat.name))
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      found_cat =
+        Enum.find(response["Results"], nil, fn entity -> entity["@metadata"]["@id"] == cat.id end)
+
+      assert found_cat["name"] == cat.name
+      refute Map.has_key?(found_cat, "breed")
+    end
+
+    test "Should return only the selected fields" do
+      cat = build(:cat_entity)
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, cat)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            from("Cats")
+            |> select(["name", "breed"])
+            |> where(equal_to("name", cat.name))
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      found_cat =
+        Enum.find(response["Results"], nil, fn entity -> entity["@metadata"]["@id"] == cat.id end)
+
+      assert found_cat["name"] == cat.name
+      assert found_cat["breed"] == cat.breed
+      refute Map.has_key?(found_cat, "id")
+    end
+
     test "Should limit the responses if the limit function was applied" do
       glaring = build_list(5, :cat_entity)
 
