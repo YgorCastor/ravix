@@ -16,6 +16,7 @@ defmodule Ravix.RQL.QueryParser do
         query
         |> parse_stmt(query.from_token)
         |> parse_stmt(query.where_token)
+        |> parse_stmt(query.group_token)
         |> parse_stmts(query.and_tokens)
         |> parse_stmts(query.or_tokens)
         |> parse_stmt(query.update_token)
@@ -56,6 +57,8 @@ defmodule Ravix.RQL.QueryParser do
       :from -> parse_from(query, stmt)
       :from_index -> parse_from_index(query, stmt)
       :select -> parse_select(query, stmt)
+      :select_function -> parse_select_function(query, stmt)
+      :group_by -> parse_group_by(query, stmt)
       :update -> parse_update(query, stmt)
       :where -> parse_where(query, stmt)
       :and -> parse_and(query, stmt)
@@ -114,35 +117,34 @@ defmodule Ravix.RQL.QueryParser do
   end
 
   defp parse_from(%Query{} = query, from_token) do
-    {:ok,
-     %Query{
-       query
-       | query_string:
-           query.query_string <>
-             "from #{from_token.document_or_index}" <>
-             parse_alias(query, from_token.document_or_index)
-     }}
+    query_fragment =
+      "from #{from_token.document_or_index}" <> parse_alias(query, from_token.document_or_index)
+
+    {:ok, append_query_fragment(query, query_fragment)}
   end
 
   defp parse_from_index(%Query{} = query, from_token) do
-    {:ok,
-     %Query{
-       query
-       | query_string:
-           query.query_string <>
-             "from index #{from_token.document_or_index}" <>
-             parse_alias(query, from_token.document_or_index)
-     }}
+    query_fragment =
+      "from #{from_token.document_or_index}" <> parse_alias(query, from_token.document_or_index)
+
+    {:ok, append_query_fragment(query, query_fragment)}
   end
 
   defp parse_select(%Query{} = query, select_token) do
-    {:ok,
-     %Query{
-       query
-       | query_string:
-           query.query_string <>
-             " select " <> Enum.map_join(select_token.fields, ",", &parse_field(query, &1))
-     }}
+    query_fragment =
+      " select " <> Enum.map_join(select_token.fields, ",", &parse_field(query, &1))
+
+    {:ok, append_query_fragment(query, query_fragment)}
+  end
+
+  defp parse_select_function(%Query{} = query, projected_select_token) do
+    query_fragment =
+      " select { " <>
+        Enum.map_join(projected_select_token.fields, "\n", fn {field, projected} ->
+          Atom.to_string(field) <> " : " <> projected
+        end) <> " }"
+
+    {:ok, append_query_fragment(query, query_fragment)}
   end
 
   defp parse_update(%Query{} = query, update_token) do
@@ -168,12 +170,10 @@ defmodule Ravix.RQL.QueryParser do
     {:ok,
      %Query{
        query
-       | query_string:
-           query.query_string <>
-             " update{ " <> Enum.join(fields_to_update.updates, ", ") <> " }",
-         query_params: query_params,
+       | query_params: query_params,
          params_count: fields_to_update.current_position
-     }}
+     }
+     |> append_query_fragment(" update{ " <> Enum.join(fields_to_update.updates, ", ") <> " }")}
   end
 
   defp parse_where(%Query{} = query, where_token) do
@@ -196,26 +196,25 @@ defmodule Ravix.RQL.QueryParser do
   end
 
   defp parse_ordering(%Query{} = query, order_by_token) do
-    {:ok,
-     %Query{
-       query
-       | query_string:
-           query.query_string <>
-             " order by " <>
-             Enum.map_join(order_by_token.fields, ",", fn {field, order} ->
-               "#{parse_field(query, field)} #{Atom.to_string(order)}"
-             end)
-     }}
+    query_fragment =
+      " order by " <>
+        Enum.map_join(order_by_token.fields, ",", fn {field, order} ->
+          "#{parse_field(query, field)} #{Atom.to_string(order)}"
+        end)
+
+    {:ok, append_query_fragment(query, query_fragment)}
+  end
+
+  defp parse_group_by(%Query{} = query, group_by_token) do
+    query_fragment = " group by " <> Enum.map_join(group_by_token.fields, &parse_field(query, &1))
+
+    {:ok, append_query_fragment(query, query_fragment)}
   end
 
   defp parse_limit(%Query{} = query, limit_token) do
-    {:ok,
-     %Query{
-       query
-       | query_string:
-           query.query_string <>
-             " limit #{limit_token.skip}, #{limit_token.next}"
-     }}
+    query_fragment = " limit #{limit_token.skip}, #{limit_token.next}"
+
+    {:ok, append_query_fragment(query, query_fragment)}
   end
 
   defp parse_locator_stmt(%Query{} = query, stmt, locator, negated) do
@@ -265,10 +264,24 @@ defmodule Ravix.RQL.QueryParser do
     end
   end
 
+  defp parse_field(%Query{aliases: aliases, from_token: from_token}, {field_name, field_alias}) do
+    case Map.has_key?(aliases, from_token.document_or_index) do
+      true -> Map.get(aliases, from_token.document_or_index) <> ".#{field_name} as #{field_alias}"
+      false -> field_name <> " as #{field_alias}"
+    end
+  end
+
   defp parse_field(%Query{aliases: aliases, from_token: from_token}, field) do
     case Map.has_key?(aliases, from_token.document_or_index) do
       true -> Map.get(aliases, from_token.document_or_index) <> ".#{field}"
       false -> field
     end
+  end
+
+  defp append_query_fragment(%Query{} = query, append) do
+    %Query{
+      query
+      | query_string: query.query_string <> "#{append}"
+    }
   end
 end

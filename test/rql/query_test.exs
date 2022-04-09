@@ -177,6 +177,32 @@ defmodule Ravix.RQL.QueryTest do
       refute Map.has_key?(found_cat, "id")
     end
 
+    test "Should return only the selected field with the correct alias" do
+      cat = build(:cat_entity)
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, cat)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            from("Cats")
+            |> select({"name", "cat_name"})
+            |> where(equal_to("name", cat.name))
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      found_cat =
+        Enum.find(response["Results"], nil, fn entity -> entity["@metadata"]["@id"] == cat.id end)
+
+      assert found_cat["cat_name"] == cat.name
+    end
+
     test "Should order based on a single field" do
       [cat1, cat2, cat3] = build_list(3, :cat_entity)
 
@@ -185,6 +211,10 @@ defmodule Ravix.RQL.QueryTest do
           session_id <- Store.open_session()
           _ <- Session.store(session_id, cat1)
           _ <- Session.store(session_id, cat2)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(1000)
+
           _ <- Session.store(session_id, cat3)
           _ <- Session.save_changes(session_id)
 
@@ -230,6 +260,55 @@ defmodule Ravix.RQL.QueryTest do
         end
 
       assert [_, _] = response["Results"]
+    end
+
+    test "Should support function select" do
+      cat = build(:cat_entity)
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, cat)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            from("Cats", "c")
+            |> where(equal_to("id", cat.id))
+            |> select_function(ooga: "c.name")
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      assert [found_cat] = response["Results"]
+      assert found_cat["ooga"] == cat.name
+    end
+
+    test "Should support group by" do
+      cat = build(:cat_entity)
+
+      {:ok, response} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, cat)
+          _ <- Session.save_changes(session_id)
+
+          :timer.sleep(500)
+
+          query_response <-
+            from("Cats")
+            |> group_by("breed")
+            |> list_all(session_id)
+        after
+          query_response
+        end
+
+      il_cato =
+        response["Results"] |> Enum.find(fn response -> response["breed"] == cat.breed end)
+
+      assert il_cato["breed"] == cat.breed
     end
 
     test "Should limit the responses if the limit function was applied" do

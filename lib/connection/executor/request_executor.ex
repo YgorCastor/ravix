@@ -37,15 +37,11 @@ defmodule Ravix.Connection.RequestExecutor do
   def init(%ServerNode{} = node) do
     {:ok, conn_params} = build_params(node.certificate, node.protocol)
 
-    Logger.info(
-      "[RAVIX] Connecting to node '#{node}' for store '#{inspect(node.store)}'"
-    )
+    Logger.info("[RAVIX] Connecting to node '#{node}' for store '#{inspect(node.store)}'")
 
     case Mint.HTTP.connect(node.protocol, node.url, node.port, conn_params) do
       {:ok, conn} ->
-        Logger.info(
-          "[RAVIX] Connected to node '#{node}' for store '#{inspect(node.store)}'"
-        )
+        Logger.info("[RAVIX] Connected to node '#{node}' for store '#{inspect(node.store)}'")
 
         {:ok, %ServerNode{node | conn: conn}}
 
@@ -267,11 +263,12 @@ defmodule Ravix.Connection.RequestExecutor do
   end
 
   defp process_response({:data, request_ref, new_data}, state) do
-    put_in(state.requests[request_ref].response[:data], decode_body(new_data))
+    update_in(state.requests[request_ref].response[:data], fn data -> (data || "") <> new_data end)
   end
 
   defp process_response({:done, request_ref}, state) do
     {%{response: response, from: from}, state} = pop_in(state.requests[request_ref])
+    response = put_in(response[:data], decode_body(response[:data]))
 
     parsed_response =
       case response do
@@ -292,9 +289,6 @@ defmodule Ravix.Connection.RequestExecutor do
 
         error_response when error_response.status in [408, 502, 503, 504] ->
           parse_error(error_response)
-
-        {:error, err} ->
-          {:non_retryable_error, err}
 
         parsed_response ->
           {:ok, parsed_response}
@@ -352,10 +346,12 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
-  defp decode_body(raw_response) do
+  defp decode_body(raw_response) when is_binary(raw_response) do
     case Jason.decode(raw_response) do
       {:ok, parsed_response} -> parsed_response
       {:error, %Jason.DecodeError{}} -> :invalid_response_payload
     end
   end
+
+  defp decode_body(_), do: nil
 end
