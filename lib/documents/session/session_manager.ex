@@ -68,11 +68,12 @@ defmodule Ravix.Documents.Session.Manager do
     OK.try do
       metadata = Metadata.build_default_metadata(entity)
       entity = Metadata.add_metadata(entity, metadata)
+      original_document = Map.get(state.documents_by_id, key)
 
       updated_state <-
         state
         |> SessionState.update_last_session_call()
-        |> SessionState.register_document(key, entity, change_vector)
+        |> SessionState.register_document(key, entity, change_vector, original_document)
     after
       {:ok, [entity, updated_state]}
     rescue

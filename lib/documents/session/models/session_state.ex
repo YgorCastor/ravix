@@ -93,7 +93,6 @@ defmodule Ravix.Documents.Session.State do
   - `{:ok, updated_state}`
   - `{:error, :document_already_deferred}` if the document id is in a deferred command
   - `{:error, :document_deleted}` if the document is marked for delete
-  - `{:error, :document_already_stored}` if the document is already in the session
   """
   def register_document(
         %SessionState{} = state,
@@ -105,7 +104,6 @@ defmodule Ravix.Documents.Session.State do
     OK.for do
       _ <- Validations.document_not_in_deferred_command(state, key)
       _ <- Validations.document_not_deleted(state, key)
-      _ <- Validations.document_not_stored(state, key)
     after
       %SessionState{
         state

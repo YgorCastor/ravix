@@ -16,7 +16,7 @@ defmodule Ravix.Factory do
 
   def session_state_factory do
     random_document_id = UUID.uuid4()
-    random_deleted_entity = %{id: UUID.uuid4(), something: Faker.Cat.breed()}
+    random_deleted_entity = build(:session_document)
 
     %Session.State{
       session_id: UUID.uuid4(),

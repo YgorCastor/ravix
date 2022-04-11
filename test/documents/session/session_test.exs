@@ -51,6 +51,23 @@ defmodule Ravix.Documents.SessionTest do
       assert Map.has_key?(documents_in_state, "custom_key") == true
     end
 
+    test "A document should be updated successfully" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+      updated_entity = Map.put(any_entity, :cat_name, Faker.Cat.name())
+
+      {:ok, result} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, any_entity, "custom_key")
+          updated_document <- Session.store(session_id, updated_entity, "custom_key")
+          session_state <- Session.fetch_state(session_id)
+        after
+          [stored_document: updated_document, session_state: session_state]
+        end
+
+      assert result[:stored_document] == updated_entity
+    end
+
     test "If the entity is null, an error should be returned" do
       {:error, :null_entity} =
         OK.for do
@@ -74,17 +91,12 @@ defmodule Ravix.Documents.SessionTest do
     test "If an error happens while storing, returns it" do
       any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
 
-      {:error, {:document_already_stored, _stored_entity}} =
+      {:error, :document_deleted} =
         OK.for do
           session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
-
-          new_clashing_entity = %{
-            id: any_entity.id,
-            cat_name: Faker.Cat.name()
-          }
-
-          _ <- Session.store(session_id, new_clashing_entity)
+          _ <- Session.delete(session_id, any_entity)
+          _ <- Session.store(session_id, any_entity)
         after
         end
     end

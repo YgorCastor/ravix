@@ -23,7 +23,7 @@ defmodule Ravix.Documents.Session.Validations do
   def document_not_deleted(%State{} = state, entity_id) do
     state.deleted_entities
     |> Enum.find_value({:ok, entity_id}, fn elmn ->
-      if elmn.id == entity_id, do: {:error, :document_deleted}
+      if elmn.key == entity_id, do: {:error, :document_deleted}
     end)
   end
 
