@@ -1,5 +1,5 @@
 defmodule Ravix.RQL.QueryTest do
-  use ExUnit.Case
+  use Ravix.Integration.Case
   require OK
 
   import Ravix.RQL.Query
@@ -8,12 +8,6 @@ defmodule Ravix.RQL.QueryTest do
 
   alias Ravix.Documents.Session
   alias Ravix.TestStore, as: Store
-
-  setup do
-    _ = start_supervised!(Ravix.TestApplication)
-
-    :ok
-  end
 
   describe "list_all/2" do
     test "Should list all the matching documents of a query" do
@@ -212,10 +206,6 @@ defmodule Ravix.RQL.QueryTest do
           session_id <- Store.open_session()
           _ <- Session.store(session_id, cat1)
           _ <- Session.store(session_id, cat2)
-          _ <- Session.save_changes(session_id)
-
-          :timer.sleep(1000)
-
           _ <- Session.store(session_id, cat3)
           _ <- Session.save_changes(session_id)
 
@@ -224,8 +214,8 @@ defmodule Ravix.RQL.QueryTest do
           query_response <-
             from("Cats")
             |> where(in?("name", [cat1.name, cat2.name, cat3.name]))
-            |> order_by({"@metadata.@last-modified", :desc})
-            |> limit(1, 1)
+            |> order_by({"name", :asc})
+            |> limit(0, 1)
             |> list_all(session_id)
         after
           query_response
@@ -233,8 +223,13 @@ defmodule Ravix.RQL.QueryTest do
 
       found_cat = Enum.at(response["Results"], 0)
 
-      assert found_cat["@metadata"]["@id"] == cat3.id
-      assert found_cat["breed"] == cat3.breed
+      sorted_cat =
+        [cat1, cat2, cat3]
+        |> Enum.sort_by(fn cat -> String.first(cat.name) end)
+        |> Enum.at(0)
+
+      assert found_cat["name"] == sorted_cat.name
+      assert found_cat["breed"] == sorted_cat.breed
     end
 
     test "Should order based on multiple fields" do
