@@ -1,5 +1,5 @@
 defmodule Ravix.RQL.QueryTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   require OK
 
   import Ravix.RQL.Query
@@ -10,7 +10,8 @@ defmodule Ravix.RQL.QueryTest do
   alias Ravix.TestStore, as: Store
 
   setup do
-    %{ravix: start_supervised!(Ravix.TestApplication)}
+    _ = start_supervised!(Ravix.TestApplication)
+
     :ok
   end
 
@@ -232,7 +233,7 @@ defmodule Ravix.RQL.QueryTest do
 
       found_cat = Enum.at(response["Results"], 0)
 
-      assert found_cat["name"] == cat3.name
+      assert found_cat["@metadata"]["@id"] == cat3.id
       assert found_cat["breed"] == cat3.breed
     end
 

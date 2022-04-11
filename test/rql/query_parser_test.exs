@@ -1,5 +1,5 @@
 defmodule Ravix.RQL.QueryParserTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import Ravix.RQL.Query
   import Ravix.RQL.Tokens.Condition
