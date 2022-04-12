@@ -54,7 +54,6 @@ defmodule Ravix.Documents.Session.Manager do
   @spec store_entity(SessionState.t(), map, any, String.t()) :: {:error, any} | {:ok, [...]}
   def store_entity(%SessionState{} = state, entity, key, change_vector) when is_struct(entity) do
     entity
-    |> Map.reject(fn {_, v} -> is_nil(v) end)
     |> do_store_entity(key, change_vector, state)
   end
 
