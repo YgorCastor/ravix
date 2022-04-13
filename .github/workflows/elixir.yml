@@ -30,7 +30,7 @@ jobs:
       - name: Install Git client
         run: apk add --no-cache git
       - name: Build & Deps Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: mix-deps
         with:
           path: |
@@ -41,7 +41,7 @@ jobs:
             ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
             ${{ runner.os }}-01-build-
       - name: Dyalizer Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: mix-dialyzer
         with:
           path: priv/plts

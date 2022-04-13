@@ -22,7 +22,7 @@ jobs:
       - name: Install Git client
         run: apk add --no-cache git
       - name: Build & Deps Cache
-        uses: actions/cache@v
+        uses: actions/cache@v3
         id: mix-deps
         with:
           path: |
