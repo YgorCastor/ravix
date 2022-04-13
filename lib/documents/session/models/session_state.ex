@@ -261,6 +261,7 @@ defmodule Ravix.Documents.Session.State do
     }
   end
 
+  @dialyzer {:nowarn_function, fetch_entity_from_db: 2}
   defp fetch_entity_from_db(%SessionState{} = session_state, %SessionDocument{} = document) do
     OK.for do
       session_id <- session_state.store.open_session()
