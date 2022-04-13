@@ -17,13 +17,13 @@ jobs:
         run: apk add --no-cache curl tar git
       - name: Fix git permissions
         run: git config --global --add safe.directory /__w/ravix/ravix
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Configure Bot Commiter
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - name: Build & Deps Cache
         uses: actions/cache@v3
         id: mix-deps
