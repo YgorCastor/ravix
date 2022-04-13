@@ -24,9 +24,9 @@ jobs:
           RAVEN_License_Eula_Accepted: 'true'
           RAVEN_Security_UnsecuredAccessAllowed: 'PublicNetwork'
     steps:
-      - name: Install Git/Curl/GNU Tar
-        run: apk add --no-cache git curl tar
-      - uses: actions/checkout@v2
+      - name: Install Curl/GNU Tar
+        run: apk add --no-cache curl tar
+      - uses: actions/checkout@v3
       - name: Build & Deps Cache
         uses: actions/cache@v2
         id: mix-deps

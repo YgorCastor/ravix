@@ -15,12 +15,12 @@ jobs:
     steps:
       - name: Install Git/Curl/GNU Tar
         run: apk add --no-cache git curl tar
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           persist-credentials: false
           fetch-depth: 0
       - name: Build & Deps Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v
         id: mix-deps
         with:
           path: |
