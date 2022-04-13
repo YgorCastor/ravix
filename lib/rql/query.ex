@@ -58,7 +58,7 @@ defmodule Ravix.RQL.Query do
   @doc """
   Adds a `Ravix.RQL.Tokens.From` to the query
   """
-  @spec from(nil | bitstring) :: {:error, :query_document_must_be_informed} | Query.t()
+  @spec from(nil | binary()) :: {:error, :query_document_must_be_informed} | Query.t()
   def from(nil), do: {:error, :query_document_must_be_informed}
 
   def from(document) do

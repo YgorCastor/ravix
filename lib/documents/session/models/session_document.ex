@@ -10,6 +10,7 @@ defmodule Ravix.Documents.Session.SessionDocument do
   """
   defstruct entity: nil,
             key: nil,
+            metadata: %{},
             original_value: nil,
             change_vector: ""
 
@@ -19,6 +20,7 @@ defmodule Ravix.Documents.Session.SessionDocument do
   @type t :: %SessionDocument{
           entity: map(),
           key: binary(),
+          metadata: map(),
           change_vector: binary(),
           original_value: map()
         }
@@ -52,6 +54,7 @@ defmodule Ravix.Documents.Session.SessionDocument do
           existing_document
           | entity: document_without_metadata,
             key: document["@id"],
+            metadata: document_metadata,
             change_vector: document_metadata["@change-vector"],
             original_value: existing_document.entity
         }
@@ -60,6 +63,7 @@ defmodule Ravix.Documents.Session.SessionDocument do
         %SessionDocument{
           key: document_metadata["@id"],
           entity: document_without_metadata,
+          metadata: document_metadata,
           change_vector: document_metadata["@change-vector"]
         }
     end
@@ -88,14 +92,16 @@ defmodule Ravix.Documents.Session.SessionDocument do
           | change_vector: metadata["@change-vector"],
             key: document_id,
             entity: updated_document,
+            metadata: metadata,
             original_value: existing_document.entity
         }
 
       _ ->
         %SessionDocument{
           key: document_id,
-          entity: metadata,
-          change_vector: metadata["@metadata"]["@change-vector"]
+          entity: nil,
+          metadata: metadata,
+          change_vector: metadata["@change-vector"]
         }
     end
   end

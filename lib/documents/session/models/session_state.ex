@@ -32,6 +32,9 @@ defmodule Ravix.Documents.Session.State do
   alias Ravix.Documents.Session.SessionDocument
   alias Ravix.Documents.Conventions
 
+  import Ravix.RQL.Query
+  import Ravix.RQL.Tokens.Condition
+
   @type t :: %SessionState{
           store: atom() | nil,
           session_id: bitstring(),
@@ -229,7 +232,22 @@ defmodule Ravix.Documents.Session.State do
     }
   end
 
+  def clear_tmp_keys(%SessionState{} = state) do
+    %SessionState{
+      state
+      | documents_by_id:
+          state.documents_by_id
+          |> Map.reject(fn {k, _v} -> String.contains?(k, "tmp_") end)
+    }
+  end
+
   defp update_document(session_state, document) do
+    {:ok, document} =
+      case document.entity do
+        nil -> fetch_entity_from_db(session_state, document)
+        _ -> {:ok, document}
+      end
+
     %SessionState{
       session_state
       | documents_by_id: Map.put(session_state.documents_by_id, document.key, document)
@@ -241,5 +259,33 @@ defmodule Ravix.Documents.Session.State do
       session_state
       | documents_by_id: Map.delete(session_state.documents_by_id, document_id)
     }
+  end
+
+  defp fetch_entity_from_db(%SessionState{} = session_state, %SessionDocument{} = document) do
+    OK.for do
+      session_id <- session_state.store.open_session()
+      collection = fetch_collection(document)
+
+      result <-
+        from(collection)
+        |> where(equal_to("id()", document.key))
+        |> list_all(session_id)
+
+      entity = Enum.at(result["Results"], 0) |> Map.drop(["@metadata"])
+    after
+      %SessionDocument{
+        document
+        | entity: entity
+      }
+    end
+  end
+
+  @spec fetch_collection(SessionDocument.t()) :: String.t()
+  defp fetch_collection(document) do
+    case document.metadata["@collection"] do
+      nil -> "@all_docs"
+      "@empty" -> "@all_docs"
+      collection -> collection
+    end
   end
 end

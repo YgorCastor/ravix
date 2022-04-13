@@ -65,14 +65,15 @@ defmodule Ravix.Documents.Session.Manager do
 
   defp do_store_entity(entity, key, change_vector, %SessionState{} = state) do
     OK.try do
+      local_key <- ensure_key(key)
       metadata = Metadata.build_default_metadata(entity)
       entity = Metadata.add_metadata(entity, metadata)
-      original_document = Map.get(state.documents_by_id, key)
+      original_document = Map.get(state.documents_by_id, local_key)
 
       updated_state <-
         state
         |> SessionState.update_last_session_call()
-        |> SessionState.register_document(key, entity, change_vector, original_document)
+        |> SessionState.register_document(local_key, entity, change_vector, original_document)
     after
       {:ok, [entity, updated_state]}
     rescue
@@ -185,8 +186,22 @@ defmodule Ravix.Documents.Session.Manager do
         |> SessionState.update_last_session_call()
         |> SessionState.clear_deferred_commands()
         |> SessionState.clear_deleted_entities()
+        |> SessionState.clear_tmp_keys()
     after
       [request_response: response.data, updated_state: updated_state]
     end
+  end
+
+  defp ensure_key(nil), do: {:error, :no_valid_id_informed}
+
+  defp ensure_key(key) do
+    key =
+      case String.last(key) do
+        "/" -> "tmp_" <> key <> UUID.uuid4()
+        "|" -> "tmp_" <> key <> UUID.uuid4()
+        _ -> key
+      end
+
+    {:ok, key}
   end
 end

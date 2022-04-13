@@ -177,7 +177,7 @@ defmodule Ravix.Documents.Session do
         _from,
         %SessionState{} = state
       )
-      when entity.id != nil do
+      when is_map_key(entity, :id) do
     OK.try do
       [entity, updated_state] <-
         SessionManager.store_entity(state, entity, entity.id, change_vector)

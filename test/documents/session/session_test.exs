@@ -148,6 +148,24 @@ defmodule Ravix.Documents.SessionTest do
       # Ok, dis weird as fuck
       assert document_in_session.entity."@metadata"["@collection"] == "Cats"
     end
+
+    test "Should work with RavenDB generated Ids" do
+      any_entity = %{id: "random/", cat_name: Faker.Cat.name()}
+
+      {:ok, saved_changes} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, any_entity)
+          saved_changes <- Session.save_changes(session_id)
+          _ <- Session.fetch_state(session_id)
+        after
+          saved_changes
+        end
+
+      result_id = Enum.at(saved_changes["Results"], 0)["@id"]
+
+      assert result_id != any_entity.id
+    end
   end
 
   describe "load/1" do
