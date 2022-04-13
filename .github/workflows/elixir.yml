@@ -24,8 +24,10 @@ jobs:
           RAVEN_License_Eula_Accepted: 'true'
           RAVEN_Security_UnsecuredAccessAllowed: 'PublicNetwork'
     steps:
-      - name: Install Curl/GNU Tar
-        run: apk add --no-cache curl tar
+      - name: Install Git/Curl/GNU Tar
+        run: apk add --no-cache curl tar git
+      - name: Fix git permissions
+        run: git config --global --add safe.directory /__w/ravix/ravix
       - uses: actions/checkout@v3
       - name: Install Git client
         run: apk add --no-cache git
