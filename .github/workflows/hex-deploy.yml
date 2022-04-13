@@ -17,9 +17,12 @@ jobs:
         run: apk add --no-cache curl tar git
       - name: Fix git permissions
         run: git config --global --add safe.directory /__w/ravix/ravix
+      - name: Configure Bot Commiter
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
       - uses: actions/checkout@v3
         with:
-          persist-credentials: false
           fetch-depth: 0
       - name: Build & Deps Cache
         uses: actions/cache@v3
@@ -42,10 +45,6 @@ jobs:
         run: HEX_API_KEY=${{ secrets.HEX_API_KEY }} mix hex.publish --yes
       - name: Tag the version
         run: mix version.tag
-      - name: Configure Bot Commiter
-        run: |
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
       - name: Push Version Change
         uses: ad-m/github-push-action@master
         with:
