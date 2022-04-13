@@ -13,14 +13,12 @@ jobs:
     container:
       image: elixir:1.13.3-alpine
     steps:
-      - name: Install Curl/GNU Tar
-        run: apk add --no-cache curl tar
+      - name: Install Git/Curl/GNU Tar
+        run: apk add --no-cache curl tar git
       - uses: actions/checkout@v3
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Install Git client
-        run: apk add --no-cache git
       - name: Build & Deps Cache
         uses: actions/cache@v3
         id: mix-deps
