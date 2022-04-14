@@ -194,7 +194,7 @@ defmodule Ravix.Documents.Session.Manager do
 
   defp ensure_key(nil), do: {:error, :no_valid_id_informed}
 
-  defp ensure_key(key) do
+  defp ensure_key(key) when is_bitstring(key) do
     key =
       case String.last(key) do
         "/" -> "tmp_" <> key <> UUID.uuid4()
@@ -204,4 +204,6 @@ defmodule Ravix.Documents.Session.Manager do
 
     {:ok, key}
   end
+
+  defp ensure_key(key), do: {:ok, key}
 end
