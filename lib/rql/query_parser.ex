@@ -132,7 +132,7 @@ defmodule Ravix.RQL.QueryParser do
 
   defp parse_select(%Query{} = query, select_token) do
     query_fragment =
-      " select " <> Enum.map_join(select_token.fields, ",", &parse_field(query, &1))
+      " select " <> Enum.map_join(select_token.fields, ", ", &parse_field(query, &1))
 
     {:ok, append_query_fragment(query, query_fragment)}
   end
@@ -264,12 +264,19 @@ defmodule Ravix.RQL.QueryParser do
     end
   end
 
+  defp parse_field(%Query{}, {field_name, field_alias})
+       when field_name in ["id()", "count()", "sum()"] do
+    field_name <> " as #{field_alias}"
+  end
+
   defp parse_field(%Query{aliases: aliases, from_token: from_token}, {field_name, field_alias}) do
     case Map.has_key?(aliases, from_token.document_or_index) do
       true -> Map.get(aliases, from_token.document_or_index) <> ".#{field_name} as #{field_alias}"
       false -> field_name <> " as #{field_alias}"
     end
   end
+
+  defp parse_field(%Query{}, field) when field in ["id()", "count()", "sum()"], do: field
 
   defp parse_field(%Query{aliases: aliases, from_token: from_token}, field) do
     case Map.has_key?(aliases, from_token.document_or_index) do

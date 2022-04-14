@@ -59,5 +59,28 @@ defmodule Ravix.RQL.QueryParserTest do
       assert query_result.params_count == 4
       assert query_result.is_raw == false
     end
+
+    test "Functions should not be prepended with the document alias" do
+      {:ok, query_result} =
+        from("test", "t")
+        |> where(equal_to("id()", "asdf"))
+        |> or?(equal_to("count()", "asdf"))
+        |> or?(equal_to("sum()", "asdf"))
+        |> QueryParser.parse()
+
+      assert query_result.query_string ==
+               "from test as t where id() = $p0 or count() = $p1 or sum() = $p2"
+    end
+
+    test "Functions can be aliased" do
+      {:ok, query_result} =
+        from("test", "t")
+        |> where(equal_to("id", "asdf"))
+        |> select([{"id()", "i"}, {"count()", "c"}, {"sum()", "s"}])
+        |> QueryParser.parse()
+
+      assert query_result.query_string ==
+               "from test as t where t.id = $p0 select id() as i, count() as c, sum() as s"
+    end
   end
 end
