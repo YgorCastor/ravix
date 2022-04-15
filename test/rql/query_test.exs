@@ -8,6 +8,7 @@ defmodule Ravix.RQL.QueryTest do
 
   alias Ravix.Documents.Session
   alias Ravix.TestStore, as: Store
+  alias Ravix.TestStore2, as: RetryableStore
 
   describe "list_all/2" do
     test "Should list all the matching documents of a query" do
@@ -39,7 +40,7 @@ defmodule Ravix.RQL.QueryTest do
     test "If no results, it should be a valid response with empty results" do
       {:ok, response} =
         OK.for do
-          session_id <- Store.open_session()
+          session_id <- RetryableStore.open_session()
 
           query_response <-
             from("@all_docs")
@@ -111,6 +112,44 @@ defmodule Ravix.RQL.QueryTest do
 
           query_response <-
             raw("never gonna give you up")
+            |> list_all(session_id)
+        after
+          query_response
+        end
+    end
+
+    test "If the query is stale, should return an error" do
+      cat = build(:cat_entity)
+
+      {:error, :stale} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, cat)
+          _ <- Session.save_changes(session_id)
+
+          query_response <-
+            from("Cats")
+            |> select("name")
+            |> where(equal_to("name", cat.name))
+            |> list_all(session_id)
+        after
+          query_response
+        end
+    end
+
+    test "If the query is stale, but the retry_on_stale is on, it should return ok" do
+      cat = build(:cat_entity)
+
+      {:ok, _} =
+        OK.for do
+          session_id <- RetryableStore.open_session()
+          _ <- Session.store(session_id, cat)
+          _ <- Session.save_changes(session_id)
+
+          query_response <-
+            from("Cats")
+            |> select("name")
+            |> where(equal_to("name", cat.name))
             |> list_all(session_id)
         after
           query_response

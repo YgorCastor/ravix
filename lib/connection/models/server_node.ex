@@ -11,6 +11,7 @@ defmodule Ravix.Connection.ServerNode do
       - protocol: http or https
       - database: For which database is this executor
       - cluster_tag: Tag of this node in the RavenDB cluster
+      - opts: General node Options
   """
   defstruct store: nil,
             url: nil,
@@ -20,7 +21,8 @@ defmodule Ravix.Connection.ServerNode do
             requests: %{},
             protocol: nil,
             database: nil,
-            cluster_tag: nil
+            cluster_tag: nil,
+            opts: []
 
   alias Ravix.Connection.ServerNode
 
@@ -33,7 +35,8 @@ defmodule Ravix.Connection.ServerNode do
           requests: map(),
           protocol: atom(),
           database: String.t(),
-          cluster_tag: String.t() | nil
+          cluster_tag: String.t() | nil,
+          opts: keyword()
         }
 
   @doc """
@@ -74,6 +77,9 @@ defmodule Ravix.Connection.ServerNode do
   @spec node_url(ServerNode.t()) :: String.t()
   def node_url(%ServerNode{} = server_node),
     do: "/databases/#{server_node.database}"
+
+  @spec retry_on_stale?(ServerNode.t()) :: boolean()
+  def retry_on_stale?(%ServerNode{} = node), do: Keyword.get(node.opts, :retry_on_stale, false)
 
   defimpl String.Chars, for: Ravix.Connection.ServerNode do
     def to_string(nil) do

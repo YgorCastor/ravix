@@ -17,6 +17,7 @@ defmodule Ravix.Connection.RequestExecutor do
   alias Ravix.Connection
   alias Ravix.Connection.State, as: ConnectionState
   alias Ravix.Connection.{ServerNode, NodeSelector, Response}
+  alias Ravix.Connection.RequestExecutor
   alias Ravix.Documents.Protocols.CreateRequest
 
   @doc """
@@ -81,6 +82,7 @@ defmodule Ravix.Connection.RequestExecutor do
         opts \\ []
       ) do
     node_pid = NodeSelector.current_node(conn_state)
+    opts = opts ++ RequestExecutor.Options.from_connection_state(conn_state)
 
     headers =
       case conn_state.disable_topology_updates do
@@ -120,8 +122,9 @@ defmodule Ravix.Connection.RequestExecutor do
   end
 
   defp call_raven(executor, command, headers, opts) do
-    should_retry = Keyword.get(opts, :should_retry, false)
+    should_retry = Keyword.get(opts, :retry_on_failure, false)
     retry_backoff = Keyword.get(opts, :retry_backoff, 100)
+    retry_on_stale = Keyword.get(opts, :retry_on_stale, false)
 
     retry_count =
       case should_retry do
@@ -130,7 +133,7 @@ defmodule Ravix.Connection.RequestExecutor do
       end
 
     retry with: constant_backoff(retry_backoff) |> Stream.take(retry_count) do
-      GenServer.call(executor, {:request, command, headers})
+      GenServer.call(executor, {:request, command, headers, [retry_on_stale: retry_on_stale]})
     after
       {:ok, result} -> {:ok, result}
       {:non_retryable_error, response} -> {:error, response}
@@ -201,7 +204,7 @@ defmodule Ravix.Connection.RequestExecutor do
   ####################
   #     Handlers     #
   ####################
-  def handle_call({:request, command, headers}, from, %ServerNode{} = node) do
+  def handle_call({:request, command, headers, opts}, from, %ServerNode{} = node) do
     request = CreateRequest.create_request(command, node)
 
     case Mint.HTTP.request(
@@ -218,6 +221,7 @@ defmodule Ravix.Connection.RequestExecutor do
 
         node = put_in(node.conn, conn)
         node = put_in(node.requests[request_ref], %{from: from, response: %{}})
+        node = put_in(node.opts, opts)
         {:noreply, node}
 
       {:error, conn, reason} ->
@@ -286,6 +290,14 @@ defmodule Ravix.Connection.RequestExecutor do
 
         %{data: data} when is_map_key(data, "Error") ->
           {:non_retryable_error, data["Message"]}
+
+        %{data: %{"IsStale" => true}} ->
+          Logger.warn("[RAVIX] The request '#{inspect(request_ref)}' is Stale!")
+
+          case ServerNode.retry_on_stale?(state) do
+            true -> {:error, :stale}
+            false -> {:non_retryable_error, :stale}
+          end
 
         error_response when error_response.status in [408, 502, 503, 504] ->
           parse_error(error_response)

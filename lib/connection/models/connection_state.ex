@@ -7,6 +7,10 @@ defmodule Ravix.Connection.State do
      - certificate: RavenDB emmited SSL certificate for the database user in base64
      - certificate_file: Same as above, but a path to the file in the disk
      - conventions: Document Configuration conventions
+     - retry_on_failure: Automatic retry in retryable errors
+     - retry_on_stale: Automatic retry when the query is stale
+     - retry_backoff: Amount of time between retries (in ms)
+     - retry_count: Amount of retries
      - node_selector: Module that selects the nodes based on different strategies. E.g: Ravix.Connection.NodeSelector
      - urls: List of the urls of RavenDB servers
      - topology_etag: ETAG of the RavenDB cluster topology
@@ -19,6 +23,10 @@ defmodule Ravix.Connection.State do
             database: nil,
             certificate: nil,
             certificate_file: nil,
+            retry_on_failure: true,
+            retry_on_stale: false,
+            retry_backoff: 100,
+            retry_count: 3,
             conventions: %Ravix.Documents.Conventions{},
             node_selector: nil,
             urls: [],
@@ -35,6 +43,10 @@ defmodule Ravix.Connection.State do
           database: String.t(),
           certificate: String.t() | nil,
           certificate_file: String.t() | nil,
+          retry_on_failure: boolean(),
+          retry_on_stale: boolean(),
+          retry_backoff: non_neg_integer(),
+          retry_count: non_neg_integer(),
           conventions: Ravix.Documents.Conventions.t(),
           node_selector: Ravix.Connection.NodeSelector.t(),
           urls: list(String.t()),
