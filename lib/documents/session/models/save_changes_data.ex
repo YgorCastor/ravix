@@ -1,6 +1,6 @@
 defmodule Ravix.Documents.Session.SaveChangesData do
   @moduledoc """
-  Defines all changes that will be executed in a session when calling the save_changes function 
+  Defines all changes that will be executed in a session when calling the save_changes function
 
   ## Fields
   - deferred_commands_count: How many command will be executed
@@ -29,7 +29,7 @@ defmodule Ravix.Documents.Session.SaveChangesData do
   - deferred_commands: Raven commands to be deferred
 
   ## Returns
-  - Updated `Ravix.Documents.Session.SaveChangesData` 
+  - Updated `Ravix.Documents.Session.SaveChangesData`
   """
   @spec add_deferred_commands(SaveChangesData.t(), list(map())) :: SaveChangesData.t()
   def add_deferred_commands(%SaveChangesData{} = save_changes_data, deferred_commands) do
@@ -48,7 +48,7 @@ defmodule Ravix.Documents.Session.SaveChangesData do
   - deleted_entities: Entities that will be deleted
 
   ## Returns
-  - Updated `Ravix.Documents.Session.SaveChangesData` 
+  - Updated `Ravix.Documents.Session.SaveChangesData`
   """
   @spec add_delete_commands(SaveChangesData.t(), list(map())) :: SaveChangesData.t()
   def add_delete_commands(%SaveChangesData{} = save_changes_data, deleted_entities) do
@@ -75,7 +75,7 @@ defmodule Ravix.Documents.Session.SaveChangesData do
   - documents_by_id: Map with the documents that will be created
 
   ## Returns
-  - Updated `Ravix.Documents.Session.SaveChangesData` 
+  - Updated `Ravix.Documents.Session.SaveChangesData`
   """
   @spec add_put_commands(SaveChangesData.t(), map()) :: SaveChangesData.t()
   def add_put_commands(%SaveChangesData{} = save_changes_data, documents_by_id) do
@@ -84,7 +84,7 @@ defmodule Ravix.Documents.Session.SaveChangesData do
       |> Map.values()
       |> documents_with_changes()
       |> Enum.map(fn elmn ->
-        %PutDocument{Id: elmn.entity.id, Document: elmn.entity}
+        %PutDocument{Id: elmn.key, Document: elmn.entity}
       end)
 
     entities = put_commands |> Enum.map(fn cmnd -> Map.get(cmnd, "Document") end)
