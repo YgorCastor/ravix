@@ -4,8 +4,8 @@ defmodule Ravix.TestApplication do
   def init(_opts) do
     children = [
       {Ravix, [%{}]},
-      {Ravix.TestStore, [%{}]},
-      {Ravix.TestStore2, [%{}]}
+      {Ravix.Test.Store, [%{}]},
+      {Ravix.Test.NonRetryableStore, [%{}]}
     ]
 
     Supervisor.init(

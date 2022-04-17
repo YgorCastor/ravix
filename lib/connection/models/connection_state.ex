@@ -2,7 +2,7 @@ defmodule Ravix.Connection.State do
   @moduledoc """
   Represents the state of a RavenDB connection
 
-     - store: Store atom for this state. E.g: Ravix.TestStore
+     - store: Store atom for this state. E.g: Ravix.Test.Store
      - database: Name of the database.
      - certificate: RavenDB emmited SSL certificate for the database user in base64
      - certificate_file: Same as above, but a path to the file in the disk

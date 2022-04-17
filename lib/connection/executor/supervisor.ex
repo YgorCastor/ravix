@@ -3,7 +3,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   Supervises the Requests Executors processes
 
   Each node connection has it own supervised process, so they are completely isolated
-  from each other. All executors are registered under the :request_executors Registry. 
+  from each other. All executors are registered under the :request_executors Registry.
   """
   use DynamicSupervisor
 
@@ -36,7 +36,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   Register a new RavenDB Database node for the informed store
 
   ## Parameters
-  - store: the store module. E.g: Ravix.TestStore
+  - store: the store module. E.g: Ravix.Test.Store
   - node: the node to be registered
   """
   @spec register_node_executor(any, ServerNode.t()) ::
@@ -54,7 +54,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   Fetches the nodes running for a specific store
 
   ## Parameters
-  - store: the store module: E.g: Ravix.TestStore
+  - store: the store module: E.g: Ravix.Test.Store
 
   ## Returns
   - List of PIDs
@@ -69,8 +69,8 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   Triggers a topology update for all nodes of a specific store
 
   ## Parameters
-  - store: the store module. E.g: Ravix.TestStore
-  - topology: The `Ravix.Connection.Topology` to be used 
+  - store: the store module. E.g: Ravix.Test.Store
+  - topology: The `Ravix.Connection.Topology` to be used
 
   ## Returns
   - List of nodes `[new_nodes: list(Ravix.Connection.ServerNode), updated_nodes: list(Ravix.Connection.ServerNode)]`

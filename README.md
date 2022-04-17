@@ -33,7 +33,7 @@ end
 You can configure your Store in your config.exs files
 
 ```elixir
-config :ravix, Ravix.TestStore,
+config :ravix, Ravix.Test.Store,
   urls: [System.get_env("RAVENDB_URL", "http://localhost:8080")],
   database: "test",
   retry_on_failure: true,
@@ -62,7 +62,7 @@ defmodule Ravix.TestApplication do
   def init(_opts) do
     children = [
       {Ravix, [%{}]},
-      {Ravix.TestStore, [%{}]} # you can create multiple stores
+      {Ravix.Test.Store, [%{}]} # you can create multiple stores
     ]
 
     Supervisor.init(
@@ -87,15 +87,15 @@ All operations supported by the driver should be executed inside a session, to o
 `Ravix.Documents.Session.save_changes/1` is called!
 
 ```elixir
-iex(2)> Ravix.TestStore.open_session()
+iex(2)> Ravix.Test.Store.open_session()
 {:ok, "985781c8-9154-494b-92d0-a66b49bb17ee"}
 ```
 
 ### Inserting a new document
 
 ```elixir
-iex(2)> Ravix.TestStore.open_session()
-iex(2)> {:ok, session_id} = Ravix.TestStore.open_session()
+iex(2)> Ravix.Test.Store.open_session()
+iex(2)> {:ok, session_id} = Ravix.Test.Store.open_session()
 {:ok, "c4fb1f48-c969-4c76-9b12-5521926c7533"}
 iex(3)> Ravix.Documents.Session.store(session_id, %{id: "cat/1", cat_name: "Adolfus"})
 {:ok, %{cat_name: "Adolfus", id: "cat/1"}}
@@ -117,7 +117,7 @@ iex(4)> Ravix.Documents.Session.save_changes(session_id)
 ### Loading a document into the session
 
 ```elixir
-iex(3)> {:ok, session_id} = Ravix.TestStore.open_session()
+iex(3)> {:ok, session_id} = Ravix.Test.Store.open_session()
 {:ok, "d17e2be8-8c1e-4a59-8626-46725387f769"}
 iex(4)> Ravix.Documents.Session.load(session_id, ["cat/1"])
 {:ok,
@@ -225,7 +225,7 @@ end
 To connect to a secure server, you can just inform the SSL certificate using the `certificate` or the `certificate_file` configuration.
 
 ```elixir
-config :ravix, Ravix.TestStore,
+config :ravix, Ravix.Test.Store,
   urls: [System.get_env("RAVENDB_URL", "http://localhost:8080")],
   database: "test",
   certificate: CERT_IN_BASE_64,

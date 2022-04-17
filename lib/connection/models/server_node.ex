@@ -2,7 +2,7 @@ defmodule Ravix.Connection.ServerNode do
   @moduledoc """
   State of a RavenDB connection executor node
 
-      - store: Atom of the RavenDB Store, E.g: Ravix.TestStore
+      - store: Atom of the RavenDB Store, E.g: Ravix.Test.Store
       - url: URL of this node
       - port: port of this node
       - conn: TCP Connection State

@@ -80,11 +80,18 @@ defmodule Ravix.RQL.Query do
   @doc """
   Adds a `Ravix.RQL.Tokens.Update` to the query
   """
-  @spec update(Query.t(), map()) :: Query.t()
-  def update(%Query{} = query, document_updates) do
+  @spec update(Query.t(), list(Update.Field.t()) | Update.t()) :: Query.t()
+  def update(%Query{} = query, document_updates) when is_list(document_updates) do
     %Query{
       query
-      | update_token: Update.update(document_updates)
+      | update_token: Update.fields(document_updates)
+    }
+  end
+
+  def update(%Query{} = query, update) do
+    %Query{
+      query
+      | update_token: update
     }
   end
 

@@ -2,7 +2,7 @@ defmodule Ravix.Connection.ConnectionTest do
   use ExUnit.Case
 
   alias Ravix.Connection
-  alias Ravix.TestStore, as: Store
+  alias Ravix.Test.Store, as: Store
   alias Ravix.TestStoreInvalid, as: InvalidStore
 
   describe "update_topology/1" do

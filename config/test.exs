@@ -1,11 +1,11 @@
 import Config
 
-config :ravix, Ravix.TestStore,
+config :ravix, Ravix.Test.Store,
   urls: [System.get_env("RAVENDB_URL", "http://localhost:8080")],
   database: "test",
-  retry_on_failure: false,
-  retry_on_stale: false,
-  retry_backoff: 100,
+  retry_on_failure: true,
+  retry_on_stale: true,
+  retry_backoff: 300,
   retry_count: 3,
   force_create_database: true,
   document_conventions: %{
@@ -18,11 +18,11 @@ config :ravix, Ravix.TestStore,
     disable_topology_update: false
   }
 
-config :ravix, Ravix.TestStore2,
+config :ravix, Ravix.Test.NonRetryableStore,
   urls: [System.get_env("RAVENDB_URL", "http://localhost:8080")],
   database: "test2",
-  retry_on_failure: true,
-  retry_on_stale: true,
+  retry_on_failure: false,
+  retry_on_stale: false,
   retry_backoff: 100,
   retry_count: 3,
   force_create_database: true,

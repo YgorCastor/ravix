@@ -1,7 +1,7 @@
 defmodule Ravix.Documents.StoreTest do
   use ExUnit.Case
 
-  alias Ravix.TestStore, as: Store
+  alias Ravix.Test.Store, as: Store
 
   setup do
     %{ravix: start_supervised!(Ravix.TestApplication)}

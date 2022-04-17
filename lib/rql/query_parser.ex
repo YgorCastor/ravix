@@ -150,16 +150,20 @@ defmodule Ravix.RQL.QueryParser do
   defp parse_update(%Query{} = query, update_token) do
     fields_to_update =
       update_token.fields
-      |> Map.keys()
       |> Enum.reduce(%{updates: [], current_position: query.params_count}, fn field, acc ->
         %{
           acc
-          | updates: acc.updates ++ ["#{parse_field(query, field)} = $p#{acc.current_position}"],
+          | updates:
+              acc.updates ++
+                [
+                  "#{parse_field(query, field.name)} #{parse_assignment_operation(field.operation)} $p#{acc.current_position}"
+                ],
             current_position: acc.current_position + 1
         }
       end)
 
-    positional_params = parse_params_to_positional(query, Map.values(update_token.fields))
+    field_values = Enum.map(update_token.fields, fn field -> field.value end)
+    positional_params = parse_params_to_positional(query, field_values)
 
     query_params =
       Map.merge(
@@ -174,6 +178,14 @@ defmodule Ravix.RQL.QueryParser do
          params_count: fields_to_update.current_position
      }
      |> append_query_fragment(" update{ " <> Enum.join(fields_to_update.updates, ", ") <> " }")}
+  end
+
+  defp parse_assignment_operation(operation) do
+    case operation do
+      :set -> "="
+      :inc -> "+="
+      :dec -> "-="
+    end
   end
 
   defp parse_where(%Query{} = query, where_token) do

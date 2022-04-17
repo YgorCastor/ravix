@@ -4,11 +4,13 @@ defmodule Ravix.RQL.QueryTest do
 
   import Ravix.RQL.Query
   import Ravix.RQL.Tokens.Condition
+  import Ravix.RQL.Tokens.Update
   import Ravix.Factory
 
   alias Ravix.Documents.Session
-  alias Ravix.TestStore, as: Store
-  alias Ravix.TestStore2, as: RetryableStore
+  alias Ravix.RQL.Tokens.Update
+  alias Ravix.Test.Store, as: Store
+  alias Ravix.Test.NonRetryableStore
 
   describe "list_all/2" do
     test "Should list all the matching documents of a query" do
@@ -40,7 +42,7 @@ defmodule Ravix.RQL.QueryTest do
     test "If no results, it should be a valid response with empty results" do
       {:ok, response} =
         OK.for do
-          session_id <- RetryableStore.open_session()
+          session_id <- Store.open_session()
 
           query_response <-
             from("@all_docs")
@@ -64,8 +66,6 @@ defmodule Ravix.RQL.QueryTest do
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
 
-          :timer.sleep(500)
-
           query_response <-
             raw("from @all_docs where cat_name = \"#{any_entity.cat_name}\"")
             |> list_all(session_id)
@@ -88,8 +88,6 @@ defmodule Ravix.RQL.QueryTest do
           session_id <- Store.open_session()
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
-
-          :timer.sleep(500)
 
           query_response <-
             raw("from @all_docs where cat_name = $p1", %{p1: any_entity.cat_name})
@@ -123,7 +121,7 @@ defmodule Ravix.RQL.QueryTest do
 
       {:error, :stale} =
         OK.for do
-          session_id <- Store.open_session()
+          session_id <- NonRetryableStore.open_session()
           _ <- Session.store(session_id, cat)
           _ <- Session.save_changes(session_id)
 
@@ -142,7 +140,7 @@ defmodule Ravix.RQL.QueryTest do
 
       {:ok, _} =
         OK.for do
-          session_id <- RetryableStore.open_session()
+          session_id <- Store.open_session()
           _ <- Session.store(session_id, cat)
           _ <- Session.save_changes(session_id)
 
@@ -164,8 +162,6 @@ defmodule Ravix.RQL.QueryTest do
           session_id <- Store.open_session()
           _ <- Session.store(session_id, cat)
           _ <- Session.save_changes(session_id)
-
-          :timer.sleep(500)
 
           query_response <-
             from("Cats")
@@ -192,8 +188,6 @@ defmodule Ravix.RQL.QueryTest do
           _ <- Session.store(session_id, cat)
           _ <- Session.save_changes(session_id)
 
-          :timer.sleep(500)
-
           query_response <-
             from("Cats")
             |> select(["name", "breed"])
@@ -219,8 +213,6 @@ defmodule Ravix.RQL.QueryTest do
           session_id <- Store.open_session()
           _ <- Session.store(session_id, cat)
           _ <- Session.save_changes(session_id)
-
-          :timer.sleep(500)
 
           query_response <-
             from("Cats")
@@ -282,8 +274,6 @@ defmodule Ravix.RQL.QueryTest do
           _ <- Session.store(session_id, cat3)
           _ <- Session.save_changes(session_id)
 
-          :timer.sleep(500)
-
           query_response <-
             from("Cats")
             |> where(in?("name", [cat1.name, cat2.name, cat3.name]))
@@ -306,8 +296,6 @@ defmodule Ravix.RQL.QueryTest do
           _ <- Session.store(session_id, cat)
           _ <- Session.save_changes(session_id)
 
-          :timer.sleep(500)
-
           query_response <-
             from("Cats", "c")
             |> where(equal_to("id", cat.id))
@@ -329,8 +317,6 @@ defmodule Ravix.RQL.QueryTest do
           session_id <- Store.open_session()
           _ <- Session.store(session_id, cat)
           _ <- Session.save_changes(session_id)
-
-          :timer.sleep(500)
 
           query_response <-
             from("Cats")
@@ -361,8 +347,6 @@ defmodule Ravix.RQL.QueryTest do
 
           _ <- Session.save_changes(session_id)
 
-          :timer.sleep(500)
-
           query_response <-
             from("Cats")
             |> limit(1, 2)
@@ -382,8 +366,6 @@ defmodule Ravix.RQL.QueryTest do
           session_id <- Store.open_session()
           _ <- Session.store(session_id, el_cato)
           _ <- Session.save_changes(session_id)
-
-          :timer.sleep(500)
 
           query_response <-
             from("Cats")
@@ -406,8 +388,6 @@ defmodule Ravix.RQL.QueryTest do
           _ <- Session.store(session_id, cat2)
           _ <- Session.store(session_id, cat3)
           _ <- Session.save_changes(session_id)
-
-          :timer.sleep(500)
 
           query_response <-
             from("Cats")
@@ -474,7 +454,7 @@ defmodule Ravix.RQL.QueryTest do
 
           update_response <-
             from("@all_docs", "a")
-            |> update(%{cat_name: "Fluffer, the hand-ripper"})
+            |> update(set(%Update{}, :cat_name, "Fluffer, the hand-ripper"))
             |> where(equal_to("cat_name", any_entity.cat_name))
             |> update_for(session_id)
 

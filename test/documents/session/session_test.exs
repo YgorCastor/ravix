@@ -6,8 +6,8 @@ defmodule Ravix.Documents.SessionTest do
   require OK
 
   alias Ravix.Documents.Session
-  alias Ravix.TestStore, as: Store
-  alias Ravix.TestStore2, as: TimedStore
+  alias Ravix.Test.Store, as: Store
+  alias Ravix.Test.NonRetryableStore, as: TimedStore
 
   setup do
     %{ravix: start_supervised!(Ravix.TestApplication)}
