@@ -58,7 +58,7 @@ defmodule Ravix.RQL.Query do
   @doc """
   Adds a `Ravix.RQL.Tokens.From` to the query
   """
-  @spec from(nil | binary()) :: {:error, :query_document_must_be_informed} | Query.t()
+  @spec from(nil | String.t()) :: {:error, :query_document_must_be_informed} | Query.t()
   def from(nil), do: {:error, :query_document_must_be_informed}
 
   def from(document) do
@@ -80,7 +80,7 @@ defmodule Ravix.RQL.Query do
   @doc """
   Adds a `Ravix.RQL.Tokens.Update` to the query
   """
-  @spec update(Query.t(), list(Update.Field.t()) | Update.t()) :: Query.t()
+  @spec update(Query.t(), list(map()) | Update.t()) :: Query.t()
   def update(%Query{} = query, document_updates) when is_list(document_updates) do
     %Query{
       query
@@ -152,6 +152,7 @@ defmodule Ravix.RQL.Query do
     }
   end
 
+  @spec group_by(Query.t(), String.t() | [String.t()]) :: Query.t()
   def group_by(%Query{} = query, fields) do
     %Query{
       query
