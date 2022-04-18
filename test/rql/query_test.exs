@@ -125,6 +125,14 @@ defmodule Ravix.RQL.QueryTest do
           _ <- Session.store(session_id, cat)
           _ <- Session.save_changes(session_id)
 
+          _ <-
+            from("Cats")
+            |> select("name")
+            |> where(equal_to("name", cat.name))
+            |> list_all(session_id)
+
+          # The first query usually creates an auto_index, who gives time to the query to finish
+          # If we query again, it will be faster, leading to a stale call
           query_response <-
             from("Cats")
             |> select("name")

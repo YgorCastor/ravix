@@ -1,6 +1,7 @@
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
 Faker.start()
+
 ExUnit.start()
 
 defmodule Ravix.Integration.Case do
