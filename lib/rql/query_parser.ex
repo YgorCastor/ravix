@@ -15,9 +15,9 @@ defmodule Ravix.RQL.QueryParser do
       parsed_query =
         query
         |> parse_stmt(query.from_token)
+        |> parse_stmt(query.group_token)
         |> parse_stmt(query.where_token)
         |> parse_stmt(query.order_token)
-        |> parse_stmt(query.group_token)
         |> parse_stmts(query.and_tokens)
         |> parse_stmts(query.or_tokens)
         |> parse_stmt(query.update_token)

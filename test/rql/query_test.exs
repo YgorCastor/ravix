@@ -330,6 +330,7 @@ defmodule Ravix.RQL.QueryTest do
           query_response <-
             from("Cats")
             |> group_by("breed")
+            |> where(equal_to("breed", cat.breed))
             |> list_all(session_id)
         after
           query_response
