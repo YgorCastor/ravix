@@ -2,7 +2,11 @@
 
 Faker.start()
 
-ExUnit.start()
+ExUnit.start(
+  exclude: [
+    :flaky
+  ]
+)
 
 defmodule Ravix.Integration.Case do
   use ExUnit.CaseTemplate

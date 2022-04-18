@@ -116,6 +116,7 @@ defmodule Ravix.RQL.QueryTest do
         end
     end
 
+    @tag :flaky
     test "If the query is stale, should return an error" do
       cat = build(:cat_entity)
 
