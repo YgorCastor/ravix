@@ -6,6 +6,8 @@ defmodule Ravix.RQL.QueryParser do
 
   alias Ravix.RQL.Query
 
+  @non_aliasable_fields ["id()", "count()", "sum()", :"id()", :"count()", :"sum()"]
+
   @doc """
   Receives a `Ravix.RQL.Query` object and parses it to a RQL query string
   """
@@ -277,7 +279,7 @@ defmodule Ravix.RQL.QueryParser do
   end
 
   defp parse_field(%Query{}, {field_name, field_alias})
-       when field_name in ["id()", "count()", "sum()"] do
+       when field_name in @non_aliasable_fields do
     field_name <> " as #{field_alias}"
   end
 
@@ -288,7 +290,7 @@ defmodule Ravix.RQL.QueryParser do
     end
   end
 
-  defp parse_field(%Query{}, field) when field in ["id()", "count()", "sum()"], do: field
+  defp parse_field(%Query{}, field) when field in @non_aliasable_fields, do: field
 
   defp parse_field(%Query{aliases: aliases, from_token: from_token}, field) do
     case Map.has_key?(aliases, from_token.document_or_index) do
