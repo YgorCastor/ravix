@@ -56,7 +56,7 @@ defmodule Ravix.Documents.Session.SaveChangesData do
       Enum.map(
         deleted_entities,
         fn entity ->
-          %DeleteDocument{Id: entity.key}
+          %DeleteDocument{Id: entity.key, ChangeVector: entity.change_vector}
         end
       )
 
@@ -84,7 +84,7 @@ defmodule Ravix.Documents.Session.SaveChangesData do
       |> Map.values()
       |> documents_with_changes()
       |> Enum.map(fn elmn ->
-        %PutDocument{Id: elmn.key, Document: elmn.entity}
+        %PutDocument{Id: elmn.key, Document: elmn.entity, ChangeVector: elmn.change_vector}
       end)
 
     entities = put_commands |> Enum.map(fn cmnd -> Map.get(cmnd, "Document") end)

@@ -20,6 +20,7 @@ defmodule Ravix.Documents.Session.Manager do
 
   def load_documents(%SessionState{} = state, document_ids, includes, opts) do
     OK.try do
+      _ <- Validations.load_documents_limit_reached(state, document_ids)
       already_loaded_ids = fetch_loaded_documents(state, document_ids)
       ids_to_load <- Validations.all_ids_are_not_already_loaded(document_ids, already_loaded_ids)
       network_state <- Connection.fetch_state(state.store)
@@ -65,6 +66,14 @@ defmodule Ravix.Documents.Session.Manager do
 
   defp do_store_entity(entity, key, change_vector, %SessionState{} = state) do
     OK.try do
+      _ <- Validations.session_request_limit_reached(state)
+
+      change_vector =
+        case state.conventions.use_optimistic_concurrency do
+          true -> change_vector
+          false -> nil
+        end
+
       local_key <- ensure_key(key)
       metadata = Metadata.build_default_metadata(entity)
       entity = Metadata.add_metadata(entity, metadata)
@@ -72,6 +81,7 @@ defmodule Ravix.Documents.Session.Manager do
 
       updated_state <-
         state
+        |> SessionState.increment_request_count()
         |> SessionState.update_last_session_call()
         |> SessionState.register_document(local_key, entity, change_vector, original_document)
     after
@@ -109,6 +119,7 @@ defmodule Ravix.Documents.Session.Manager do
     OK.for do
       updated_state <-
         state
+        |> SessionState.increment_request_count()
         |> SessionState.update_last_session_call()
         |> SessionState.mark_document_for_exclusion(document_id)
     after
@@ -142,7 +153,7 @@ defmodule Ravix.Documents.Session.Manager do
         {:error, {:document_already_stored, stored_document}} -> stored_document.key
       end
     end)
-    |> Enum.reject(fn item -> item == nil end)
+    |> Enum.reject(&is_nil/1)
   end
 
   defp execute_load_request(%ConnectionState{} = network_state, ids, includes, opts)
@@ -182,7 +193,6 @@ defmodule Ravix.Documents.Session.Manager do
 
       updated_state =
         state
-        |> SessionState.increment_request_count()
         |> SessionState.update_last_session_call()
         |> SessionState.clear_deferred_commands()
         |> SessionState.clear_deleted_entities()

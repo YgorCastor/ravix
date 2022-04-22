@@ -8,6 +8,7 @@ defmodule Ravix.Documents.SessionTest do
   alias Ravix.Documents.Session
   alias Ravix.Test.Store, as: Store
   alias Ravix.Test.NonRetryableStore, as: TimedStore
+  alias Ravix.Test.OptimisticLockStore, as: OptimisticStore
 
   setup do
     %{ravix: start_supervised!(Ravix.TestApplication)}
@@ -97,6 +98,21 @@ defmodule Ravix.Documents.SessionTest do
           _ <- Session.store(session_id, any_entity)
           _ <- Session.delete(session_id, any_entity)
           _ <- Session.store(session_id, any_entity)
+        after
+        end
+    end
+
+    test "If the amount of operations exceed the limit, an error should be returned" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+      any_entity_2 = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+      any_entity_3 = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:error, :max_amount_of_requests_reached} =
+        OK.for do
+          session_id <- OptimisticStore.open_session()
+          _ <- Session.store(session_id, any_entity)
+          _ <- Session.store(session_id, any_entity_2)
+          _ <- Session.store(session_id, any_entity_3)
         after
         end
     end
@@ -284,6 +300,15 @@ defmodule Ravix.Documents.SessionTest do
       assert Map.has_key?(state.documents_by_id, any_entity.id)
     end
 
+    test "If the url size reaches the limit, it should return an error" do
+      {:error, :maximum_url_length_reached} =
+        OK.for do
+          session_id <- OptimisticStore.open_session()
+          _ <- Session.load(session_id, [Ravix.Test.Random.safe_random_string(50)])
+        after
+        end
+    end
+
     test "Includes should be loaded successfully" do
       any_entity_to_include = %{id: UUID.uuid4(), owner_name: Faker.Person.first_name()}
 
@@ -319,6 +344,15 @@ defmodule Ravix.Documents.SessionTest do
 
       assert state.documents_by_id[any_entity.id].entity ==
                any_entity |> Morphix.stringmorphiform!()
+    end
+
+    test "If the amount loaded ids exceed the limit, it should return an error" do
+      {:error, :max_amount_of_ids_reached} =
+        OK.for do
+          session_id <- OptimisticStore.open_session()
+          _ <- Session.load(session_id, ["1", "2", "3", "4", "5"])
+        after
+        end
     end
   end
 

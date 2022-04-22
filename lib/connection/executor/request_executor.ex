@@ -124,7 +124,6 @@ defmodule Ravix.Connection.RequestExecutor do
   defp call_raven(executor, command, headers, opts) do
     should_retry = Keyword.get(opts, :retry_on_failure, false)
     retry_backoff = Keyword.get(opts, :retry_backoff, 100)
-    retry_on_stale = Keyword.get(opts, :retry_on_stale, false)
 
     retry_count =
       case should_retry do
@@ -133,7 +132,7 @@ defmodule Ravix.Connection.RequestExecutor do
       end
 
     retry with: constant_backoff(retry_backoff) |> Stream.take(retry_count) do
-      GenServer.call(executor, {:request, command, headers, [retry_on_stale: retry_on_stale]})
+      GenServer.call(executor, {:request, command, headers, opts})
     after
       {:ok, result} -> {:ok, result}
       {:non_retryable_error, response} -> {:error, response}
@@ -207,26 +206,9 @@ defmodule Ravix.Connection.RequestExecutor do
   def handle_call({:request, command, headers, opts}, from, %ServerNode{} = node) do
     request = CreateRequest.create_request(command, node)
 
-    case Mint.HTTP.request(
-           node.conn,
-           request.method,
-           request.url,
-           @default_headers ++ [headers],
-           request.data
-         ) do
-      {:ok, conn, request_ref} ->
-        Logger.debug(
-          "[RAVIX] Executing command #{inspect(command)} under the request '#{inspect(request_ref)}' for the store #{inspect(node.store)}"
-        )
-
-        node = put_in(node.conn, conn)
-        node = put_in(node.requests[request_ref], %{from: from, response: %{}})
-        node = put_in(node.opts, opts)
-        {:noreply, node}
-
-      {:error, conn, reason} ->
-        state = put_in(node.conn, conn)
-        {:reply, {:error, reason}, state}
+    case maximum_url_length_reached?(opts, request.url) do
+      true -> {:reply, {:error, :maximum_url_length_reached}, node}
+      false -> exec_request(node, from, request, command, headers, opts)
     end
   end
 
@@ -256,6 +238,30 @@ defmodule Ravix.Connection.RequestExecutor do
 
   def handle_cast({:update_cluster_tag, cluster_tag}, %ServerNode{} = node) do
     {:noreply, %ServerNode{node | cluster_tag: cluster_tag}}
+  end
+
+  defp exec_request(%ServerNode{} = node, from, request, command, headers, opts) do
+    case Mint.HTTP.request(
+           node.conn,
+           request.method,
+           request.url,
+           @default_headers ++ [headers],
+           request.data
+         ) do
+      {:ok, conn, request_ref} ->
+        Logger.debug(
+          "[RAVIX] Executing command #{inspect(command)} under the request '#{inspect(request_ref)}' for the store #{inspect(node.store)}"
+        )
+
+        node = put_in(node.conn, conn)
+        node = put_in(node.requests[request_ref], %{from: from, response: %{}})
+        node = put_in(node.opts, opts)
+        {:noreply, node}
+
+      {:error, conn, reason} ->
+        state = put_in(node.conn, conn)
+        {:reply, {:error, reason}, state}
+    end
   end
 
   defp process_response({:status, request_ref, status}, state) do
@@ -366,4 +372,11 @@ defmodule Ravix.Connection.RequestExecutor do
   end
 
   defp decode_body(_), do: nil
+
+  @spec maximum_url_length_reached?(keyword(), String.t()) :: boolean()
+  defp maximum_url_length_reached?(opts, url) do
+    max_url_length = Keyword.get(opts, :max_length_of_query_using_get_url, 1024 + 512)
+
+    String.length(url) > max_url_length
+  end
 end
