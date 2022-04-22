@@ -430,7 +430,7 @@ defmodule Ravix.RQL.QueryTest do
           delete_response <-
             from("@all_docs")
             |> where(equal_to("cat_name", any_entity.cat_name))
-            |> delete_for(session_id)
+            |> delete_for(session_id) |> IO.inspect()
 
           :timer.sleep(500)
 
