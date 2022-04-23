@@ -1,4 +1,5 @@
 defmodule Ravix.RQL.Tokens.Where do
+  @moduledoc false
   defstruct [
     :token,
     :condition

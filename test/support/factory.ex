@@ -1,4 +1,5 @@
 defmodule Ravix.Factory do
+  @moduledoc false
   use ExMachina
 
   alias Ravix.Documents.Session

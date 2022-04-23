@@ -1,7 +1,5 @@
 defmodule Ravix.Connection.Supervisor do
-  @moduledoc """
-     Supervises and triggers the initialization of a Raven Store
-  """
+  @moduledoc false
   use Supervisor
 
   alias Ravix.Connection

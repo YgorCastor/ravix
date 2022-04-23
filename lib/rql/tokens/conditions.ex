@@ -1,4 +1,7 @@
 defmodule Ravix.RQL.Tokens.Condition do
+  @moduledoc """
+  Supported RQL Conditions
+  """
   defstruct [
     :token,
     :field,
@@ -13,7 +16,16 @@ defmodule Ravix.RQL.Tokens.Condition do
           params: list()
         }
 
-  @spec greater_than(String.t(), any) :: Condition.t()
+  @doc """
+  Greater than condition
+
+  Returns a `Ravix.RQL.Tokens.Condition`
+
+  ## Examples
+      iex> import Ravix.RQL.Tokens.Condition
+      iex> greater_than("field", 10)
+  """
+  @spec greater_than(atom() | String.t(), number()) :: Condition.t()
   def greater_than(field_name, value) do
     %Condition{
       token: :greater_than,
@@ -22,7 +34,16 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
-  @spec greater_than_or_equal_to(String.t(), any) :: Condition.t()
+  @doc """
+  Greater than or equal to condition
+
+  Returns a `Ravix.RQL.Tokens.Condition`
+
+  ## Examples
+      iex> import Ravix.RQL.Tokens.Condition
+      iex> greater_than_or_equal_to("field", 10)
+  """
+  @spec greater_than_or_equal_to(atom() | String.t(), number()) :: Condition.t()
   def greater_than_or_equal_to(field_name, value) do
     %Condition{
       token: :greater_than_or_eq,
@@ -31,7 +52,16 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
-  @spec lower_than(String.t(), any) :: Condition.t()
+  @doc """
+  Lower than condition
+
+  Returns a `Ravix.RQL.Tokens.Condition`
+
+  ## Examples
+      iex> import Ravix.RQL.Tokens.Condition
+      iex> lower_than("field", 10)
+  """
+  @spec lower_than(atom() | String.t(), number()) :: Condition.t()
   def lower_than(field_name, value) do
     %Condition{
       token: :lower_than,
@@ -40,7 +70,16 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
-  @spec lower_than_or_equal_to(String.t(), any) :: Condition.t()
+  @doc """
+  Lower than or equal to condition
+
+  Returns a `Ravix.RQL.Tokens.Condition`
+
+  ## Examples
+      iex> import Ravix.RQL.Tokens.Condition
+      iex> lower_than_or_equal_to("field", 10)
+  """
+  @spec lower_than_or_equal_to(atom() | String.t(), number()) :: Condition.t()
   def lower_than_or_equal_to(field_name, value) do
     %Condition{
       token: :lower_than_or_eq,
@@ -49,7 +88,16 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
-  @spec equal_to(String.t(), any) :: Condition.t()
+  @doc """
+  Equal to condition
+
+  Returns a `Ravix.RQL.Tokens.Condition`
+
+  ## Examples
+      iex> import Ravix.RQL.Tokens.Condition
+      iex> equal_to("field", "value")
+  """
+  @spec equal_to(atom() | String.t(), any) :: Condition.t()
   def equal_to(field_name, value) do
     %Condition{
       token: :eq,
@@ -58,7 +106,16 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
-  @spec not_equal_to(String.t(), any) :: Condition.t()
+  @doc """
+  Not Equal to condition
+
+  Returns a `Ravix.RQL.Tokens.Condition`
+
+  ## Examples
+      iex> import Ravix.RQL.Tokens.Condition
+      iex> not_equal_to("field", "value")
+  """
+  @spec not_equal_to(atom() | String.t(), any) :: Condition.t()
   def not_equal_to(field_name, value) do
     %Condition{
       token: :ne,
@@ -67,7 +124,16 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
-  @spec in?(String.t(), any) :: Condition.t()
+  @doc """
+  Specifies that the value is in a list
+
+  Returns a `Ravix.RQL.Tokens.Condition`
+
+  ## Examples
+      iex> import Ravix.RQL.Tokens.Condition
+      iex> in?("field", [1,2,3])
+  """
+  @spec in?(atom() | String.t(), list()) :: Condition.t()
   def in?(field_name, values) do
     %Condition{
       token: :in,
@@ -76,7 +142,16 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
-  @spec not_in(String.t(), any) :: Condition.t()
+  @doc """
+  Specifies that the value is not in a list
+
+  Returns a `Ravix.RQL.Tokens.Condition`
+
+  ## Examples
+      iex> import Ravix.RQL.Tokens.Condition
+      iex> not_in("field", ["a", "b", "c"])
+  """
+  @spec not_in(atom() | String.t(), list()) :: Condition.t()
   def not_in(field_name, values) do
     %Condition{
       token: :nin,
@@ -85,7 +160,16 @@ defmodule Ravix.RQL.Tokens.Condition do
     }
   end
 
-  @spec between(String.t(), any) :: Condition.t()
+  @doc """
+  Specifies that the value is between two values
+
+  Returns a `Ravix.RQL.Tokens.Condition`
+
+  ## Examples
+      iex> import Ravix.RQL.Tokens.Condition
+      iex> between("field", [15,25])
+  """
+  @spec between(atom() | String.t(), list()) :: Condition.t()
   def between(field_name, values) do
     %Condition{
       token: :between,

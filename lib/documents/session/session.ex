@@ -1,6 +1,6 @@
 defmodule Ravix.Documents.Session do
   @moduledoc """
-  A stateful session to execute ravendb commands
+  A stateful session to execute RavenDB commands
   """
   use GenServer
 
@@ -36,6 +36,25 @@ defmodule Ravix.Documents.Session do
   ## Returns
   - `{:ok, results}`
   - `{:errors, cause}`
+
+  ## Examples
+      iex> Session.load(session_id, "entity_id")
+          {:ok,
+          %{
+            "Includes" => %{},
+            "Results" => [
+              %{
+                "@metadata" => %{
+                  "@change-vector" => "A:6450-HJrwf2z3c0G/FHJPm3zK3w",
+                  "@id" => "f13ffb17-ed7d-43b6-a483-23993db70958",
+                  "@last-modified" => "2022-04-23T11:14:16.4277047Z"
+                },
+                "cat_name" => "Coco",
+                "id" => "f13ffb17-ed7d-43b6-a483-23993db70958"
+              }
+            ],
+            "already_loaded_ids" => []
+          }}
   """
   @spec load(binary(), list() | bitstring(), any, keyword() | nil) :: any
   def load(session_id, ids, includes \\ nil, opts \\ nil)
@@ -58,13 +77,13 @@ defmodule Ravix.Documents.Session do
 
   ## Parameters
   - session_id: the session id
-  - entity: the document to be deleted
+  - entity/entity_id: the document to be deleted
 
   ## Returns
-  - `{:ok, updated_state}`
+  - `{:ok, Ravix.Documents.Session.State}`
   - `{:error, cause}`
   """
-  @spec delete(binary, map()) :: any
+  @spec delete(binary, map() | binary()) :: any
   def delete(session_id, entity) when is_map_key(entity, :id) do
     delete(session_id, entity.id)
   end
@@ -85,7 +104,7 @@ defmodule Ravix.Documents.Session do
   - change_vector: the concurrency change vector
 
   ## Returns
-  - `{:ok, updated_session}`
+  - `{:ok, Ravix.Documents.Session.State}`
   - `{:error, cause}`
   """
   @spec store(binary(), map(), binary() | nil, binary() | nil) :: any
@@ -102,6 +121,22 @@ defmodule Ravix.Documents.Session do
 
   @doc """
   Persists the session changes to the RavenDB database
+
+  Returns a [RavenDB batch response](https://ravendb.net/docs/article-page/5.3/csharp/client-api/rest-api/document-commands/batch-commands#response-format)
+
+  ## Examples
+      iex> Session.save_changes(session_id)
+          {:ok,
+          %{
+            "Results" => [
+              %{
+                "ChangeVector" => nil,
+                "Deleted" => true,
+                "Id" => "3421125e-416a-4bce-bb56-56cb4a7991ae",
+                "Type" => "DELETE"
+              }
+            ]
+          }}
   """
   @spec save_changes(binary) :: any
   def save_changes(session_id) do
@@ -112,6 +147,8 @@ defmodule Ravix.Documents.Session do
 
   @doc """
   Fetches the current session state
+
+  Returns a `{:ok, Ravix.Documents.Session.State}`
   """
   @spec fetch_state(binary()) :: {:error, :session_not_found} | {:ok, SessionState.t()}
   def fetch_state(session_id) do
@@ -132,6 +169,8 @@ defmodule Ravix.Documents.Session do
   - query: The `Ravix.RQL.Query` to be executed
   - session_id: the session_id
   - method: The http method
+
+  Returns a RavenDB query response
   """
   @spec execute_query(any, binary, any) :: any
   def execute_query(query, session_id, method) do
@@ -204,7 +243,7 @@ defmodule Ravix.Documents.Session do
 
   def handle_call({:delete, id}, _from, %SessionState{} = state) do
     case SessionManager.delete_document(state, id) do
-      {:ok, updated_state} -> {:reply, {:ok, id}, updated_state}
+      {:ok, updated_state} -> {:reply, {:ok, updated_state}, updated_state}
       {:error, err} -> {:reply, {:error, err}, state}
     end
   end

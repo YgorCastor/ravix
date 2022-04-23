@@ -39,8 +39,15 @@ jobs:
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
         run: mix deps.get
-      - name: Set the new version
-        run: mix version.up
+      - name: Set the new patch version
+        if: "contains(github.event.head_commit.message, '[patch]')"
+        run: mix version.up patch
+      - name: Set the new minor version
+        if: "contains(github.event.head_commit.message, '[minor]')"
+        run: mix version.up minor
+      - name: Set the new major version
+        if: "contains(github.event.head_commit.message, '[major]')"
+        run: mix version.up major
       - name: Publish to hex.pm
         run: HEX_API_KEY=${{ secrets.HEX_API_KEY }} mix hex.publish --yes
       - name: Tag the version

@@ -1,4 +1,5 @@
 defmodule Ravix.RQL.Tokens.From do
+  @moduledoc false
   defstruct [
     :token,
     :as_alias,

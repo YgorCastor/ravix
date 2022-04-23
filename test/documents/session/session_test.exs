@@ -375,7 +375,7 @@ defmodule Ravix.Documents.SessionTest do
       response = result[:response]
       state = result[:state]
 
-      assert response == any_entity.id
+      assert length(response.deleted_entities) == 1
       assert state.documents_by_id == %{}
     end
 

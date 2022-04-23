@@ -232,6 +232,10 @@ config :ravix, Ravix.Test.Store,
   certificate_file: "/opt/certs/cert.pfx"
 ```
 
+## Ecto
+ 
+What about querying your RavenDB using Ecto? [Ravix-Ecto](https://github.com/YgorCastor/ravix-ecto)
+
 ## Current State
 
 * ~~Configuration Reading~~
