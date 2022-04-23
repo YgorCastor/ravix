@@ -1,11 +1,5 @@
 defmodule Ravix.Connection.RequestExecutor do
-  @moduledoc """
-  A process responsible for executing requests to the RavenDB API
-
-  Each RavenDB cluster node has it's own stateful request executor, which
-  holds how many requests this node executed, the address and infos from the Node and
-  which requests are being executed in the moment.
-  """
+  @moduledoc false
   use GenServer
   use Retry
 
@@ -86,8 +80,8 @@ defmodule Ravix.Connection.RequestExecutor do
 
     headers =
       case conn_state.disable_topology_updates do
-        false -> headers
-        true -> [{"Topology-Etag", conn_state.topology_etag}]
+        true -> headers
+        false -> [{"Topology-Etag", conn_state.topology_etag}]
       end
 
     execute_for_node(command, node_pid, nil, headers, opts)

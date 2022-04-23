@@ -1,4 +1,5 @@
 defmodule Ravix.Documents.Commands.Data.DeleteDocument do
+  @moduledoc false
   @derive {Jason.Encoder, only: [:Id, :ChangeVector, :Type]}
   defstruct Id: nil,
             ChangeVector: nil,

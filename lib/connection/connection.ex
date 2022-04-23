@@ -1,7 +1,5 @@
 defmodule Ravix.Connection do
-  @moduledoc """
-     Service to manage the connection with a RavenDB database
-  """
+  @moduledoc false
   use GenServer
 
   require OK
@@ -16,7 +14,7 @@ defmodule Ravix.Connection do
     Receives the reference of a  RavenDB store and a initial store state and starts a connection, the connection
   is registered in the :connections register under the naming StoreModule.Connection
 
-  Returns: 
+  Returns:
     `{:ok, pid}` if the connecion is started
     `{:error, cause}` if the connection start failed
   """
@@ -52,7 +50,7 @@ defmodule Ravix.Connection do
     Triggers a topology update for the specified Ravix.Document.Store, this operation
     is asynchronous and will be done on background
 
-    Returns `:ok` 
+    Returns `:ok`
   """
   @spec update_topology(atom) :: :ok
   def update_topology(store) do

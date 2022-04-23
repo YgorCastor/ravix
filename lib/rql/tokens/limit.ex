@@ -1,4 +1,5 @@
 defmodule Ravix.RQL.Tokens.Limit do
+  @moduledoc false
   defstruct [
     :token,
     :skip,

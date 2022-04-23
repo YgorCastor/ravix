@@ -3,11 +3,10 @@ defmodule Ravix.RQL.QueryParserTest do
 
   import Ravix.RQL.Query
   import Ravix.RQL.Tokens.Condition
+  import Ravix.RQL.Tokens.Update
 
   alias Ravix.RQL.QueryParser
   alias Ravix.RQL.Tokens.Condition
-  alias Ravix.RQL.Tokens.Update
-
 
   describe "parse/1" do
     test "It should parse the tokens succesfully" do
@@ -43,17 +42,13 @@ defmodule Ravix.RQL.QueryParserTest do
     end
 
     test "Should parse an update succesfully" do
-      updates = [
-        %{name: "field", value: "new_value", operation: :set},
-        %{name: "field2", value: 1, operation: :inc},
-        %{name: "field3", value: 2, operation: :dec}
-      ]
+      updates = set("field", "new_value") |> inc("field2", 1) |> dec("field3", 2)
 
       {:ok, query_result} =
         from("test", "t")
         |> where(greater_than("field", 10))
         |> and?(equal_to("field2", "asdf"))
-        |> update(Update.fields(updates))
+        |> update(updates)
         |> QueryParser.parse()
 
       assert query_result.query_string ==

@@ -1,7 +1,5 @@
 defmodule Ravix.RQL.QueryParser do
-  @moduledoc """
-  Parsing tokens to RQL
-  """
+  @moduledoc false
   require OK
 
   alias Ravix.RQL.Query

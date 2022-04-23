@@ -1,4 +1,5 @@
 defmodule Ravix.RQL.Tokens.Select do
+  @moduledoc false
   defstruct [
     :token,
     :fields
@@ -6,7 +7,7 @@ defmodule Ravix.RQL.Tokens.Select do
 
   alias Ravix.RQL.Tokens.Select
 
-  @type field_name :: String.t()
+  @type field_name :: atom() | String.t()
   @type field_alias :: String.t()
   @type allowed_select_params ::
           list(field_name() | {field_name(), field_alias()})

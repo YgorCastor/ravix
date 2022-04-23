@@ -1,7 +1,5 @@
 defmodule Ravix.Connection.State.Manager do
-  @moduledoc """
-    Manages the state of a RavenDB Store connection
-  """
+  @moduledoc false
   require OK
   require Logger
 
