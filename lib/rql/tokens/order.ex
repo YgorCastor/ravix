@@ -1,4 +1,5 @@
 defmodule Ravix.RQL.Tokens.Order do
+  @moduledoc false
   defstruct [
     :token,
     :fields

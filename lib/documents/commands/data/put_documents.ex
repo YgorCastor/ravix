@@ -1,4 +1,5 @@
 defmodule Ravix.Documents.Commands.Data.PutDocument do
+  @moduledoc false
   @derive {Jason.Encoder, only: [:Id, :Document, :ChangeVector, :Type]}
   defstruct Id: nil,
             Document: nil,

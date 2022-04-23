@@ -1,7 +1,5 @@
 defmodule Ravix.Connection.NodeSelector do
-  @moduledoc """
-    Strategy to select nodes
-  """
+  @moduledoc false
   defstruct current_node_index: 0
 
   alias Ravix.Connection.State, as: ConnectionState

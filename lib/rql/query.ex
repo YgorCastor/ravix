@@ -92,7 +92,7 @@ defmodule Ravix.RQL.Query do
   end
 
   @doc """
-  Adds an update operation to the informed query, it supports a list of maps or an
+  Adds an update operation to the informed query, it supports a
   `Ravix.RQL.Tokens.Update` token. The token can be created using the following functions:
 
   `Ravix.RQL.Tokens.Update.set(%Update{}, field, new_value)` to set values
@@ -105,14 +105,7 @@ defmodule Ravix.RQL.Query do
       iex> from = Ravix.RQL.Query.from("cats", "c")
       iex> update = Ravix.RQL.Query.update(from, set(%Update{}, :cat_name, "Fluffer, the hand-ripper"))
   """
-  @spec update(Query.t(), list(map()) | Update.t()) :: Query.t()
-  def update(%Query{} = query, document_updates) when is_list(document_updates) do
-    %Query{
-      query
-      | update_token: Update.fields(document_updates)
-    }
-  end
-
+  @spec update(Query.t(), Ravix.RQL.Tokens.Update.t()) :: Query.t()
   def update(%Query{} = query, update) do
     %Query{
       query
@@ -384,7 +377,7 @@ defmodule Ravix.RQL.Query do
   ## Examples
       iex> from("@all_docs")
             |> where(equal_to("cat_name", any_entity.cat_name))
-            |> delete_for(session_id) |> IO.inspect()
+            |> delete_for(session_id)
           {:ok, %{"OperationId" => 2480, "OperationNodeTag" => "A"}}
   """
   @spec delete_for(Query.t(), binary) :: {:error, any} | {:ok, any}

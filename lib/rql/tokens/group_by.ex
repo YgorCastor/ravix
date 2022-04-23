@@ -1,4 +1,5 @@
 defmodule Ravix.RQL.Tokens.Group do
+  @moduledoc false
   defstruct [
     :token,
     :fields

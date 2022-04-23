@@ -58,7 +58,27 @@ defmodule Ravix.Documents.Store do
               | {:error, {:already_started, pid}}
               | {:error, term}
 
+  @doc """
+  Opens a RavenDB local session
+
+  Returns a tuple with `{:ok, uuid}` if successful or `{:error, :not_found}` if the store
+  is not initialized
+
+  ## Examples
+      iex> Ravix.Test.Store.open_session
+      {:ok, "8945c215-dd67-44da-9a64-2916e0a328d9"}
+  """
   @callback open_session() :: {:ok, binary()}
 
+  @doc """
+  Closes a RavenDB local session
+
+  Returns `:ok` if successful or `{:error, :not_found}` if the session
+  is not found
+
+  ## Examples
+      iex> Ravix.Test.Store.close_session("8945c215-dd67-44da-9a64-2916e0a328d9")
+      :ok
+  """
   @callback close_session(session_id :: binary()) :: :ok | {:error, :not_found}
 end

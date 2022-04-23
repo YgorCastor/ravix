@@ -1,4 +1,5 @@
 defmodule Ravix.Connection.RequestExecutor.Options do
+  @moduledoc false
   alias Ravix.Connection.State, as: ConnectionState
 
   def from_connection_state(%ConnectionState{} = conn_state) do

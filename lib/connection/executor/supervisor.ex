@@ -1,10 +1,5 @@
 defmodule Ravix.Connection.RequestExecutor.Supervisor do
-  @moduledoc """
-  Supervises the Requests Executors processes
-
-  Each node connection has it own supervised process, so they are completely isolated
-  from each other. All executors are registered under the :request_executors Registry.
-  """
+  @moduledoc false
   use DynamicSupervisor
 
   require Logger

@@ -1,7 +1,5 @@
 defprotocol Ravix.Documents.Protocols.CreateRequest do
-  @moduledoc """
-  Protocol to define how commands are converted to requests
-  """
+  @moduledoc false
 
   @doc """
   Creates a request based on the command

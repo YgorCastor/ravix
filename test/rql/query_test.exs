@@ -8,7 +8,6 @@ defmodule Ravix.RQL.QueryTest do
   import Ravix.Factory
 
   alias Ravix.Documents.Session
-  alias Ravix.RQL.Tokens.Update
   alias Ravix.Test.Store, as: Store
   alias Ravix.Test.NonRetryableStore
 
@@ -430,7 +429,7 @@ defmodule Ravix.RQL.QueryTest do
           delete_response <-
             from("@all_docs")
             |> where(equal_to("cat_name", any_entity.cat_name))
-            |> delete_for(session_id) |> IO.inspect()
+            |> delete_for(session_id)
 
           :timer.sleep(500)
 
@@ -464,7 +463,7 @@ defmodule Ravix.RQL.QueryTest do
 
           update_response <-
             from("@all_docs", "a")
-            |> update(set(%Update{}, :cat_name, "Fluffer, the hand-ripper"))
+            |> update(set(:cat_name, "Fluffer, the hand-ripper"))
             |> where(equal_to("cat_name", any_entity.cat_name))
             |> update_for(session_id)
 

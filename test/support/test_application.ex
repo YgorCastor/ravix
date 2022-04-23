@@ -1,4 +1,5 @@
 defmodule Ravix.TestApplication do
+  @moduledoc false
   use Supervisor
 
   def init(_opts) do
