@@ -4,7 +4,6 @@ defmodule Ravix.TestApplication do
 
   def init(_opts) do
     children = [
-      {Ravix, [%{}]},
       {Ravix.Test.Store, [%{}]},
       {Ravix.Test.NonRetryableStore, [%{}]},
       {Ravix.Test.OptimisticLockStore, [%{}]}
