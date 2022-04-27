@@ -1,5 +1,5 @@
 defmodule Ravix.Connection.ConnectionTest do
-  use ExUnit.Case
+  use Ravix.Integration.Case
 
   alias Ravix.Connection
   alias Ravix.Test.Store, as: Store
@@ -7,8 +7,6 @@ defmodule Ravix.Connection.ConnectionTest do
 
   describe "update_topology/1" do
     test "Should update the topology correctly" do
-      %{ravix: start_supervised!(Ravix.TestApplication)}
-
       :ok = Connection.update_topology(Store)
       {:ok, state} = Connection.fetch_state(Store)
 
@@ -17,7 +15,6 @@ defmodule Ravix.Connection.ConnectionTest do
   end
 
   test "If all nodes are unreachable, the connection will fail" do
-    _ravix = start_supervised(Ravix)
     {:error, _} = start_supervised(InvalidStore)
   end
 end

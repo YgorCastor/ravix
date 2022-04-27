@@ -18,8 +18,6 @@ Add Ravix to your mix.exs dependencies
 
 ## Setting up your Repository
 
-&nbsp; 
-
 Create a Ravix Store Module for your repository
 
 ```elixir
@@ -27,8 +25,6 @@ defmodule YourProject.YourStore do
   use Ravix.Documents.Store, otp_app: :your_app
 end
 ```
-
-&nbsp; 
 
 You can configure your Store in your config.exs files
 
@@ -51,17 +47,14 @@ config :ravix, Ravix.Test.Store,
   }
 ```
 
-&nbsp; 
-
 Then you can start the processes in your main supervisor
 
 ```elixir
 defmodule Ravix.TestApplication do
-  use Supervisor
+  use Application
 
-  def init(_opts) do
+  def start(_opts, _) do
     children = [
-      {Ravix, [%{}]},
       {Ravix.Test.Store, [%{}]} # you can create multiple stores
     ]
 
@@ -70,18 +63,10 @@ defmodule Ravix.TestApplication do
       strategy: :one_for_one
     )
   end
-
-  def start_link(init_arg) do
-    Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
-  end
 end
 ```
 
-&nbsp; 
-
 ## Querying the Database
-
-&nbsp; 
 
 All operations supported by the driver should be executed inside a session, to open a session you can just call the `open_session/0` function from the store you defined. All the changes are only persisted when the function 
 `Ravix.Documents.Session.save_changes/1` is called!
@@ -233,6 +218,7 @@ config :ravix, Ravix.Test.Store,
 ```
 
 ## Ecto
+
  
 What about querying your RavenDB using Ecto? [Ravix-Ecto](https://github.com/YgorCastor/ravix-ecto)
 
@@ -255,4 +241,3 @@ What about querying your RavenDB using Ecto? [Ravix-Ecto](https://github.com/Ygo
 * Attachments
 
 The driver is working for the basic operations, clustering and resiliency are also implemented.
-
