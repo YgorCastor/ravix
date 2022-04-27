@@ -101,7 +101,7 @@ defmodule Ravix.Operations.Database.Maintenance do
   end
 
   @spec database_stats(atom | pid, nil | binary, keyword) :: {:error, any} | {:ok, any}
-  def database_stats(store_or_pid, database_name, opts \\ [])
+  def database_stats(store_or_pid, database_name \\ nil, opts \\ [])
 
   def database_stats(store, database_name, opts) when is_atom(store) do
     node_pid = RequestExecutor.Supervisor.fetch_nodes(store) |> Enum.at(0)
@@ -113,7 +113,8 @@ defmodule Ravix.Operations.Database.Maintenance do
     OK.for do
       response <-
         %GetStatisticsCommand{
-          debugTag: Keyword.get(opts, :debug_tag, "")
+          debugTag: Keyword.get(opts, :debug_tag, ""),
+          databaseName: database_name
         }
         |> RequestExecutor.execute_for_node(
           node_pid,

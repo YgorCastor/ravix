@@ -30,14 +30,9 @@ defmodule Ravix.Operations.Database.MaintenanceTest do
     end
   end
 
-  describe "database_stats/2" do
+  describe "database_stats/1" do
     test "Should fetch database stats if it exists" do
-      db_name = Ravix.Test.Random.safe_random_string(5)
-      _ = Maintenance.create_database(NonRetryableStore, db_name)
-
-      {:ok, %{"LastDatabaseEtag" => 0}} = Maintenance.database_stats(NonRetryableStore, db_name)
-
-      _ = Maintenance.delete_database(NonRetryableStore, db_name)
+      {:ok, %{"LastDatabaseEtag" => 0}} = Maintenance.database_stats(NonRetryableStore)
     end
   end
 end
