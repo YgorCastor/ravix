@@ -4,7 +4,8 @@ defmodule Ravix.Operations.Database.Commands.GetStatisticsCommand do
   """
   @derive {Jason.Encoder, only: [:debugTag]}
   use Ravix.Documents.Commands.RavenCommand,
-    debugTag: nil
+    debugTag: nil,
+    databaseName: nil
 
   import Ravix.Documents.Commands.RavenCommand
 
@@ -13,15 +14,22 @@ defmodule Ravix.Operations.Database.Commands.GetStatisticsCommand do
   alias Ravix.Connection.ServerNode
 
   command_type(%{
-    debugTag: String.t()
+    debugTag: String.t(),
+    databaseName: String.t() | nil
   })
 
   defimpl CreateRequest, for: GetStatisticsCommand do
     @spec create_request(GetStatisticsCommand.t(), ServerNode.t()) :: GetStatisticsCommand.t()
     def create_request(%GetStatisticsCommand{} = command, %ServerNode{} = server_node) do
+      database_name =
+        case command.databaseName do
+          nil -> server_node.database
+          database_name -> database_name
+        end
+
       %GetStatisticsCommand{
         command
-        | url: "/databases/#{server_node.database}/stats?" <> command.debugTag,
+        | url: "/databases/#{database_name}/stats?" <> command.debugTag,
           method: "GET"
       }
     end
