@@ -52,21 +52,30 @@ defmodule Ravix.Documents.Session.Manager do
     end
   end
 
-  @spec store_entity(SessionState.t(), map, any, String.t()) :: {:error, any} | {:ok, [...]}
-  def store_entity(%SessionState{} = state, entity, key, change_vector) when is_struct(entity) do
+  @spec store_entity(SessionState.t(), map, any, String.t(), keyword()) ::
+          {:error, any} | {:ok, [...]}
+  def store_entity(%SessionState{} = state, entity, key, change_vector, opts)
+      when is_struct(entity) do
     entity
-    |> do_store_entity(key, change_vector, state)
+    |> do_store_entity(key, change_vector, state, opts)
   end
 
-  def store_entity(%SessionState{} = state, entity, key, change_vector) when is_map(entity) do
+  def store_entity(%SessionState{} = state, entity, key, change_vector, opts)
+      when is_map(entity) do
     entity
     |> Morphix.atomorphiform!()
-    |> do_store_entity(key, change_vector, state)
+    |> do_store_entity(key, change_vector, state, opts)
   end
 
-  defp do_store_entity(entity, key, change_vector, %SessionState{} = state) do
+  defp do_store_entity(entity, key, change_vector, %SessionState{} = state, opts) do
     OK.try do
       _ <- Validations.session_request_limit_reached(state)
+
+      _ <-
+        case Keyword.get(opts, :upsert, true) do
+          false -> Validations.document_not_stored(state, key)
+          true -> {:ok, nil}
+        end
 
       change_vector =
         case state.conventions.use_optimistic_concurrency do

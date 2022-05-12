@@ -116,6 +116,20 @@ defmodule Ravix.Documents.SessionTest do
         after
         end
     end
+
+    test "If the document is already loaded and it's not an upsert, should return an error" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:error, {:document_already_stored, _}} =
+        OK.for do
+          session_id <- Store.open_session()
+          _ <- Session.store(session_id, any_entity, "custom_key")
+          _ <- Session.save_changes(session_id)
+          _ <- Session.load(session_id, "custom_key")
+          _ <- Session.store(session_id, any_entity, "custom_key", nil, [upsert: false])
+        after
+        end
+    end
   end
 
   describe "save_changes/1" do

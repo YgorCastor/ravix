@@ -102,21 +102,24 @@ defmodule Ravix.Documents.Session do
   - entity: the document to store
   - key: the document key to be used
   - change_vector: the concurrency change vector
+  - opts: [
+    upsert: If the document is already loaded in the session, it should be upserted
+  ]
 
   ## Returns
   - `{:ok, Ravix.Documents.Session.State}`
   - `{:error, cause}`
   """
-  @spec store(binary(), map(), binary() | nil, binary() | nil) :: any
-  def store(session_id, entity, key \\ nil, change_vector \\ nil)
+  @spec store(binary(), map(), binary() | nil, binary() | nil, keyword()) :: any
+  def store(session_id, entity, key \\ nil, change_vector \\ nil, opts \\ [])
 
-  def store(_session_id, entity, _key, _change_vector) when entity == nil,
+  def store(_session_id, entity, _key, _change_vector, _opts) when entity == nil,
     do: {:error, :null_entity}
 
-  def store(session_id, entity, key, change_vector) do
+  def store(session_id, entity, key, change_vector, opts) do
     session_id
     |> session_id()
-    |> GenServer.call({:store, [entity: entity, key: key, change_vector: change_vector]})
+    |> GenServer.call({:store, [entity: entity, key: key, change_vector: change_vector, opts: opts]})
   end
 
   @doc """
@@ -197,13 +200,13 @@ defmodule Ravix.Documents.Session do
   end
 
   def handle_call(
-        {:store, [entity: entity, key: key, change_vector: change_vector]},
+        {:store, [entity: entity, key: key, change_vector: change_vector, opts: opts]},
         _from,
         %SessionState{} = state
       )
       when key != nil do
     OK.try do
-      [entity, updated_state] <- SessionManager.store_entity(state, entity, key, change_vector)
+      [entity, updated_state] <- SessionManager.store_entity(state, entity, key, change_vector, opts)
     after
       {:reply, {:ok, entity}, updated_state}
     rescue
@@ -212,14 +215,14 @@ defmodule Ravix.Documents.Session do
   end
 
   def handle_call(
-        {:store, [entity: entity, key: _, change_vector: change_vector]},
+        {:store, [entity: entity, key: _, change_vector: change_vector, opts: opts]},
         _from,
         %SessionState{} = state
       )
       when is_map_key(entity, :id) do
     OK.try do
       [entity, updated_state] <-
-        SessionManager.store_entity(state, entity, entity.id, change_vector)
+        SessionManager.store_entity(state, entity, entity.id, change_vector, opts)
     after
       {:reply, {:ok, entity}, updated_state}
     rescue
@@ -228,7 +231,7 @@ defmodule Ravix.Documents.Session do
   end
 
   def handle_call(
-        {:store, [entity: _, key: _, change_vector: _]},
+        {:store, [entity: _, key: _, change_vector: _, opts: _]},
         _from,
         %SessionState{} = state
       ),
