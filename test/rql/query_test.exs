@@ -102,16 +102,37 @@ defmodule Ravix.RQL.QueryTest do
       assert saved_cat["cat_name"] == any_entity.cat_name
     end
 
+    test "A invalid query should not kill the session" do
+      any_entity = %{id: UUID.uuid4(), cat_name: Faker.Cat.name()}
+
+      {:ok, _} =
+        OK.for do
+          session_id <- Store.open_session()
+
+          _ =
+            raw("never gonna give you up")
+            |> list_all(session_id)
+
+          _ <- Session.store(session_id, any_entity)
+          _ <- Session.save_changes(session_id)
+
+          query_response <-
+            raw("from @all_docs where cat_name = \"#{any_entity.cat_name}\"")
+            |> list_all(session_id)
+        after
+          query_response
+        end
+    end
+
     test "A invalid query should return an error" do
       {:error, "1:1 Expected FROM clause but got: never\nQuery: \nnever gonna give you up"} =
         OK.for do
           session_id <- Store.open_session()
 
-          query_response <-
+          _ <-
             raw("never gonna give you up")
             |> list_all(session_id)
         after
-          query_response
         end
     end
 

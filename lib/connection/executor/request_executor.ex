@@ -219,6 +219,12 @@ defmodule Ravix.Connection.RequestExecutor do
 
       {:error, conn, error, _headers} when is_struct(error, Mint.HTTPError) ->
         node = put_in(node.conn, conn)
+
+        _ =
+          Logger.error(fn ->
+            "Received error message: " <> inspect(message) <> " " <> inspect(error)
+          end)
+
         {:noreply, node}
 
       {:error, _conn, error, _headers} when is_struct(error, Mint.TransportError) ->
@@ -281,6 +287,9 @@ defmodule Ravix.Connection.RequestExecutor do
 
         %{status: 403} ->
           {:non_retryable_error, :unauthorized}
+
+        %{status: 409} ->
+          {:error, :conflict}
 
         %{status: 410} ->
           {:error, :node_gone}
