@@ -33,7 +33,8 @@ defmodule Ravix.Factory do
     %Cat{
       id: UUID.uuid4(),
       name: Faker.Cat.name(),
-      breed: Faker.Cat.breed()
+      breed: Faker.Cat.breed(),
+      registry: Faker.Cat.registry()
     }
   end
 end
