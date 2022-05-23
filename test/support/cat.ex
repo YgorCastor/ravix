@@ -1,4 +1,4 @@
 defmodule Ravix.SampleModel.Cat do
   @moduledoc false
-  use Ravix.Document, fields: [:id, :name, :breed]
+  use Ravix.Document, fields: [:id, :name, :breed, :registry]
 end

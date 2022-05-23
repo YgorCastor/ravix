@@ -288,6 +288,8 @@ defmodule Ravix.RQL.QueryTest do
         |> Enum.sort_by(fn cat -> String.first(cat.name) end)
         |> Enum.at(0)
 
+      :timer.sleep(200)
+
       assert found_cat["name"] == sorted_cat.name
       assert found_cat["breed"] == sorted_cat.breed
     end
@@ -349,7 +351,7 @@ defmodule Ravix.RQL.QueryTest do
 
           query_response <-
             from("Cats")
-            |> group_by("breed")
+            |> group_by(["breed", "registry"])
             |> where(equal_to("breed", cat.breed))
             |> list_all(session_id)
         after

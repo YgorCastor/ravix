@@ -218,7 +218,8 @@ defmodule Ravix.RQL.QueryParser do
   end
 
   defp parse_group_by(%Query{} = query, group_by_token) do
-    query_fragment = " group by " <> Enum.map_join(group_by_token.fields, &parse_field(query, &1))
+    query_fragment =
+      " group by " <> Enum.map_join(group_by_token.fields, ", ", &parse_field(query, &1))
 
     {:ok, append_query_fragment(query, query_fragment)}
   end
