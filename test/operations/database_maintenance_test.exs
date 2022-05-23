@@ -26,7 +26,7 @@ defmodule Ravix.Operations.Database.MaintenanceTest do
       {:ok, _created} = Maintenance.create_database(NonRetryableStore, db_name)
       {:error, err} = Maintenance.create_database(NonRetryableStore, db_name)
 
-      assert err == "Database '#{db_name}' already exists!"
+      assert err == :conflict
     end
   end
 
