@@ -32,15 +32,23 @@ defmodule Ravix.Connection.RequestExecutor do
   def init(%ServerNode{} = node) do
     {:ok, conn_params} = build_params(node.certificate, node.protocol)
 
-    Logger.info("[RAVIX] Connecting to node '#{node}' for store '#{inspect(node.store)}'")
+    Logger.info(
+      "[RAVIX] Connecting to node '#{inspect(node)}' for store '#{inspect(node.store)}'"
+    )
 
     case Mint.HTTP.connect(node.protocol, node.url, node.port, conn_params) do
       {:ok, conn} ->
-        Logger.info("[RAVIX] Connected to node '#{node}' for store '#{inspect(node.store)}'")
+        Logger.info(
+          "[RAVIX] Connected to node '#{inspect(node)}' for store '#{inspect(node.store)}'"
+        )
 
         {:ok, %ServerNode{node | conn: conn}}
 
       {:error, reason} ->
+        Logger.error(
+          "[RAVIX] Unable to register the node '#{inspect(node)} for store '#{inspect(node.store)}', cause: #{inspect(reason)}'"
+        )
+
         {:stop, reason}
     end
   end
@@ -50,7 +58,7 @@ defmodule Ravix.Connection.RequestExecutor do
     GenServer.start_link(
       __MODULE__,
       node,
-      name: executor_id(node.database, node.url)
+      name: executor_id(node.url, node.database)
     )
   end
 
