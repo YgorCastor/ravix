@@ -25,6 +25,7 @@ defmodule Ravix.Connection.ServerNode do
             opts: []
 
   alias Ravix.Connection.ServerNode
+  alias Ravix.Connection.State, as: ConnectionState
 
   @type t :: %ServerNode{
           store: atom(),
@@ -42,15 +43,19 @@ defmodule Ravix.Connection.ServerNode do
   @doc """
     Creates a new node state from the url, database name and ssl certificate
   """
-  @spec from_url(binary | URI.t(), any, any) :: ServerNode.t()
-  def from_url(url, database, certificate) do
+  @spec from_url(binary | URI.t(), ConnectionState.t()) :: ServerNode.t()
+  def from_url(url, %ConnectionState{
+        certificate: certificate,
+        certificate_file: certificate_file,
+        database: database
+      }) do
     parsed_url = URI.new!(url)
 
     %ServerNode{
       url: parsed_url.host,
       port: parsed_url.port,
       protocol: String.to_atom(parsed_url.scheme),
-      certificate: certificate,
+      certificate: %{certificate: certificate, certificate_file: certificate_file},
       database: database
     }
   end
