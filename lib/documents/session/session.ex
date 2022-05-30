@@ -119,7 +119,9 @@ defmodule Ravix.Documents.Session do
   def store(session_id, entity, key, change_vector, opts) do
     session_id
     |> session_id()
-    |> GenServer.call({:store, [entity: entity, key: key, change_vector: change_vector, opts: opts]})
+    |> GenServer.call(
+      {:store, [entity: entity, key: key, change_vector: change_vector, opts: opts]}
+    )
   end
 
   @doc """
@@ -206,7 +208,8 @@ defmodule Ravix.Documents.Session do
       )
       when key != nil do
     OK.try do
-      [entity, updated_state] <- SessionManager.store_entity(state, entity, key, change_vector, opts)
+      [entity, updated_state] <-
+        SessionManager.store_entity(state, entity, key, change_vector, opts)
     after
       {:reply, {:ok, entity}, updated_state}
     rescue

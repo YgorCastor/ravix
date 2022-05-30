@@ -58,6 +58,7 @@ defmodule Ravix.RQL.QueryParser do
       :from_index -> parse_from_index(query, stmt)
       :select -> parse_select(query, stmt)
       :select_function -> parse_select_function(query, stmt)
+      :select_facet -> parse_select_facet(query, stmt)
       :group_by -> parse_group_by(query, stmt)
       :update -> parse_update(query, stmt)
       :where -> parse_where(query, stmt)
@@ -133,6 +134,12 @@ defmodule Ravix.RQL.QueryParser do
   defp parse_select(%Query{} = query, select_token) do
     query_fragment =
       " select " <> Enum.map_join(select_token.fields, ", ", &parse_field(query, &1))
+
+    {:ok, append_query_fragment(query, query_fragment)}
+  end
+
+  defp parse_select_facet(%Query{} = query, select_facets_token) do
+    facets = Enum.map(select_facets_token.fields, &parse_facet(&1))
 
     {:ok, append_query_fragment(query, query_fragment)}
   end
@@ -296,6 +303,15 @@ defmodule Ravix.RQL.QueryParser do
       true -> Map.get(aliases, from_token.document_or_index) <> ".#{field}"
       false -> field
     end
+  end
+
+  defp parse_facet(facet) do
+    # "facet(" <>
+    #   Enum.map_join(facet.conditions, ",", fn condition ->
+    #     case condition do
+    #       condition when is_struct(condition, Ravix.RQL.Tokens.Condition) -> parse_condition_stmt()
+    #     end
+    #   end)
   end
 
   defp append_query_fragment(%Query{} = query, append) do

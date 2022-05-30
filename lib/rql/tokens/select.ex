@@ -6,6 +6,7 @@ defmodule Ravix.RQL.Tokens.Select do
   ]
 
   alias Ravix.RQL.Tokens.Select
+  alias Ravix.RQL.Tokens.Facet
 
   @type field_name :: atom() | String.t()
   @type field_alias :: String.t()
@@ -16,7 +17,7 @@ defmodule Ravix.RQL.Tokens.Select do
 
   @type t :: %Select{
           token: atom(),
-          fields: list(field_name() | {field_name(), field_alias()})
+          fields: list(field_name() | {field_name(), field_alias()} | Facet.t())
         }
 
   @spec fields(allowed_select_params()) :: Select.t()
@@ -39,6 +40,22 @@ defmodule Ravix.RQL.Tokens.Select do
     %Select{
       token: :select_function,
       fields: to
+    }
+  end
+
+  @spec facets(list(Facet.t())) :: Select.t()
+  def facets(facets) do
+    %Select{
+      token: :select_facet,
+      fields: facets
+    }
+  end
+
+  @spec facet(Facet.t()) :: Select.t()
+  def facet(%Facet{} = facet) do
+    %Select{
+      token: :select_facet,
+      fields: [facet]
     }
   end
 end

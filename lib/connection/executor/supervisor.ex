@@ -37,9 +37,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   @spec register_node_executor(any, ServerNode.t()) ::
           :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
   def register_node_executor(store, %ServerNode{} = node) do
-    Logger.debug(
-      "[RAVIX] Registering cluster node '#{node}' for the store '#{inspect(store)}'"
-    )
+    Logger.debug("[RAVIX] Registering cluster node '#{node}' for the store '#{inspect(store)}'")
 
     node = %ServerNode{node | store: store}
     DynamicSupervisor.start_child(supervisor_name(store), {RequestExecutor, node})
