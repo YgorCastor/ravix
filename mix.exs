@@ -53,6 +53,7 @@ defmodule Ravix.MixProject do
       {:tzdata, "~> 1.1"},
       {:retry, "~> 0.16.0"},
       {:inflex, "~> 2.1"},
+      {:castore, "~> 0.1.17"},
       {:gradient, github: "esl/gradient", only: [:dev, :test], runtime: false},
       {:elixir_sense, github: "elixir-lsp/elixir_sense", only: [:dev]},
       {:ex_doc, "~> 0.28.3", only: :dev, runtime: false},

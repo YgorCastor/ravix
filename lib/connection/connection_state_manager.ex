@@ -139,7 +139,7 @@ defmodule Ravix.Connection.State.Manager do
   defp register_nodes(%ConnectionState{} = state) do
     registered_nodes =
       state.urls
-      |> Enum.map(fn url -> ServerNode.from_url(url, state.database, state.certificate) end)
+      |> Enum.map(fn url -> ServerNode.from_url(url, state) end)
       |> Enum.map(fn node ->
         RequestExecutor.Supervisor.register_node_executor(state.store, node)
       end)
