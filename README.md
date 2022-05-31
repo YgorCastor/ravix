@@ -207,14 +207,28 @@ end
 
 ## Secure Server
 
-To connect to a secure server, you can just inform the SSL certificate using the `certificate` or the `certificate_file` configuration.
+To connect to a secure server, you can just inform the SSL certificates based on the [erlang ssl configs](https://www.erlang.org/doc/man/ssl.html).
+
+E.g:
 
 ```elixir
 config :ravix, Ravix.Test.Store,
-  urls: [System.get_env("RAVENDB_URL", "http://localhost:8080")],
+  urls: [System.get_env("RAVENDB_URL", "https://localhost:8080")],
   database: "test",
-  certificate: CERT_IN_BASE_64,
-  certificate_file: "/opt/certs/cert.pfx"
+  ssl_config: [
+    certfile: "certs/ravix_test.crt",
+    keyfile: "certs/ravix_test.key"
+  ]
+```
+OR
+
+```elixir
+config :ravix, Ravix.Test.Store,
+  urls: [System.get_env("RAVENDB_URL", "https://localhost:8080")],
+  database: "test",
+  ssl_config: [
+    certfile: "certs/ravix_test.pem"
+  ]
 ```
 
 ## Ecto

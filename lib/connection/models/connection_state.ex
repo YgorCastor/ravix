@@ -4,8 +4,7 @@ defmodule Ravix.Connection.State do
 
      - store: Store atom for this state. E.g: Ravix.Test.Store
      - database: Name of the database.
-     - certificate: RavenDB emmited SSL certificate for the database user in base64
-     - certificate_file: Same as above, but a path to the file in the disk
+     - ssl_config: SSL Configurations, E.g: https://www.erlang.org/doc/man/ssl.html
      - conventions: Document Configuration conventions
      - retry_on_failure: Automatic retry in retryable errors
      - retry_on_stale: Automatic retry when the query is stale
@@ -21,8 +20,7 @@ defmodule Ravix.Connection.State do
   """
   defstruct store: nil,
             database: nil,
-            certificate: nil,
-            certificate_file: nil,
+            ssl_config: [],
             retry_on_failure: true,
             retry_on_stale: false,
             retry_backoff: 100,
@@ -41,8 +39,7 @@ defmodule Ravix.Connection.State do
   @type t :: %Ravix.Connection.State{
           store: any(),
           database: String.t(),
-          certificate: String.t() | nil,
-          certificate_file: String.t() | nil,
+          ssl_config: Keyword.t(),
           retry_on_failure: boolean(),
           retry_on_stale: boolean(),
           retry_backoff: non_neg_integer(),

@@ -30,7 +30,7 @@ defmodule Ravix.Connection.RequestExecutor do
                optional(:module) => any
              }}
   def init(%ServerNode{} = node) do
-    {:ok, conn_params} = build_params(node.certificate, node.protocol)
+    {:ok, conn_params} = build_params(node.ssl_config, node.protocol)
 
     Logger.info(
       "[RAVIX] Connecting to node '#{inspect(node)}' for store '#{inspect(node.store)}'"
@@ -362,16 +362,13 @@ defmodule Ravix.Connection.RequestExecutor do
 
   defp build_params(_, :http), do: {:ok, []}
 
-  defp build_params(certificate, :https) do
-    case certificate do
-      %{certificate: nil, certificate_file: file} ->
-        {:ok, transport_opts: [cacertfile: file]}
+  defp build_params(ssl_config, :https) do
+    case ssl_config do
+      [] ->
+        {:error, :no_ssl_configurations_informed}
 
-      %{certificate: cert, certificate_file: nil} ->
-        {:ok, transport_opts: [cacert: cert]}
-
-      _ ->
-        {:error, :invalid_ssl_certificate}
+      transport_ops ->
+        {:ok, transport_opts: transport_ops}
     end
   end
 

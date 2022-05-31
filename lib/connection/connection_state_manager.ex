@@ -143,6 +143,7 @@ defmodule Ravix.Connection.State.Manager do
       |> Enum.map(fn node ->
         RequestExecutor.Supervisor.register_node_executor(state.store, node)
       end)
+      #|> IO.inspect()
       |> Enum.filter(fn pids -> elem(pids, 0) == :ok end)
       |> Enum.map(fn pid -> elem(pid, 1) end)
 

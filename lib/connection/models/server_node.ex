@@ -6,7 +6,7 @@ defmodule Ravix.Connection.ServerNode do
       - url: URL of this node
       - port: port of this node
       - conn: TCP Connection State
-      - certificate: User SSL certificate for this node
+      - ssl_config: User SSL certificate config for this node
       - requests: Currently executing request calls to RavenDB
       - protocol: http or https
       - database: For which database is this executor
@@ -17,7 +17,7 @@ defmodule Ravix.Connection.ServerNode do
             url: nil,
             port: nil,
             conn: nil,
-            certificate: nil,
+            ssl_config: nil,
             requests: %{},
             protocol: nil,
             database: nil,
@@ -32,7 +32,7 @@ defmodule Ravix.Connection.ServerNode do
           url: String.t(),
           port: non_neg_integer(),
           conn: Mint.HTTP.t() | nil,
-          certificate: map() | nil,
+          ssl_config: Keyword.t() | nil,
           requests: map(),
           protocol: atom(),
           database: String.t(),
@@ -45,8 +45,7 @@ defmodule Ravix.Connection.ServerNode do
   """
   @spec from_url(binary | URI.t(), ConnectionState.t()) :: ServerNode.t()
   def from_url(url, %ConnectionState{
-        certificate: certificate,
-        certificate_file: certificate_file,
+        ssl_config: ssl_config,
         database: database
       }) do
     parsed_url = URI.new!(url)
@@ -55,7 +54,7 @@ defmodule Ravix.Connection.ServerNode do
       url: parsed_url.host,
       port: parsed_url.port,
       protocol: String.to_atom(parsed_url.scheme),
-      certificate: %{certificate: certificate, certificate_file: certificate_file},
+      ssl_config: ssl_config,
       database: database
     }
   end
