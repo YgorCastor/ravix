@@ -391,7 +391,7 @@ defmodule Ravix.Connection.RequestExecutor do
 
     case Mint.HTTP.connect(node.protocol, node.url, node.port, conn_params) do
       {:ok, conn} ->
-        Logger.info(
+        Logger.debug(
           "[RAVIX] Connected to node '#{inspect(node.url)}' for store '#{inspect(node.store)}'"
         )
 
