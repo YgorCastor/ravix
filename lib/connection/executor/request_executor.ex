@@ -30,27 +30,11 @@ defmodule Ravix.Connection.RequestExecutor do
                optional(:module) => any
              }}
   def init(%ServerNode{} = node) do
-    {:ok, conn_params} = build_params(node.ssl_config, node.protocol)
-
     Logger.info(
-      "[RAVIX] Connecting to node '#{inspect(node)}' for store '#{inspect(node.store)}'"
+      "[RAVIX] Connecting to node '#{inspect(node.url)}' for store '#{inspect(node.store)}'"
     )
 
-    case Mint.HTTP.connect(node.protocol, node.url, node.port, conn_params) do
-      {:ok, conn} ->
-        Logger.info(
-          "[RAVIX] Connected to node '#{inspect(node)}' for store '#{inspect(node.store)}'"
-        )
-
-        {:ok, %ServerNode{node | conn: conn}}
-
-      {:error, reason} ->
-        Logger.error(
-          "[RAVIX] Unable to register the node '#{inspect(node)} for store '#{inspect(node.store)}', cause: #{inspect(reason)}'"
-        )
-
-        {:stop, reason}
-    end
+    connect(node)
   end
 
   @spec start_link(any, ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}
@@ -248,6 +232,20 @@ defmodule Ravix.Connection.RequestExecutor do
     {:noreply, %ServerNode{node | cluster_tag: cluster_tag}}
   end
 
+  defp exec_request(
+         %ServerNode{conn: %{state: :closed}} = node,
+         from,
+         request,
+         command,
+         headers,
+         opts
+       ) do
+    case connect(node) do
+      {:ok, node} -> exec_request(node, from, request, command, headers, opts)
+      _ -> {:error, :node_unreachable}
+    end
+  end
+
   defp exec_request(%ServerNode{} = node, from, request, command, headers, opts) do
     case Mint.HTTP.request(
            node.conn,
@@ -386,5 +384,25 @@ defmodule Ravix.Connection.RequestExecutor do
     max_url_length = Keyword.get(opts, :max_length_of_query_using_get_url, 1024 + 512)
 
     String.length(url) > max_url_length
+  end
+
+  defp connect(node) do
+    {:ok, conn_params} = build_params(node.ssl_config, node.protocol)
+
+    case Mint.HTTP.connect(node.protocol, node.url, node.port, conn_params) do
+      {:ok, conn} ->
+        Logger.info(
+          "[RAVIX] Connected to node '#{inspect(node.url)}' for store '#{inspect(node.store)}'"
+        )
+
+        {:ok, %ServerNode{node | conn: conn}}
+
+      {:error, reason} ->
+        Logger.error(
+          "[RAVIX] Unable to connect to the node '#{inspect(node.url)} for store '#{inspect(node.store)}', cause: #{inspect(reason)}'"
+        )
+
+        {:stop, reason}
+    end
   end
 end
