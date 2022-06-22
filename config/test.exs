@@ -57,7 +57,7 @@ config :ravix, Ravix.Test.OptimisticLockStore,
   }
 
 config :ravix, Ravix.Test.ClusteredStore,
-  urls: ["http://localhost:8080", "http://localhost:8090"],
+  urls: [System.get_env("RAVENDB_URL", "http://localhost:8080"), "http://localhost:8090"],
   database: "test4",
   retry_on_failure: false,
   retry_on_stale: false,
