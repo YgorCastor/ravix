@@ -29,9 +29,16 @@ defmodule Ravix.Documents.Commands.ExecuteQueryCommand do
 
       %ExecuteQueryCommand{
         command
-        | url: url <> "/queries",
+        | url: url <> streamable(command) <> "/queries",
           data: fix_body(command)
       }
+    end
+
+    defp streamable(%{use_stream: use_stream}) do
+      case use_stream do
+        true -> "/streams"
+        false -> ""
+      end
     end
 
     defp fix_body(command) do
