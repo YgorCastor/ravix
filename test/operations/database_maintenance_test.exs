@@ -1,13 +1,8 @@
 defmodule Ravix.Operations.Database.MaintenanceTest do
-  use ExUnit.Case
+  use Ravix.Integration.Case
 
   alias Ravix.Operations.Database.Maintenance
   alias Ravix.Test.NonRetryableStore
-
-  setup do
-    %{ravix: start_supervised!(Ravix.TestApplication)}
-    :ok
-  end
 
   describe "create_database/0 and delete_database" do
     test "should create a new database successfully" do

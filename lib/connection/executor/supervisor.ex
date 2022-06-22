@@ -37,12 +37,16 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   @spec register_node_executor(any, ServerNode.t()) ::
           :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
   def register_node_executor(store, %ServerNode{} = node) do
-    Logger.debug(
-      "[RAVIX] Registering cluster node '#{node}' for the store '#{inspect(store)}'"
-    )
+    Logger.debug("[RAVIX] Registering cluster node '#{node}' for the store '#{inspect(store)}'")
 
     node = %ServerNode{node | store: store}
     DynamicSupervisor.start_child(supervisor_name(store), {RequestExecutor, node})
+  end
+
+  @spec remove_node_executor(atom(), pid) :: :ok | {:error, :not_found}
+  def remove_node_executor(store, pid) do
+    Logger.debug("[RAVIX] Removing cluster node '#{inspect(pid)}' for the store '#{inspect(store)}'")
+    DynamicSupervisor.terminate_child(supervisor_name(store), pid)
   end
 
   @doc """
@@ -52,12 +56,15 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   - store: the store module: E.g: Ravix.Test.Store
 
   ## Returns
-  - List of PIDs
+  - list({pod, Ravix.Connection.ServerNode})
   """
-  @spec fetch_nodes(any) :: list(pid())
+  @spec fetch_nodes(any) :: list({pid, ServerNode.t()})
   def fetch_nodes(store) do
     DynamicSupervisor.which_children(supervisor_name(store))
     |> Enum.map(fn {_, pid, _kind, _modules} -> pid end)
+    |> Enum.map(fn pid -> {pid, RequestExecutor.fetch_node_state(pid)} end)
+    |> Enum.filter(fn {_, response} -> elem(response, 0) == :ok end)
+    |> Enum.map(fn {pid, {:ok, node}} -> {pid, node} end)
   end
 
   @doc """
@@ -74,21 +81,32 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
           {:new_nodes, list} | {:updated_nodes, list}
         ]
   def update_topology(store, %Topology{} = topology) do
-    existing_nodes =
-      fetch_nodes(store)
-      |> Enum.map(fn pid -> RequestExecutor.fetch_node_state(pid) end)
-      |> Enum.filter(fn response -> elem(response, 0) == :ok end)
-      |> Enum.map(fn {:ok, node} -> node end)
-
-    updated_nodes = update_existing_nodes(existing_nodes, topology)
-    new_nodes = add_new_nodes(store, existing_nodes, topology)
+    current_nodes = fetch_nodes(store)
+    remaining_nodes = remove_old_nodes(store, current_nodes, topology)
+    updated_nodes = update_existing_nodes(remaining_nodes, topology)
+    new_nodes = add_new_nodes(store, remaining_nodes, topology)
 
     [updated_nodes: updated_nodes, new_nodes: new_nodes]
   end
 
+  defp remove_old_nodes(store, current_nodes, %Topology{} = topology) do
+    new_nodes_urls = Enum.map(topology.nodes, fn node -> node.url end)
+
+    nodes_to_delete =
+      current_nodes
+      |> Enum.reject(fn {_, node} -> Enum.member?(new_nodes_urls, node.url) end)
+
+    nodes_to_delete
+    |> Enum.each(fn {pid, _node} ->
+      RequestExecutor.Supervisor.remove_node_executor(store, pid)
+    end)
+
+    current_nodes -- nodes_to_delete
+  end
+
   defp update_existing_nodes(nodes, %Topology{} = topology) do
     nodes
-    |> Enum.map(fn node ->
+    |> Enum.map(fn {_pid, node} ->
       [
         url: node.url,
         database: node.database,
@@ -96,7 +114,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
       ]
     end)
     |> Enum.map(fn [url: url, database: database, cluster_tag: cluster_tag] ->
-      Logger.debug(
+      Logger.info(
         "[RAVIX] Updating node '#{inspect(url)}' for the database '#{inspect(database)}' with cluster tag '#{inspect(cluster_tag)}'"
       )
 
@@ -105,12 +123,12 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   end
 
   defp add_new_nodes(store, existing_nodes, %Topology{} = topology) do
-    existing_nodes_urls = Enum.map(existing_nodes, fn node -> node.url end)
+    existing_nodes_urls = Enum.map(existing_nodes, fn {_pid, node} -> node.url end)
 
     topology.nodes
     |> Enum.reject(fn node -> Enum.member?(existing_nodes_urls, node.url) end)
     |> Enum.map(fn new_node ->
-      Logger.debug(
+      Logger.info(
         "[RAVIX] Registering new node '#{inspect(new_node)}' for the store '#{inspect(store)}'"
       )
 

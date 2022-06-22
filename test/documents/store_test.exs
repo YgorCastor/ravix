@@ -1,12 +1,7 @@
 defmodule Ravix.Documents.StoreTest do
-  use ExUnit.Case
+  use Ravix.Integration.Case
 
   alias Ravix.Test.Store, as: Store
-
-  setup do
-    %{ravix: start_supervised!(Ravix.TestApplication)}
-    :ok
-  end
 
   describe "open_session/0" do
     test "Should open a session successfully" do
