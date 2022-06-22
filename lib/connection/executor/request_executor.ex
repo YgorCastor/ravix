@@ -34,7 +34,12 @@ defmodule Ravix.Connection.RequestExecutor do
       "[RAVIX] Connecting to node '#{inspect(node.url)}' for store '#{inspect(node.store)}'"
     )
 
-    connect(node)
+    Process.send_after(self(), :healthcheck, :timer.seconds(node.healthcheck_every))
+
+    case connect(node) do
+      {:ok, node} -> {:ok, node, {:continue, :healthcheck}}
+      {:error, node} -> {:stop, node}
+    end
   end
 
   @spec start_link(any, ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}
@@ -196,6 +201,14 @@ defmodule Ravix.Connection.RequestExecutor do
       true -> {:reply, {:error, :maximum_url_length_reached}, node}
       false -> exec_request(node, from, request, command, headers, opts)
     end
+  end
+
+  def handle_continue(:healthcheck, node) do
+    {:noreply, healthcheck(node)}
+  end
+
+  def handle_info(:healthcheck, node) do
+    {:noreply, healthcheck(node)}
   end
 
   def handle_info(message, %ServerNode{} = node) do
@@ -402,7 +415,23 @@ defmodule Ravix.Connection.RequestExecutor do
           "[RAVIX] Unable to connect to the node '#{inspect(node.url)} for store '#{inspect(node.store)}', cause: #{inspect(reason)}'"
         )
 
-        {:stop, reason}
+        {:error, reason}
     end
+  end
+
+  defp healthcheck(node) do
+    node =
+      case connect(node) do
+        {:ok, _} ->
+          %ServerNode{node | state: :healthy}
+
+        _ ->
+          Logger.warn("The node '${node.url}' is now in an unhealthy state!")
+          %ServerNode{node | state: :unhealthy}
+      end
+
+    Process.send_after(self(), :healthcheck, :timer.seconds(node.healthcheck_every))
+
+    node
   end
 end

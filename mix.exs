@@ -58,6 +58,7 @@ defmodule Ravix.MixProject do
       {:elixir_sense, github: "elixir-lsp/elixir_sense", only: [:dev]},
       {:ex_doc, "~> 0.28.3", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1.0", only: [:dev, :test], runtime: false},
+      {:bypass, "~> 2.1", only: :test},
       {:ex_machina, "~> 2.7", only: :test},
       {:faker, "~> 0.17.0", only: :test},
       {:fake_server, "~> 2.1", only: :test},

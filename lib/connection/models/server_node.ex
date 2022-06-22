@@ -11,6 +11,7 @@ defmodule Ravix.Connection.ServerNode do
       - protocol: http or https
       - database: For which database is this executor
       - cluster_tag: Tag of this node in the RavenDB cluster
+      - healthcheck_every: Checks the node health every x seconds
       - opts: General node Options
   """
   defstruct store: nil,
@@ -22,6 +23,8 @@ defmodule Ravix.Connection.ServerNode do
             protocol: nil,
             database: nil,
             cluster_tag: nil,
+            healthcheck_every: 60,
+            state: :initializing,
             opts: []
 
   alias Ravix.Connection.ServerNode
@@ -37,6 +40,8 @@ defmodule Ravix.Connection.ServerNode do
           protocol: atom(),
           database: String.t(),
           cluster_tag: String.t() | nil,
+          healthcheck_every: non_neg_integer(),
+          state: :healthy | :unhealthy | :initializing,
           opts: keyword()
         }
 
@@ -46,7 +51,8 @@ defmodule Ravix.Connection.ServerNode do
   @spec from_url(binary | URI.t(), ConnectionState.t()) :: ServerNode.t()
   def from_url(url, %ConnectionState{
         ssl_config: ssl_config,
-        database: database
+        database: database,
+        healthcheck_every: healthcheck_every
       }) do
     parsed_url = URI.new!(url)
 
@@ -55,6 +61,7 @@ defmodule Ravix.Connection.ServerNode do
       port: parsed_url.port,
       protocol: String.to_atom(parsed_url.scheme),
       ssl_config: ssl_config,
+      healthcheck_every: healthcheck_every,
       database: database
     }
   end

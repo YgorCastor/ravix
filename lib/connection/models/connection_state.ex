@@ -17,6 +17,7 @@ defmodule Ravix.Connection.State do
      - force_create_database: If true, when the database does not exist, it will be created
      - last_topology_update: DateTime when the topology was last updated
      - cluster_token: Security Token for the members of the cluster
+     - healthcheck_every: Checks the node health every x seconds
   """
   defstruct store: nil,
             database: nil,
@@ -32,6 +33,7 @@ defmodule Ravix.Connection.State do
             disable_topology_updates: false,
             force_create_database: false,
             last_topology_update: nil,
+            healthcheck_every: 60,
             cluster_token: nil
 
   use Vex.Struct
@@ -51,6 +53,7 @@ defmodule Ravix.Connection.State do
           disable_topology_updates: boolean(),
           force_create_database: boolean(),
           last_topology_update: DateTime.t() | nil,
+          healthcheck_every: non_neg_integer(),
           cluster_token: String.t() | nil
         }
 

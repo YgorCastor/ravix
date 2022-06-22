@@ -45,7 +45,7 @@ defmodule Ravix.Connection.State.Manager do
             :ok
         end
 
-      state = put_in(state.node_selector, %NodeSelector{current_node_index: 0})
+      state = put_in(state.node_selector, NodeSelector.new())
       state <- __MODULE__.update_topology(state)
     after
       Logger.info("[RAVIX] Connection stabilished for the Store '#{inspect(state.store)}'")
@@ -72,7 +72,7 @@ defmodule Ravix.Connection.State.Manager do
       _ = ExecutorSupervisor.update_topology(state.store, topology)
 
       state = put_in(state.topology_etag, topology.etag)
-      state = put_in(state.node_selector, %NodeSelector{current_node_index: 0})
+      state = put_in(state.node_selector, NodeSelector.new())
       state = put_in(state.last_topology_update, Timex.now())
     after
       Logger.debug(
@@ -143,7 +143,6 @@ defmodule Ravix.Connection.State.Manager do
       |> Enum.map(fn node ->
         RequestExecutor.Supervisor.register_node_executor(state.store, node)
       end)
-      #|> IO.inspect()
       |> Enum.filter(fn pids -> elem(pids, 0) == :ok end)
       |> Enum.map(fn pid -> elem(pid, 1) end)
 

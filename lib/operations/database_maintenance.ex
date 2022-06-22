@@ -47,7 +47,7 @@ defmodule Ravix.Operations.Database.Maintenance do
   def create_database(store_or_pid, database_name, opts \\ [])
 
   def create_database(store, database_name, opts) when is_atom(store) do
-    node_pid = RequestExecutor.Supervisor.fetch_nodes(store) |> Enum.at(0)
+    {node_pid, _} = RequestExecutor.Supervisor.fetch_nodes(store) |> Enum.at(0)
 
     create_database(node_pid, database_name, opts)
   end
@@ -76,7 +76,7 @@ defmodule Ravix.Operations.Database.Maintenance do
   def delete_database(store_or_pid, database_name, opts \\ [])
 
   def delete_database(store, database_name, opts) when is_atom(store) do
-    node_pid = RequestExecutor.Supervisor.fetch_nodes(store) |> Enum.at(0)
+    {node_pid, _} = RequestExecutor.Supervisor.fetch_nodes(store) |> Enum.at(0)
 
     delete_database(node_pid, database_name, opts)
   end
@@ -104,7 +104,7 @@ defmodule Ravix.Operations.Database.Maintenance do
   def database_stats(store_or_pid, database_name \\ nil, opts \\ [])
 
   def database_stats(store, database_name, opts) when is_atom(store) do
-    node_pid = RequestExecutor.Supervisor.fetch_nodes(store) |> Enum.at(0)
+    {node_pid, _} = RequestExecutor.Supervisor.fetch_nodes(store) |> Enum.at(0)
 
     database_stats(node_pid, database_name, opts)
   end

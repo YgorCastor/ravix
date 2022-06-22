@@ -1,5 +1,5 @@
 defmodule Ravix.Documents.SessionTest do
-  use ExUnit.Case
+  use Ravix.Integration.Case
 
   import Ravix.Factory
 
@@ -9,11 +9,6 @@ defmodule Ravix.Documents.SessionTest do
   alias Ravix.Test.Store, as: Store
   alias Ravix.Test.NonRetryableStore, as: TimedStore
   alias Ravix.Test.OptimisticLockStore, as: OptimisticStore
-
-  setup do
-    %{ravix: start_supervised!(Ravix.TestApplication)}
-    :ok
-  end
 
   describe "store/3" do
     test "A document should be stored using the entity id" do
