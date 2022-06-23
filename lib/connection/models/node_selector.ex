@@ -28,9 +28,8 @@ defmodule Ravix.Connection.NodeSelector do
   @spec current_node(ConnectionState.t()) :: pid()
   def current_node(%ConnectionState{} = state) do
     current_nodes =
-      ExecutorSupervisor.fetch_nodes(state.store)
-      |> Enum.filter(fn {_pid, node} -> node.state == :healthy end)
-      |> Enum.map(fn {pid, _node} -> pid end)
+      ExecutorSupervisor.fetch_node_pools(state.store)
+      |> Enum.map(fn {_pid, pool_id, _} -> pool_id end)
 
     if length(current_nodes) == 0 do
       raise "No nodes available to execute the request!"
@@ -42,5 +41,14 @@ defmodule Ravix.Connection.NodeSelector do
     state.node_selector.current_node_index |> :counters.add(1, 1)
 
     Enum.at(current_nodes, current_index)
+  end
+
+  @spec random_node_for(atom()) :: pid()
+  def random_node_for(store) do
+    ExecutorSupervisor.fetch_nodes(store) |> Enum.random()
+  end
+
+  def node_id(node) do
+    "#{node.url}.#{node.port}.#{node.database}"
   end
 end

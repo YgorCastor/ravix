@@ -61,9 +61,8 @@ defmodule Ravix.Operations.Database.Maintenance do
           Disabled: Keyword.get(opts, :disabled, false),
           ReplicationFactor: Keyword.get(opts, :replication_factor, 1)
         }
-        |> RequestExecutor.execute_for_node(
+        |> RequestExecutor.execute_with_node(
           node_pid,
-          database_name,
           {},
           opts
         )
@@ -89,9 +88,8 @@ defmodule Ravix.Operations.Database.Maintenance do
           HardDelete: Keyword.get(opts, :hard_delete, false),
           TimeToWaitForConfirmation: Keyword.get(opts, :time_for_confirmation, 100)
         }
-        |> RequestExecutor.execute_for_node(
+        |> RequestExecutor.execute_with_node(
           node_pid,
-          database_name,
           {},
           opts
         )
@@ -116,9 +114,8 @@ defmodule Ravix.Operations.Database.Maintenance do
           debugTag: Keyword.get(opts, :debug_tag, ""),
           databaseName: database_name
         }
-        |> RequestExecutor.execute_for_node(
+        |> RequestExecutor.execute_with_node(
           node_pid,
-          database_name,
           {},
           opts
         )

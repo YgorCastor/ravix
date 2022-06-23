@@ -148,7 +148,7 @@ defmodule Ravix.Documents.Session.Manager do
         method: method
       }
 
-      result <- RequestExecutor.execute(command, network_state, {}, [])
+      result <- RequestExecutor.execute(command, network_state)
     after
       result.data
     end

@@ -24,21 +24,20 @@ defmodule Ravix.Connection.State.Manager do
     Logger.info("[RAVIX] Initializing connection for the repository '#{inspect(state.store)}'")
 
     OK.try do
-      node_pids <- register_nodes(state)
+      pools <- register_node_pools(state)
 
-      Logger.debug(
-        "[RAVIX] Nodes with PIDs '#{inspect(node_pids)}' were registered successfully for the repository '#{inspect(state.store)}'"
+      Logger.info(
+        "[RAVIX] '#{length(pools)}' Node pools were registered successfully for the repository '#{inspect(state.store)}'"
       )
 
       _ =
         case state.force_create_database do
           true ->
-            Logger.debug(
+            Logger.info(
               "[RAVIX] Forcing the database creation is enabled, it will create the #{inspect(state.database)} if it does not exists"
             )
 
-            node_pids
-            |> Enum.at(0)
+            NodeSelector.random_node_for(state.store)
             |> DatabaseMaintenance.create_database(state.database)
 
           false ->
@@ -67,8 +66,8 @@ defmodule Ravix.Connection.State.Manager do
   def update_topology(%ConnectionState{} = state) do
     OK.for do
       Logger.debug("[RAVIX] Updating the topology for the store '#{inspect(state.store)}'")
-      current_node = NodeSelector.current_node(state)
-      topology <- __MODULE__.request_topology([current_node], state.database)
+      random_node = NodeSelector.random_node_for(state.store)
+      topology <- __MODULE__.request_topology(random_node, state.database)
       _ = ExecutorSupervisor.update_topology(state.store, topology)
 
       state = put_in(state.topology_etag, topology.etag)
@@ -90,25 +89,14 @@ defmodule Ravix.Connection.State.Manager do
      - `{:ok, Ravix.Connection.Topology}` if the topology request was successful
      - `{:error, :invalid_cluster_topology}` if it fails to pool the topology
   """
-  @spec request_topology(list(pid()), String.t()) ::
+  @spec request_topology(pid(), String.t()) ::
           {:error, :invalid_cluster_topology} | {:ok, Ravix.Connection.Topology.t()}
-  def request_topology(node_pids, database) do
+  def request_topology(node_pid, database) do
     Logger.debug(
       "[RAVIX] Requesting the cluster topology for the database '#{inspect(database)}'"
     )
 
-    topology =
-      node_pids
-      |> Enum.map(fn node ->
-        RequestExecutor.execute_for_node(
-          %GetTopology{database_name: database},
-          node,
-          database
-        )
-      end)
-      |> Enum.find(fn topology_response -> elem(topology_response, 0) == :ok end)
-
-    case topology do
+    case RequestExecutor.execute_with_node(%GetTopology{database_name: database}, node_pid) do
       {:ok, response} ->
         topology = %Topology{
           etag: response.data["Etag"],
@@ -136,19 +124,17 @@ defmodule Ravix.Connection.State.Manager do
   @spec connection_id(atom()) :: {:via, Registry, {:connections, atom()}}
   def connection_id(state), do: {:via, Registry, {:connections, state}}
 
-  defp register_nodes(%ConnectionState{} = state) do
-    registered_nodes =
+  defp register_node_pools(%ConnectionState{} = state) do
+    registered_node_pools =
       state.urls
-      |> Enum.map(fn url -> ServerNode.from_url(url, state) end)
-      |> Enum.map(fn node ->
-        RequestExecutor.Supervisor.register_node_executor(state.store, node)
-      end)
-      |> Enum.filter(fn pids -> elem(pids, 0) == :ok end)
+      |> Enum.map(&ServerNode.from_url(&1, state))
+      |> Enum.map(&RequestExecutor.Supervisor.register_node_pool(state.store, &1))
+      |> Enum.filter(fn pid -> elem(pid, 0) == :ok end)
       |> Enum.map(fn pid -> elem(pid, 1) end)
 
-    case registered_nodes do
-      pids when is_nil(pids) or pids == [] -> {:error, :no_node_registered}
-      pids -> {:ok, pids}
+    case registered_node_pools do
+      nodes when is_nil(nodes) or nodes == [] -> {:error, :no_node_registered}
+      nodes -> {:ok, nodes}
     end
   end
 end
