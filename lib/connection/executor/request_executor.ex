@@ -115,6 +115,7 @@ defmodule Ravix.Connection.RequestExecutor do
   defp call_raven(executor, command, headers, opts) do
     should_retry = Keyword.get(opts, :retry_on_failure, false)
     retry_backoff = Keyword.get(opts, :retry_backoff, 100)
+    timeout = Keyword.get(opts, :timeout, 15000)
 
     retry_count =
       case should_retry do
@@ -123,7 +124,7 @@ defmodule Ravix.Connection.RequestExecutor do
       end
 
     retry with: constant_backoff(retry_backoff) |> Stream.take(retry_count) do
-      GenServer.call(executor, {:request, command, headers, opts})
+      GenServer.call(executor, {:request, command, headers, opts}, timeout)
     after
       {:ok, result} -> {:ok, result}
       {:non_retryable_error, response} -> {:error, response}

@@ -12,6 +12,7 @@ defmodule Ravix.Connection.ServerNode do
       - database: For which database is this executor
       - cluster_tag: Tag of this node in the RavenDB cluster
       - healthcheck_every: Checks the node health every x seconds
+      - timeout: Maximum amount of time to wait for a execution (in ms)
       - opts: General node Options
   """
   defstruct store: nil,
@@ -24,6 +25,7 @@ defmodule Ravix.Connection.ServerNode do
             database: nil,
             cluster_tag: nil,
             healthcheck_every: 60,
+            timeout: 15000,
             state: :initializing,
             opts: []
 
@@ -41,6 +43,7 @@ defmodule Ravix.Connection.ServerNode do
           database: String.t(),
           cluster_tag: String.t() | nil,
           healthcheck_every: non_neg_integer(),
+          timeout: non_neg_integer(),
           state: :healthy | :unhealthy | :initializing,
           opts: keyword()
         }
