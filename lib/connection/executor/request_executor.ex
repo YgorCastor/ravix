@@ -115,8 +115,8 @@ defmodule Ravix.Connection.RequestExecutor do
     poolboy_config = [
       {:name, pool_registry(node)},
       {:worker_module, Ravix.Connection.RequestExecutor.Worker},
-      {:size, 2},
-      {:max_overflow, 1}
+      {:size, node.min_pool_size},
+      {:max_overflow, node.max_pool_size}
     ]
 
     executor_config =
