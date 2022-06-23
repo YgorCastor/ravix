@@ -419,7 +419,7 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
-  defp healthcheck(node) do
+  defp healthcheck(%ServerNode{conn: %{state: :closed}} = node) do
     node =
       case connect(node) do
         {:ok, node} ->
@@ -433,5 +433,11 @@ defmodule Ravix.Connection.RequestExecutor do
     Process.send_after(self(), :healthcheck, :timer.seconds(node.healthcheck_every))
 
     node
+  end
+
+  defp healthcheck(node) do
+    Process.send_after(self(), :healthcheck, :timer.seconds(node.healthcheck_every))
+
+    %ServerNode{node | state: :healthy}
   end
 end

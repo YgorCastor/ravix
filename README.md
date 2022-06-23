@@ -1,6 +1,8 @@
 ![ravix_logo](https://user-images.githubusercontent.com/1266053/148282743-79994640-4b15-4ffb-b477-5d0ed18072f9.png)
 
 [![Elixir CI](https://github.com/YgorCastor/ravix/actions/workflows/elixir.yml/badge.svg)](https://github.com/YgorCastor/ravix/actions/workflows/elixir.yml) [![Coverage Status](https://coveralls.io/repos/github/YgorCastor/ravix/badge.svg)](https://coveralls.io/github/YgorCastor/ravix)
+[![Hex](https://img.shields.io/hexpm/v/ravix?style=flat-square)](https://hex.pm/packages/ravix)
+
 
 # Ravix
 
@@ -13,7 +15,7 @@ Ravix is a in-development project to implement a client for the amazing [RavenDB
 Add Ravix to your mix.exs dependencies
 
 ```elixir
-{:ravix, "~> 0.1"}
+{:ravix, "~> 0.2.1"}
 ```
 
 ## Setting up your Repository
