@@ -422,7 +422,7 @@ defmodule Ravix.Connection.RequestExecutor do
   defp healthcheck(node) do
     node =
       case connect(node) do
-        {:ok, _} ->
+        {:ok, node} ->
           %ServerNode{node | state: :healthy}
 
         _ ->
