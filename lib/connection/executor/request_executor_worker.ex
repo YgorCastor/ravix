@@ -20,7 +20,7 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
   """
   def init(%ServerNode{} = node) do
     Logger.info(
-      "[RAVIX] Connecting to node '#{inspect(node.url)}' for store '#{inspect(node.store)}'"
+      "[RAVIX] Connecting to node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}' PID: #{inspect(self())}"
     )
 
     Registry.register(:request_executors, node.store, [])
@@ -32,8 +32,7 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
   end
 
   def start_link(opts) do
-    node = struct!(ServerNode, opts)
-    GenServer.start_link(__MODULE__, node)
+    GenServer.start_link(__MODULE__, struct!(ServerNode, opts))
   end
 
   ####################
@@ -51,7 +50,7 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
   def handle_info(message, %ServerNode{} = node) do
     case Mint.HTTP.stream(node.conn, message) do
       :unknown ->
-        _ = Logger.error(fn -> "Received unknown message: " <> inspect(message) end)
+        _ = Logger.error(fn -> "[RAVIX] Received unknown message: " <> inspect(message) end)
         {:noreply, node}
 
       {:ok, conn, responses} ->
@@ -64,14 +63,14 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
 
         _ =
           Logger.error(fn ->
-            "Received error message: " <> inspect(message) <> " " <> inspect(error)
+            "[RAVIX] Received error message: " <> inspect(message) <> " " <> inspect(error)
           end)
 
         {:noreply, node}
 
       {:error, _conn, error, _headers} when is_struct(error, Mint.TransportError) ->
         Logger.debug(
-          "The connection with the node #{inspect(node.url)} for the store #{inspect(node.store)} timed out gracefully"
+          "[RAVIX] The connection with the node '#{inspect(node.url)}:#{inspect(node.port)}' for the store '#{inspect(node.store)}' timed out gracefully"
         )
 
         {:stop, :normal, node}
@@ -249,7 +248,7 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
 
       {:error, reason} ->
         Logger.error(
-          "[RAVIX] Unable to connect to the node '#{inspect(node.url)} for store '#{inspect(node.store)}', cause: #{inspect(reason)}'"
+          "[RAVIX] Unable to connect to the node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}', cause: #{inspect(reason)}'"
         )
 
         {:error, reason}

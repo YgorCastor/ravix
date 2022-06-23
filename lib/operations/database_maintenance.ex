@@ -10,7 +10,7 @@ defmodule Ravix.Operations.Database.Maintenance do
     GetStatisticsCommand
   }
 
-  alias Ravix.Connection.RequestExecutor
+  alias Ravix.Connection.{RequestExecutor, NodeSelector}
 
   @doc """
   Creates a database using the informed request executor
@@ -47,9 +47,7 @@ defmodule Ravix.Operations.Database.Maintenance do
   def create_database(store_or_pid, database_name, opts \\ [])
 
   def create_database(store, database_name, opts) when is_atom(store) do
-    {node_pid, _} = RequestExecutor.Supervisor.fetch_nodes(store) |> Enum.at(0)
-
-    create_database(node_pid, database_name, opts)
+    create_database(NodeSelector.random_node_for(store), database_name, opts)
   end
 
   def create_database(node_pid, database_name, opts) when is_pid(node_pid) do
@@ -61,11 +59,7 @@ defmodule Ravix.Operations.Database.Maintenance do
           Disabled: Keyword.get(opts, :disabled, false),
           ReplicationFactor: Keyword.get(opts, :replication_factor, 1)
         }
-        |> RequestExecutor.execute_with_node(
-          node_pid,
-          {},
-          opts
-        )
+        |> RequestExecutor.execute_with_node(node_pid)
     after
       response.data
     end
@@ -75,9 +69,7 @@ defmodule Ravix.Operations.Database.Maintenance do
   def delete_database(store_or_pid, database_name, opts \\ [])
 
   def delete_database(store, database_name, opts) when is_atom(store) do
-    {node_pid, _} = RequestExecutor.Supervisor.fetch_nodes(store) |> Enum.at(0)
-
-    delete_database(node_pid, database_name, opts)
+    delete_database(NodeSelector.random_node_for(store), database_name, opts)
   end
 
   def delete_database(node_pid, database_name, opts) when is_pid(node_pid) do
@@ -102,9 +94,7 @@ defmodule Ravix.Operations.Database.Maintenance do
   def database_stats(store_or_pid, database_name \\ nil, opts \\ [])
 
   def database_stats(store, database_name, opts) when is_atom(store) do
-    {node_pid, _} = RequestExecutor.Supervisor.fetch_nodes(store) |> Enum.at(0)
-
-    database_stats(node_pid, database_name, opts)
+    database_stats(NodeSelector.random_node_for(store), database_name, opts)
   end
 
   def database_stats(node_pid, database_name, opts) when is_pid(node_pid) do
@@ -114,11 +104,7 @@ defmodule Ravix.Operations.Database.Maintenance do
           debugTag: Keyword.get(opts, :debug_tag, ""),
           databaseName: database_name
         }
-        |> RequestExecutor.execute_with_node(
-          node_pid,
-          {},
-          opts
-        )
+        |> RequestExecutor.execute_with_node(node_pid)
     after
       response.data
     end
