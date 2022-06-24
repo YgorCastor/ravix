@@ -121,7 +121,7 @@ defmodule Ravix.Documents.SessionTest do
           _ <- Session.store(session_id, any_entity, "custom_key")
           _ <- Session.save_changes(session_id)
           _ <- Session.load(session_id, "custom_key")
-          _ <- Session.store(session_id, any_entity, "custom_key", nil, [upsert: false])
+          _ <- Session.store(session_id, any_entity, "custom_key", nil, upsert: false)
         after
         end
     end

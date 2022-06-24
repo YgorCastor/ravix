@@ -18,7 +18,8 @@ defmodule Ravix.Connection.State do
      - last_topology_update: DateTime when the topology was last updated
      - cluster_token: Security Token for the members of the cluster
      - timeout: Maximum amount of time to wait for a execution (in ms)
-     - healthcheck_every: Checks the node health every x seconds
+     - min_pool_size: Minimum amount of parallel connections to the node
+     - max_pool_size: Maximum amount of parallel connections to the node
   """
   defstruct store: nil,
             database: nil,
@@ -35,7 +36,8 @@ defmodule Ravix.Connection.State do
             force_create_database: false,
             last_topology_update: nil,
             timeout: 15000,
-            healthcheck_every: 60,
+            min_pool_size: 1,
+            max_pool_size: 10,
             cluster_token: nil
 
   use Vex.Struct
@@ -56,7 +58,8 @@ defmodule Ravix.Connection.State do
           force_create_database: boolean(),
           last_topology_update: DateTime.t() | nil,
           timeout: non_neg_integer(),
-          healthcheck_every: non_neg_integer(),
+          min_pool_size: non_neg_integer(),
+          max_pool_size: non_neg_integer(),
           cluster_token: String.t() | nil
         }
 

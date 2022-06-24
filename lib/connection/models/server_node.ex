@@ -11,7 +11,8 @@ defmodule Ravix.Connection.ServerNode do
       - protocol: http or https
       - database: For which database is this executor
       - cluster_tag: Tag of this node in the RavenDB cluster
-      - healthcheck_every: Checks the node health every x seconds
+      - min_pool_size: Minimum amount of parallel connections to the node
+      - max_pool_size: Maximum amount of parallel connections to the node
       - timeout: Maximum amount of time to wait for a execution (in ms)
       - opts: General node Options
   """
@@ -24,9 +25,9 @@ defmodule Ravix.Connection.ServerNode do
             protocol: nil,
             database: nil,
             cluster_tag: nil,
-            healthcheck_every: 60,
+            min_pool_size: 1,
+            max_pool_size: 10,
             timeout: 15000,
-            state: :initializing,
             opts: []
 
   alias Ravix.Connection.ServerNode
@@ -42,9 +43,9 @@ defmodule Ravix.Connection.ServerNode do
           protocol: atom(),
           database: String.t(),
           cluster_tag: String.t() | nil,
-          healthcheck_every: non_neg_integer(),
+          min_pool_size: non_neg_integer(),
+          max_pool_size: non_neg_integer(),
           timeout: non_neg_integer(),
-          state: :healthy | :unhealthy | :initializing,
           opts: keyword()
         }
 
@@ -55,7 +56,8 @@ defmodule Ravix.Connection.ServerNode do
   def from_url(url, %ConnectionState{
         ssl_config: ssl_config,
         database: database,
-        healthcheck_every: healthcheck_every
+        max_pool_size: max_pool_size,
+        min_pool_size: min_pool_size
       }) do
     parsed_url = URI.new!(url)
 
@@ -64,7 +66,8 @@ defmodule Ravix.Connection.ServerNode do
       port: parsed_url.port,
       protocol: String.to_atom(parsed_url.scheme),
       ssl_config: ssl_config,
-      healthcheck_every: healthcheck_every,
+      min_pool_size: min_pool_size,
+      max_pool_size: max_pool_size,
       database: database
     }
   end
