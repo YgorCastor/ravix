@@ -23,7 +23,8 @@ defmodule Ravix.Connection.RequestExecutor do
   - `{:ok, Ravix.Connection.Response}` for a successful call
   - `{:error, cause}` if the request fails
   """
-  @spec execute(map, ConnectionState.t(), any, keyword) :: {:error, any} | {:ok, Response.t()}
+  @spec execute(struct(), ConnectionState.t(), tuple(), keyword()) ::
+          {:ok, Response.t()} | {:error, any}
   def execute(
         command,
         %ConnectionState{} = conn_state,
@@ -57,10 +58,14 @@ defmodule Ravix.Connection.RequestExecutor do
   - `{:ok, Ravix.Connection.Response}` for a successful call
   - `{:error, cause}` if the request fails
   """
+  @spec execute_with_node(struct(), pid(), tuple(), keyword()) ::
+          {:ok, Response.t()} | {:error, any()}
   def execute_with_node(command, pid, headers \\ {}, opts \\ []) do
     call_raven(pid, command, headers, opts)
   end
 
+  @spec execute_with_node_pool(struct(), binary(), tuple(), keyword()) ::
+          {:ok, Response.t()} | {:error, any()}
   def execute_with_node_pool(command, pool_name, headers, opts) do
     :poolboy.transaction(
       pool_id(pool_name),
@@ -70,6 +75,7 @@ defmodule Ravix.Connection.RequestExecutor do
     )
   end
 
+  @spec call_raven(pid(), struct(), tuple(), keyword) :: {:ok, Response.t()} | {:error, any()}
   defp call_raven(pid, command, headers, opts) do
     should_retry = Keyword.get(opts, :retry_on_failure, false)
     retry_backoff = Keyword.get(opts, :retry_backoff, 100)

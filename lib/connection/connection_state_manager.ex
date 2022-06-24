@@ -37,7 +37,7 @@ defmodule Ravix.Connection.State.Manager do
               "[RAVIX] Forcing the database creation is enabled, it will create the #{inspect(state.database)} if it does not exists"
             )
 
-            NodeSelector.random_node_for(state.store)
+            NodeSelector.random_executor_for(state.store)
             |> DatabaseMaintenance.create_database(state.database)
 
           false ->
@@ -66,7 +66,7 @@ defmodule Ravix.Connection.State.Manager do
   def update_topology(%ConnectionState{} = state) do
     OK.for do
       Logger.debug("[RAVIX] Updating the topology for the store '#{inspect(state.store)}'")
-      random_node = NodeSelector.random_node_for(state.store)
+      random_node = NodeSelector.random_executor_for(state.store)
       topology <- __MODULE__.request_topology(random_node, state.database)
       _ = ExecutorSupervisor.update_topology(state.store, topology)
 

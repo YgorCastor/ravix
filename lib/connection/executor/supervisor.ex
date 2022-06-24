@@ -46,14 +46,12 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   end
 
   @doc """
-  Fetches the nodes running for a specific store
+  Fetch the Node pools for the informed store
 
   ## Parameters
   - store: the store module: E.g: Ravix.Test.Store
-
-  ## Returns
-  - list(pids)
   """
+  @spec fetch_node_pools(atom()) :: list({pid(), binary(), ServerNode.t()})
   def fetch_node_pools(store) do
     Registry.select(:request_executor_pools, [
       {{:"$1", :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}
@@ -62,8 +60,14 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
     |> Enum.map(fn {pool_name, pid, node} -> {pid, pool_name, node} end)
   end
 
-  @spec fetch_nodes(atom()) :: list(pid())
-  def fetch_nodes(store) do
+  @doc """
+  Fetch all the executors for the informed Store
+
+  ## Parameters
+  - store: the store module: E.g: Ravix.Test.Store
+  """
+  @spec fetch_executors(atom()) :: list(pid())
+  def fetch_executors(store) do
     Registry.select(:request_executors, [{{:"$1", :"$2", :"$3"}, [], [{{:"$1", :"$2"}}]}])
     |> Enum.filter(fn {executor_store, _pid} -> executor_store == store end)
     |> Enum.map(fn {_executor_store, pid} -> pid end)

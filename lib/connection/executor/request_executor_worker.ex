@@ -18,6 +18,15 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
   The process will take care of the connection state, if the connection closes, the process
   will die automatically
   """
+  @spec init(Ravix.Connection.ServerNode.t()) ::
+          {:ok, Ravix.Connection.ServerNode.t()}
+          | {:stop,
+             %{
+               :__exception__ => any,
+               :__struct__ => Mint.HTTPError | Mint.TransportError,
+               :reason => any,
+               optional(:module) => any
+             }}
   def init(%ServerNode{} = node) do
     Logger.info(
       "[RAVIX] Connecting to node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}' PID: #{inspect(self())}"
@@ -31,6 +40,7 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
     end
   end
 
+  @spec start_link(keyword()) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(opts) do
     GenServer.start_link(__MODULE__, struct!(ServerNode, opts))
   end
@@ -241,14 +251,14 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
     case Mint.HTTP.connect(node.protocol, node.url, node.port, conn_params) do
       {:ok, conn} ->
         Logger.debug(
-          "[RAVIX] Connected to node '#{inspect(node.url)}' for store '#{inspect(node.store)}'"
+          "[RAVIX] Connected to node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}'"
         )
 
         {:ok, %ServerNode{node | conn: conn}}
 
       {:error, reason} ->
         Logger.error(
-          "[RAVIX] Unable to connect to the node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}', cause: #{inspect(reason)}'"
+          "[RAVIX] Unable to connect to the node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}', cause: #{inspect(reason)}"
         )
 
         {:error, reason}
