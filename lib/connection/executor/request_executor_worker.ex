@@ -28,7 +28,7 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
                optional(:module) => any
              }}
   def init(%ServerNode{} = node) do
-    Logger.info(
+    Logger.debug(
       "[RAVIX] Connecting to node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}' PID: #{inspect(self())}"
     )
 
@@ -53,7 +53,20 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
 
     case maximum_url_length_reached?(opts, request.url) do
       true -> {:reply, {:error, :maximum_url_length_reached}, node}
-      false -> exec_request(node, from, request, command, headers, opts)
+      false -> exec_request(node, from, request, headers, opts)
+    end
+  end
+
+  def handle_call({:read_request_buffer, request_ref}, _from, %ServerNode{} = node) do
+    case node.requests[request_ref] do
+      nil ->
+        {:reply, {:ok, :halt}, node}
+
+      %{from: _, response: %{data: data}} ->
+        {:reply, {:ok, data}, put_in(node.requests[request_ref].response[:data], "")}
+
+      %{from: _, response: _} ->
+        {:reply, {:ok, ""}, node}
     end
   end
 
@@ -87,25 +100,20 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
     end
   end
 
-  def handle_cast({:update_cluster_tag, cluster_tag}, %ServerNode{} = node) do
-    {:noreply, %ServerNode{node | cluster_tag: cluster_tag}}
-  end
-
   defp exec_request(
          %ServerNode{conn: %{state: :closed}} = node,
          from,
          request,
-         command,
          headers,
          opts
        ) do
     case connect(node) do
-      {:ok, node} -> exec_request(node, from, request, command, headers, opts)
+      {:ok, node} -> exec_request(node, from, request, headers, opts)
       _ -> {:error, :node_unreachable}
     end
   end
 
-  defp exec_request(%ServerNode{} = node, from, request, command, headers, opts) do
+  defp exec_request(%ServerNode{} = node, from, request, headers, opts) do
     case Mint.HTTP.request(
            node.conn,
            request.method,
@@ -115,13 +123,21 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
          ) do
       {:ok, conn, request_ref} ->
         Logger.debug(
-          "[RAVIX] Executing command #{inspect(command)} under the request '#{inspect(request_ref)}' for the store #{inspect(node.store)}"
+          "[RAVIX] Executing command #{inspect(request)} under the request '#{inspect(request_ref)}' for the store #{inspect(node.store)}"
         )
 
         node = put_in(node.conn, conn)
         node = put_in(node.requests[request_ref], %{from: from, response: %{}})
         node = put_in(node.opts, opts)
-        {:noreply, node}
+
+        case request.is_stream do
+          true ->
+            {:reply, {:ok, request_ref},
+             put_in(node.request_options[request_ref], stream: request.is_stream)}
+
+          false ->
+            {:noreply, node}
+        end
 
       {:error, conn, reason} ->
         state = put_in(node.conn, conn)

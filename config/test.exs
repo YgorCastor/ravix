@@ -64,7 +64,6 @@ config :ravix, Ravix.Test.ClusteredStore,
   retry_backoff: 100,
   retry_count: 3,
   force_create_database: true,
-  healthcheck_every: 5,
   document_conventions: %{
     max_number_of_requests_per_session: 2,
     max_ids_to_catch: 4,

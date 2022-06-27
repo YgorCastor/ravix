@@ -7,24 +7,16 @@ defmodule Ravix.Documents.Commands.RavenCommand do
   - method: HTTP Method
   - data: The json body payload
   - headers: HTTP headers to send to Raven
+  - is_stream: If the request should be streammed
   - is_read_request: If this request is read_only
-  - use_stream: If the request will use HTTP/2 stream
-  - timeout: Timeout for this command in ms
-  - files: Files to attach
-  - is_raft_request: If the request will be executed using Rachi Consensus
-  - raft_unique_request_id: The rachi consensus id for this request
   """
   @base_fields [
     url: nil,
     method: nil,
     data: nil,
     headers: [],
-    is_read_request: false,
-    use_stream: false,
-    timeout: nil,
-    files: [],
-    is_raft_request: false,
-    raft_unique_request_id: nil
+    is_stream: false,
+    is_read_request: false
   ]
   defmacro __using__(fields) do
     fields = @base_fields ++ fields

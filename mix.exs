@@ -44,6 +44,7 @@ defmodule Ravix.MixProject do
     [
       {:mint, "~> 1.4"},
       {:jason, "~> 1.3"},
+      {:jaxon, "~> 2.0"},
       {:vex, "~> 0.9"},
       {:mappable, "~> 0.2"},
       {:elixir_uuid, "~> 1.2"},
