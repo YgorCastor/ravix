@@ -29,7 +29,7 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
              }}
   def init(%ServerNode{} = node) do
     Logger.debug(
-      "[RAVIX] Connecting to node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}' PID: #{inspect(self())}"
+      "[RAVIX] Creating a connection to node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}'"
     )
 
     Registry.register(:request_executors, node.store, [])

@@ -184,6 +184,16 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:execute_query, query, method}, :infinity)
   end
 
+  @doc """
+  Executes a query in RavenDB and stream the response
+
+  ## Paremeters
+  - query: The `Ravix.RQL.Query` to be executed
+  - session_id: the session_id
+  - method: The http method
+
+  Returns a enumerable with the "Results" field of the RavenDB Query Response
+  """
   @spec stream_query(any, binary) :: Enumerable.t()
   def stream_query(query, session_id) do
     session_id

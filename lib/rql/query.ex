@@ -369,6 +369,33 @@ defmodule Ravix.RQL.Query do
     execute_for(query, session_id, "POST", false)
   end
 
+  @doc """
+  Executes the query in the informed session and returns the matched documents
+
+  Returns a [RavenDB response](https://ravendb.net/docs/article-page/4.2/java/client-api/rest-api/queries/query-the-database#response-format) map
+
+  ## Examples
+      iex> stream = from("Cats")
+            |> select("name")
+            |> where(equal_to("name", cat.name))
+            |> stream_all(session_id)
+
+          stream |> Enum.to_list()
+          [
+              %{
+                "@metadata" => %{
+                "@change-vector" => "A:6445-HJrwf2z3c0G/FHJPm3zK3w",
+                "@id" => "beee79e2-2560-408c-a680-253e9bd7d12e",
+                "@index-score" => 3.079441547393799,
+                "@last-modified" => "2022-04-22T20:03:03.7477980Z",
+                "@projection" => true
+              },
+              "name" => "Lily"
+            }
+          ]
+
+  """
+  @spec stream_all(Ravix.RQL.Query.t(), binary()) :: any
   def stream_all(%Query{} = query, session_id) do
     execute_for(query, session_id, "GET", true)
   end

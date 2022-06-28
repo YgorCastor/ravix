@@ -20,11 +20,12 @@ defmodule Ravix.Connection.RequestExecutor do
   - opts: Request options
 
   ## Returns
-  - `{:ok, Ravix.Connection.Response}` for a successful call
+  - `{:ok, Ravix.Connection.Response}` for a successful synchronous call
+  - `{:ok, Enumerable}` if it's a streammed command
   - `{:error, cause}` if the request fails
   """
   @spec execute(struct(), ConnectionState.t(), tuple(), keyword()) ::
-          {:ok, Response.t()} | {:error, any}
+          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   def execute(
         command,
         %ConnectionState{} = conn_state,
@@ -49,22 +50,38 @@ defmodule Ravix.Connection.RequestExecutor do
   ## Parameters
 
   - command: The command that will be executed, must be a RavenCommand
-  - pid_or_pool_name: The PID or the Pool Name
+  - pid: The PID of the node
   - headers: HTTP headers to send to RavenDB
   - opts: Request options
 
   ## Returns
-  - `{:ok, Ravix.Connection.Response}` for a successful call
+  - `{:ok, Ravix.Connection.Response}` for a successful synchronous call
+  - `{:ok, Enumerable}` if it's a streammed command
   - `{:error, cause}` if the request fails
   """
   @spec execute_with_node(struct(), pid(), tuple(), keyword()) ::
-          {:ok, Response.t()} | {:error, any()}
+          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   def execute_with_node(command, pid, headers \\ {}, opts \\ []) do
     call_raven(pid, command, headers, opts)
   end
 
+  @doc """
+  Executes a RavenDB command in any node of the informed pool
+
+  ## Parameters
+
+  - command: The command that will be executed, must be a RavenCommand
+  - pool_name: The Pool name
+  - headers: HTTP headers to send to RavenDB
+  - opts: Request options
+
+  ## Returns
+  - `{:ok, Ravix.Connection.Response}` for a successful synchronous call
+  - `{:ok, Enumerable}` if it's a streammed command
+  - `{:error, cause}` if the request fails
+  """
   @spec execute_with_node_pool(struct(), binary(), tuple(), keyword()) ::
-          {:ok, Response.t()} | {:error, any()}
+          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   def execute_with_node_pool(command, pool_name, headers, opts) do
     :poolboy.transaction(
       pool_id(pool_name),
