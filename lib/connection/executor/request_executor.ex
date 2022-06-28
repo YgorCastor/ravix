@@ -74,7 +74,8 @@ defmodule Ravix.Connection.RequestExecutor do
     )
   end
 
-  # @spec call_raven(pid(), struct(), tuple(), keyword) :: {:ok, Response.t()} | {:error, any()}
+  @spec call_raven(pid(), struct(), tuple(), keyword()) ::
+          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   defp call_raven(pid, %{is_stream: false} = command, headers, opts) do
     should_retry = Keyword.get(opts, :retry_on_failure, false)
     retry_backoff = Keyword.get(opts, :retry_backoff, 100)

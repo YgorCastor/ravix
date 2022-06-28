@@ -184,7 +184,7 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:execute_query, query, method}, :infinity)
   end
 
-  @spec stream_query(any, binary) :: Stream.t()
+  @spec stream_query(any, binary) :: Enumerable.t()
   def stream_query(query, session_id) do
     session_id
     |> session_id()

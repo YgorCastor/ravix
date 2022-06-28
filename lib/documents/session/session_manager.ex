@@ -161,7 +161,7 @@ defmodule Ravix.Documents.Session.Manager do
     end
   end
 
-  @spec stream_query(SessionState.t(), Query.t(), any) :: {:error, any} | {:ok, Stream.t()}
+  @spec stream_query(SessionState.t(), Query.t(), any) :: {:error, any} | {:ok, Enumerable.t()}
   def stream_query(%SessionState{} = session_state, %Query{} = query, "GET") do
     OK.for do
       network_state <- Connection.fetch_state(session_state.store)
