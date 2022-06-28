@@ -196,5 +196,6 @@ tags
 .ionide
 
 # Support for Project snippet scope
+.envrc
 
 # End of https://www.toptal.com/developers/gitignore/api/elixir,macos,intellij,visualstudiocode,vim

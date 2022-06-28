@@ -20,11 +20,12 @@ defmodule Ravix.Connection.RequestExecutor do
   - opts: Request options
 
   ## Returns
-  - `{:ok, Ravix.Connection.Response}` for a successful call
+  - `{:ok, Ravix.Connection.Response}` for a successful synchronous call
+  - `{:ok, Enumerable}` if it's a streammed command
   - `{:error, cause}` if the request fails
   """
   @spec execute(struct(), ConnectionState.t(), tuple(), keyword()) ::
-          {:ok, Response.t()} | {:error, any}
+          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   def execute(
         command,
         %ConnectionState{} = conn_state,
@@ -49,23 +50,38 @@ defmodule Ravix.Connection.RequestExecutor do
   ## Parameters
 
   - command: The command that will be executed, must be a RavenCommand
-  - url: The Url of the node where the command will be executed
-  - database: The database name
+  - pid: The PID of the node
   - headers: HTTP headers to send to RavenDB
   - opts: Request options
 
   ## Returns
-  - `{:ok, Ravix.Connection.Response}` for a successful call
+  - `{:ok, Ravix.Connection.Response}` for a successful synchronous call
+  - `{:ok, Enumerable}` if it's a streammed command
   - `{:error, cause}` if the request fails
   """
   @spec execute_with_node(struct(), pid(), tuple(), keyword()) ::
-          {:ok, Response.t()} | {:error, any()}
+          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   def execute_with_node(command, pid, headers \\ {}, opts \\ []) do
     call_raven(pid, command, headers, opts)
   end
 
+  @doc """
+  Executes a RavenDB command in any node of the informed pool
+
+  ## Parameters
+
+  - command: The command that will be executed, must be a RavenCommand
+  - pool_name: The Pool name
+  - headers: HTTP headers to send to RavenDB
+  - opts: Request options
+
+  ## Returns
+  - `{:ok, Ravix.Connection.Response}` for a successful synchronous call
+  - `{:ok, Enumerable}` if it's a streammed command
+  - `{:error, cause}` if the request fails
+  """
   @spec execute_with_node_pool(struct(), binary(), tuple(), keyword()) ::
-          {:ok, Response.t()} | {:error, any()}
+          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   def execute_with_node_pool(command, pool_name, headers, opts) do
     :poolboy.transaction(
       pool_id(pool_name),
@@ -75,8 +91,9 @@ defmodule Ravix.Connection.RequestExecutor do
     )
   end
 
-  @spec call_raven(pid(), struct(), tuple(), keyword) :: {:ok, Response.t()} | {:error, any()}
-  defp call_raven(pid, command, headers, opts) do
+  @spec call_raven(pid(), struct(), tuple(), keyword()) ::
+          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
+  defp call_raven(pid, %{is_stream: false} = command, headers, opts) do
     should_retry = Keyword.get(opts, :retry_on_failure, false)
     retry_backoff = Keyword.get(opts, :retry_backoff, 100)
     timeout = Keyword.get(opts, :timeout, 15000)
@@ -98,6 +115,28 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
+  defp call_raven(pid, command, headers, opts) do
+    init_request = fn ->
+      GenServer.call(pid, {:request, command, headers, opts})
+    end
+
+    read_buffer = fn {:ok, request_ref} ->
+      case GenServer.call(pid, {:read_request_buffer, request_ref}) do
+        {:ok, :halt} -> {:halt, {:ok, request_ref}}
+        {:ok, chunk} -> {[chunk], {:ok, request_ref}}
+      end
+    end
+
+    no_op = fn _request_ref ->
+      nil
+    end
+
+    {:ok,
+     Stream.resource(init_request, read_buffer, no_op)
+     |> Jaxon.Stream.from_enumerable()
+     |> Jaxon.Stream.query([:root, "Results", :all])}
+  end
+
   @doc """
   Fetches the current node executor state
 
@@ -108,7 +147,7 @@ defmodule Ravix.Connection.RequestExecutor do
   - `{:ok, Ravix.Connection.ServerNode}` if there's a node
   - `{:error, :node_not_found}` if there's not a node with the informed pid
   """
-  @spec fetch_node_state(bitstring | pid) :: {:ok, ServerNode.t()} | {:error, :node_not_found}
+  @spec fetch_node_state(pid) :: {:ok, ServerNode.t()} | {:error, :node_not_found}
   def fetch_node_state(pid) when is_pid(pid) do
     try do
       {:ok, pid |> :sys.get_state()}
@@ -117,6 +156,7 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
+  @spec start_link(any, ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(_attrs, %ServerNode{} = node) do
     poolboy_config = [
       {:name, pool_registry(node)},
@@ -136,6 +176,10 @@ defmodule Ravix.Connection.RequestExecutor do
     )
   end
 
+  @spec child_spec(ServerNode.t()) :: %{
+          id: atom,
+          start: {RequestExecutor, :start_link, [map, ...]}
+        }
   def child_spec(%ServerNode{} = node) do
     %{
       id: String.to_atom(node.url <> "_" <> node.database),

@@ -184,6 +184,23 @@ defmodule Ravix.Documents.Session do
     |> GenServer.call({:execute_query, query, method}, :infinity)
   end
 
+  @doc """
+  Executes a query in RavenDB and stream the response
+
+  ## Paremeters
+  - query: The `Ravix.RQL.Query` to be executed
+  - session_id: the session_id
+  - method: The http method
+
+  Returns a enumerable with the "Results" field of the RavenDB Query Response
+  """
+  @spec stream_query(any, binary) :: Enumerable.t()
+  def stream_query(query, session_id) do
+    session_id
+    |> session_id()
+    |> GenServer.call({:stream_query, query, "GET"})
+  end
+
   @spec session_id(String.t()) :: {:via, Registry, {:sessions, String.t()}}
   defp session_id(id) when id != nil, do: {:via, Registry, {:sessions, id}}
 
@@ -266,6 +283,14 @@ defmodule Ravix.Documents.Session do
     {:noreply,
      %SessionState{state | running_queries: Map.put(state.running_queries, reference, from)}
      |> SessionState.update_last_session_call()}
+  end
+
+  def handle_call({:stream_query, query, method}, _from, %SessionState{} = state) do
+    {
+      :reply,
+      SessionManager.stream_query(state, query, method),
+      state |> SessionState.update_last_session_call()
+    }
   end
 
   def handle_cast({:query_processed, reference, response}, %SessionState{} = state) do

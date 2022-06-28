@@ -6,7 +6,14 @@ defmodule Ravix.Documents.Session.Manager do
 
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.{SaveChangesData, Validations}
-  alias Ravix.Documents.Commands.{BatchCommand, GetDocumentsCommand, ExecuteQueryCommand}
+
+  alias Ravix.Documents.Commands.{
+    BatchCommand,
+    GetDocumentsCommand,
+    ExecuteQueryCommand,
+    ExecuteStreamQueryCommand
+  }
+
   alias Ravix.Documents.Metadata
   alias Ravix.Connection
   alias Ravix.Connection.State, as: ConnectionState
@@ -151,6 +158,24 @@ defmodule Ravix.Documents.Session.Manager do
       result <- RequestExecutor.execute(command, network_state)
     after
       result.data
+    end
+  end
+
+  @spec stream_query(SessionState.t(), Query.t(), any) :: {:error, any} | {:ok, Enumerable.t()}
+  def stream_query(%SessionState{} = session_state, %Query{} = query, "GET") do
+    OK.for do
+      network_state <- Connection.fetch_state(session_state.store)
+
+      command = %ExecuteStreamQueryCommand{
+        Query: query.query_string,
+        QueryParameters: query.query_params,
+        method: "GET",
+        is_stream: true
+      }
+
+      stream <- RequestExecutor.execute(command, network_state)
+    after
+      stream
     end
   end
 

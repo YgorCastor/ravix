@@ -510,4 +510,41 @@ defmodule Ravix.RQL.QueryTest do
       assert updated_cat["cat_name"] == "Fluffer, the hand-ripper"
     end
   end
+
+  describe "stream_query/2" do
+    test "should stream a query in a non-blocking way" do
+      glaring = build_list(1000, :cat_entity)
+
+      {:ok, stream} =
+        OK.for do
+          batches = Enum.chunk_every(glaring, 30)
+
+          _ =
+            batches
+            |> Enum.each(fn batch ->
+              {:ok, session_id} = Store.open_session()
+
+              batch
+              |> Enum.map(fn cat ->
+                Session.store(session_id, cat)
+              end)
+
+              _ = Session.save_changes(session_id)
+              _ = Store.close_session(session_id)
+            end)
+
+          session_id <- Store.open_session()
+
+          stream <-
+            from("Cats")
+            |> stream_all(session_id)
+        after
+          stream
+        end
+
+      result = Enum.to_list(stream)
+
+      assert 1000 = length(result)
+    end
+  end
 end

@@ -366,7 +366,38 @@ defmodule Ravix.RQL.Query do
   """
   @spec list_all(Query.t(), binary) :: {:error, any} | {:ok, any}
   def list_all(%Query{} = query, session_id) do
-    execute_for(query, session_id, "POST")
+    execute_for(query, session_id, "POST", false)
+  end
+
+  @doc """
+  Executes the query in the informed session and returns the matched documents
+
+  Returns a [RavenDB response](https://ravendb.net/docs/article-page/4.2/java/client-api/rest-api/queries/query-the-database#response-format) map
+
+  ## Examples
+      iex> stream = from("Cats")
+            |> select("name")
+            |> where(equal_to("name", cat.name))
+            |> stream_all(session_id)
+
+          stream |> Enum.to_list()
+          [
+              %{
+                "@metadata" => %{
+                "@change-vector" => "A:6445-HJrwf2z3c0G/FHJPm3zK3w",
+                "@id" => "beee79e2-2560-408c-a680-253e9bd7d12e",
+                "@index-score" => 3.079441547393799,
+                "@last-modified" => "2022-04-22T20:03:03.7477980Z",
+                "@projection" => true
+              },
+              "name" => "Lily"
+            }
+          ]
+
+  """
+  @spec stream_all(Ravix.RQL.Query.t(), binary()) :: any
+  def stream_all(%Query{} = query, session_id) do
+    execute_for(query, session_id, "GET", true)
   end
 
   @doc """
@@ -382,7 +413,7 @@ defmodule Ravix.RQL.Query do
   """
   @spec delete_for(Query.t(), binary) :: {:error, any} | {:ok, any}
   def delete_for(%Query{} = query, session_id) do
-    execute_for(query, session_id, "DELETE")
+    execute_for(query, session_id, "DELETE", false)
   end
 
   @doc """
@@ -399,17 +430,24 @@ defmodule Ravix.RQL.Query do
   """
   @spec update_for(Query.t(), binary) :: {:error, any} | {:ok, any}
   def update_for(%Query{} = query, session_id) do
-    execute_for(query, session_id, "PATCH")
+    execute_for(query, session_id, "PATCH", false)
   end
 
-  defp execute_for(%Query{is_raw: false} = query, session_id, method) do
+  defp execute_for(%Query{is_raw: false} = query, session_id, method, stream) do
     case QueryParser.parse(query) do
-      {:ok, parsed_query} -> Session.execute_query(parsed_query, session_id, method)
+      {:ok, parsed_query} -> stream_or_list(parsed_query, session_id, method, stream)
       {:error, err} -> {:error, err}
     end
   end
 
-  defp execute_for(%Query{is_raw: true} = query, session_id, method) do
-    Session.execute_query(query, session_id, method)
+  defp execute_for(%Query{is_raw: true} = query, session_id, method, stream) do
+    stream_or_list(query, session_id, method, stream)
+  end
+
+  defp stream_or_list(query, session, method, stream) do
+    case stream do
+      true -> Session.stream_query(query, session)
+      false -> Session.execute_query(query, session, method)
+    end
   end
 end
