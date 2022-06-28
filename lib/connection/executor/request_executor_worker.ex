@@ -58,9 +58,15 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
   end
 
   def handle_call({:read_request_buffer, request_ref}, _from, %ServerNode{} = node) do
+    stream_ended = node.request_options[request_ref].done
+
     case node.requests[request_ref] do
-      nil ->
-        {:reply, {:ok, :halt}, node}
+      %{from: _, response: %{data: ""}} ->
+        if stream_ended do
+          {:reply, {:ok, :halt}, node}
+        else
+          {:reply, {:ok, ""}, node}
+        end
 
       %{from: _, response: %{data: data}} ->
         {:reply, {:ok, data}, put_in(node.requests[request_ref].response[:data], "")}
@@ -133,10 +139,10 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
         case request.is_stream do
           true ->
             {:reply, {:ok, request_ref},
-             put_in(node.request_options[request_ref], stream: request.is_stream)}
+             put_in(node.request_options[request_ref], %{stream: true, done: false})}
 
           false ->
-            {:noreply, node}
+            {:noreply, put_in(node.request_options[request_ref], %{stream: false, done: false})}
         end
 
       {:error, conn, reason} ->
@@ -158,11 +164,23 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
   end
 
   defp process_response({:done, request_ref}, state) do
-    {%{response: response, from: from}, state} = pop_in(state.requests[request_ref])
-    response = put_in(response[:data], decode_body(response[:data]))
+    {response, state, from} =
+      case state.request_options[request_ref].stream do
+        true ->
+          from = state.requests[request_ref].from
+          state = put_in(state.request_options[request_ref].done, true)
+          {:end_stream, state, from}
+
+        false ->
+          {%{response: response, from: from}, state} = pop_in(state.requests[request_ref])
+          {put_in(response[:data], decode_body(response[:data])), state, from}
+      end
 
     parsed_response =
       case response do
+        :end_stream ->
+          {:ok, :end_stream}
+
         %{status: 404} ->
           {:non_retryable_error, :document_not_found}
 
@@ -196,15 +214,16 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
           {:ok, parsed_response}
       end
       |> check_if_needs_topology_update(state)
+      |> reply_if_not_stream(from)
 
     Logger.debug(
       "[RAVIX] Request #{inspect(request_ref)} finished with response #{inspect(parsed_response)}"
     )
 
-    GenServer.reply(from, parsed_response)
-
     state
   end
+
+  defp check_if_needs_topology_update({:ok, :end_stream}, _), do: {:ok, :end_stream}
 
   defp check_if_needs_topology_update({:ok, response}, %ServerNode{} = node) do
     case Enum.find(response.headers, fn header -> elem(header, 0) == "Refresh-Topology" end) do
@@ -217,6 +236,7 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
         )
 
         Connection.update_topology(node.store)
+
         {:ok, response}
     end
   end
@@ -259,6 +279,14 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
     max_url_length = Keyword.get(opts, :max_length_of_query_using_get_url, 1024 + 512)
 
     String.length(url) > max_url_length
+  end
+
+  defp reply_if_not_stream({:ok, :end_stream}, _from) do
+    :ok
+  end
+
+  defp reply_if_not_stream(response, from) do
+    GenServer.reply(from, response)
   end
 
   defp connect(node) do
