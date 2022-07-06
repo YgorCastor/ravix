@@ -40,8 +40,6 @@ defmodule Ravix.Connection.State do
             max_pool_size: 10,
             cluster_token: nil
 
-  use Vex.Struct
-
   @type t :: %Ravix.Connection.State{
           store: any(),
           database: String.t(),
@@ -62,13 +60,4 @@ defmodule Ravix.Connection.State do
           max_pool_size: non_neg_integer(),
           cluster_token: String.t() | nil
         }
-
-  @spec validate_configs(Ravix.Connection.State.t()) ::
-          {:error, list} | {:ok, Ravix.Connection.State.t()}
-  def validate_configs(%Ravix.Connection.State{} = configs) do
-    case Vex.valid?(configs) do
-      true -> {:ok, configs}
-      false -> {:error, Vex.errors(configs)}
-    end
-  end
 end

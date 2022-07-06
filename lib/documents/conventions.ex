@@ -20,8 +20,6 @@ defmodule Ravix.Documents.Conventions do
             session_idle_ttl: 30,
             disable_topology_update: false
 
-  use Vex.Struct
-
   alias Ravix.Documents.Conventions
 
   @type t :: %Conventions{
