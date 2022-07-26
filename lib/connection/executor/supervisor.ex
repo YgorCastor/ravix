@@ -87,6 +87,8 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
           {:new_nodes, list} | {:updated_nodes, list}
         ]
   def update_topology(store, %Topology{} = topology) do
+    Logger.info("[RAVIX] A topology update was requested by the server, updating nodes...")
+
     current_nodes = fetch_node_pools(store)
     remaining_nodes = remove_old_nodes(store, current_nodes, topology)
     updated_nodes = update_existing_nodes(remaining_nodes, topology)
@@ -107,6 +109,8 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
       RequestExecutor.Supervisor.remove_node_pool(store, pid)
     end)
 
+    Logger.info("[RAVIX] Unregistering the nodes '#{nodes_to_delete}'")
+
     current_nodes -- nodes_to_delete
   end
 
@@ -120,12 +124,11 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
        }}
     end)
     |> Enum.map(fn {pid, node} ->
-      RequestExecutor.Supervisor.remove_node_pool(node.store, pid)
-
       Logger.info(
         "[RAVIX] Updating node '#{inspect(node.url)}' for the database '#{inspect(node.database)}' with cluster tag '#{inspect(node.cluster_tag)}'"
       )
 
+      RequestExecutor.Supervisor.remove_node_pool(node.store, pid)
       RequestExecutor.Supervisor.register_node_pool(node.store, node)
     end)
   end

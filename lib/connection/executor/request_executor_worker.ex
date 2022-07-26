@@ -231,7 +231,7 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
         {:ok, response}
 
       _ ->
-        Logger.debug(
+        Logger.info(
           "[RAVIX] The database requested a topology refresh for the store '#{inspect(node.store)}'"
         )
 

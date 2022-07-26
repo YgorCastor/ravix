@@ -27,13 +27,21 @@ defmodule Ravix.Connection.RequestExecutor do
   @spec execute(struct(), ConnectionState.t(), tuple(), keyword()) ::
           {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   def execute(
-        command,
+        %{is_stream: is_stream} = command,
         %ConnectionState{} = conn_state,
         headers \\ {},
         opts \\ []
       ) do
-    pool_name = NodeSelector.current_node(conn_state)
     opts = opts ++ RequestExecutor.Options.from_connection_state(conn_state)
+
+    should_retry = Keyword.get(opts, :retry_on_failure, false) and not is_stream
+    retry_backoff = Keyword.get(opts, :retry_backoff, 100)
+
+    retry_count =
+      case should_retry do
+        true -> Keyword.get(opts, :retry_count, 3)
+        false -> 0
+      end
 
     headers =
       case conn_state.disable_topology_updates do
@@ -41,7 +49,16 @@ defmodule Ravix.Connection.RequestExecutor do
         false -> [{"Topology-Etag", conn_state.topology_etag}]
       end
 
-    execute_with_node_pool(command, pool_name, headers, opts)
+    retry with: constant_backoff(retry_backoff) |> Stream.take(retry_count) do
+      pool_name = NodeSelector.current_node(conn_state)
+      execute_with_node_pool(command, pool_name, headers, opts)
+    after
+      {:ok, result} -> {:ok, result}
+      {:non_retryable_error, response} -> {:error, response}
+      {:error, error_response} -> {:error, error_response}
+    else
+      err -> err
+    end
   end
 
   @doc """
@@ -62,27 +79,14 @@ defmodule Ravix.Connection.RequestExecutor do
   @spec execute_with_node(struct(), pid(), tuple(), keyword()) ::
           {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   def execute_with_node(command, pid, headers \\ {}, opts \\ []) do
-    call_raven(pid, command, headers, opts)
+    case call_raven(pid, command, headers, opts) do
+      {:ok, result} -> {:ok, result}
+      {:non_retryable_error, response} -> {:error, response}
+      {:error, error_response} -> {:error, error_response}
+    end
   end
 
-  @doc """
-  Executes a RavenDB command in any node of the informed pool
-
-  ## Parameters
-
-  - command: The command that will be executed, must be a RavenCommand
-  - pool_name: The Pool name
-  - headers: HTTP headers to send to RavenDB
-  - opts: Request options
-
-  ## Returns
-  - `{:ok, Ravix.Connection.Response}` for a successful synchronous call
-  - `{:ok, Enumerable}` if it's a streammed command
-  - `{:error, cause}` if the request fails
-  """
-  @spec execute_with_node_pool(struct(), binary(), tuple(), keyword()) ::
-          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
-  def execute_with_node_pool(command, pool_name, headers, opts) do
+  defp execute_with_node_pool(command, pool_name, headers, opts) do
     :poolboy.transaction(
       pool_id(pool_name),
       fn pid ->
@@ -91,28 +95,10 @@ defmodule Ravix.Connection.RequestExecutor do
     )
   end
 
-  @spec call_raven(pid(), struct(), tuple(), keyword()) ::
-          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   defp call_raven(pid, %{is_stream: false} = command, headers, opts) do
-    should_retry = Keyword.get(opts, :retry_on_failure, false)
-    retry_backoff = Keyword.get(opts, :retry_backoff, 100)
     timeout = Keyword.get(opts, :timeout, 15000)
 
-    retry_count =
-      case should_retry do
-        true -> Keyword.get(opts, :retry_count, 3)
-        false -> 0
-      end
-
-    retry with: constant_backoff(retry_backoff) |> Stream.take(retry_count) do
-      GenServer.call(pid, {:request, command, headers, opts}, timeout)
-    after
-      {:ok, result} -> {:ok, result}
-      {:non_retryable_error, response} -> {:error, response}
-      {:error, error_response} -> {:error, error_response}
-    else
-      err -> err
-    end
+    GenServer.call(pid, {:request, command, headers, opts}, timeout)
   end
 
   defp call_raven(pid, command, headers, opts) do
