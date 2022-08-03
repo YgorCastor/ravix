@@ -7,6 +7,8 @@ defmodule Ravix.RQL.QueryTest do
   import Ravix.RQL.Tokens.Update
   import Ravix.Factory
 
+  alias Ravix.RQL.Tokens.Order
+
   alias Ravix.Documents.Session
   alias Ravix.Test.Store, as: Store
   alias Ravix.Test.NonRetryableStore
@@ -274,7 +276,7 @@ defmodule Ravix.RQL.QueryTest do
           query_response <-
             from("Cats")
             |> where(in?("name", [cat1.name, cat2.name, cat3.name]))
-            |> order_by({"name", :asc})
+            |> order_by(%Order.Field{name: "name", order: :asc})
             |> limit(0, 1)
             |> list_all(session_id)
         after
@@ -308,7 +310,10 @@ defmodule Ravix.RQL.QueryTest do
           query_response <-
             from("Cats")
             |> where(in?("name", [cat1.name, cat2.name, cat3.name]))
-            |> order_by([{"@metadata.@last-modified", :desc}, {"name", :asc}])
+            |> order_by([
+              %Order.Field{name: "@metadata.@last-modified", order: :desc, type: :number},
+              %Order.Field{name: "name", order: :asc}
+            ])
             |> limit(1, 2)
             |> list_all(session_id)
         after
