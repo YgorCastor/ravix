@@ -277,13 +277,11 @@ defmodule Ravix.RQL.Query do
 
   ## Examples
       iex> from = Ravix.RQL.Query.from("cats", "c")
-      iex> ordered = Ravix.RQL.Query.order_by(from, [{"@metadata.@last-modified", :desc}, {"name", :asc}])
+      iex> ordered = Ravix.RQL.Query.order_by(from, [%Order.Field{name: "@metadata.@last-modified", order: :desc, type: :number}])
   """
   @spec order_by(
           Query.t(),
-          [{:asc, String.t()} | {:desc, String.t()}, ...]
-          | {:asc, String.t()}
-          | {:desc, String.t()}
+          [Order.Field.t()] | Order.Field.t()
         ) :: Query.t()
   def order_by(%Query{} = query, orders) do
     %Query{

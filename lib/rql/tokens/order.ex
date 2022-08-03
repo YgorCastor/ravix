@@ -7,12 +7,15 @@ defmodule Ravix.RQL.Tokens.Order do
 
   alias Ravix.RQL.Tokens.Order
 
+  @type order_direction :: :asc | :desc
+  @type order_field_type :: :lexicographicaly | :numeric
+
   @type t :: %Order{
           token: atom(),
-          fields: list({:asc | :desc, String.t()})
+          fields: list(Order.Field.t())
         }
 
-  @spec by([{:asc | :desc, String.t()}, ...] | {:asc | :desc, String.t()}) :: Order.t()
+  @spec by(list(Order.Field.t()) | Order.Field.t()) :: Order.t()
   def by(ordering) when is_list(ordering) do
     %Order{
       token: :order_by,
@@ -20,7 +23,7 @@ defmodule Ravix.RQL.Tokens.Order do
     }
   end
 
-  def by({_order, _field} = order) do
+  def by(%Order.Field{} = order) do
     %Order{
       token: :order_by,
       fields: [order]

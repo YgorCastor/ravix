@@ -80,7 +80,8 @@ defmodule Ravix.MixProject do
   defp package() do
     [
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => "https://github.com/YgorCastor/ravix"}
+      links: %{"GitHub" => "https://github.com/YgorCastor/ravix"},
+      sponsor: "ycastor.eth"
     ]
   end
 end

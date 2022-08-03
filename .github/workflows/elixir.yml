@@ -20,10 +20,13 @@ jobs:
         ports:
           - 8080:8080
         env:
-          RAVEN_Setup_Mode: 'None'
-          RAVEN_License_Eula_Accepted: 'true'
-          RAVEN_Security_UnsecuredAccessAllowed: 'PublicNetwork'
+          RAVEN_Setup_Mode: "None"
+          RAVEN_License_Eula_Accepted: "true"
+          RAVEN_Security_UnsecuredAccessAllowed: "PublicNetwork"
     steps:
+      - uses: technote-space/auto-cancel-redundant-job@v1
+        with:
+          EXCLUDE_MERGED: "true"
       - name: Install Git/Curl/GNU Tar
         run: apk add --no-cache curl tar git make gcc libc-dev g++
       - name: Fix git permissions
@@ -58,6 +61,6 @@ jobs:
         run: mix dialyzer
       - name: Run tests
         env:
-          RAVENDB_URL: 'http://ravendb:8080'
+          RAVENDB_URL: "http://ravendb:8080"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: mix coveralls.github

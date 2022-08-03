@@ -210,11 +210,19 @@ defmodule Ravix.RQL.QueryParser do
   defp parse_ordering(%Query{} = query, order_by_token) do
     query_fragment =
       " order by " <>
-        Enum.map_join(order_by_token.fields, ",", fn {field, order} ->
-          "#{parse_field(query, field)} #{Atom.to_string(order)}"
+        Enum.map_join(order_by_token.fields, ",", fn field ->
+          "#{parse_field(query, field.name)}#{parse_ordering_type(field.type)} #{Atom.to_string(field.order)}"
         end)
 
     {:ok, append_query_fragment(query, query_fragment)}
+  end
+
+  defp parse_ordering_type(ordering_type) do
+    case ordering_type do
+      :float -> " as float"
+      :number -> " as long"
+      _ -> ""
+    end
   end
 
   defp parse_group_by(%Query{} = query, group_by_token) do
