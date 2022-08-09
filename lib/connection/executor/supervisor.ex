@@ -109,7 +109,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
       RequestExecutor.Supervisor.remove_node_pool(store, pid)
     end)
 
-    Logger.info("[RAVIX] Unregistering the nodes '#{nodes_to_delete}'")
+    Logger.info("[RAVIX] Unregistering the nodes '#{inspect(nodes_to_delete)}'")
 
     current_nodes -- nodes_to_delete
   end
