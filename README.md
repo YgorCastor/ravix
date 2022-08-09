@@ -15,7 +15,7 @@ Ravix is a in-development project to implement a client for the amazing [RavenDB
 Add Ravix to your mix.exs dependencies
 
 ```elixir
-{:ravix, "~> 0.5.0"}
+{:ravix, "~> 0.5.1"}
 ```
 
 ## Setting up your Repository
