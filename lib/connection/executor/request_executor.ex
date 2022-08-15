@@ -53,9 +53,15 @@ defmodule Ravix.Connection.RequestExecutor do
       pool_name = NodeSelector.current_node(conn_state)
       execute_with_node_pool(command, pool_name, headers, opts)
     after
-      {:ok, result} -> {:ok, result}
-      {:non_retryable_error, response} -> {:error, response}
-      {:error, error_response} -> {:error, error_response}
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+
+      {_, response} ->
+        Logger.error("[RAVIX] Error received from RavenDB: #{inspect(response)}")
+        {:error, response}
     else
       err -> err
     end
@@ -80,9 +86,15 @@ defmodule Ravix.Connection.RequestExecutor do
           {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   def execute_with_node(command, pid, headers \\ {}, opts \\ []) do
     case call_raven(pid, command, headers, opts) do
-      {:ok, result} -> {:ok, result}
-      {:non_retryable_error, response} -> {:error, response}
-      {:error, error_response} -> {:error, error_response}
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+
+      {_, response} ->
+        Logger.error("[RAVIX] Error received from RavenDB: #{inspect(response)}")
+        {:error, response}
     end
   end
 

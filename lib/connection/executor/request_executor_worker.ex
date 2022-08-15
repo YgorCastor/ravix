@@ -200,7 +200,7 @@ defmodule Ravix.Connection.RequestExecutor.Worker do
           {:non_retryable_error, data["Message"]}
 
         %{data: %{"IsStale" => true}} ->
-          Logger.warn("[RAVIX] The request '#{inspect(request_ref)}' is Stale!")
+          Logger.debug("[RAVIX] The request '#{inspect(request_ref)}' is Stale!")
 
           case ServerNode.retry_on_stale?(state) do
             true -> {:error, :stale}
