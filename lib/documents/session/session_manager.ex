@@ -157,7 +157,7 @@ defmodule Ravix.Documents.Session.Manager do
 
       result <- RequestExecutor.execute(command, network_state)
     after
-      result.data
+      result.body
     end
   end
 
@@ -208,7 +208,7 @@ defmodule Ravix.Documents.Session.Manager do
            {},
            opts
          ) do
-      {:ok, response} -> {:ok, response.data}
+      {:ok, response} -> {:ok, response.body}
       {:error, err} -> {:error, err}
     end
   end

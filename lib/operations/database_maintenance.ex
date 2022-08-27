@@ -61,7 +61,7 @@ defmodule Ravix.Operations.Database.Maintenance do
         }
         |> RequestExecutor.execute_with_node(node_pid)
     after
-      response.data
+      response.body
     end
   end
 
@@ -86,7 +86,7 @@ defmodule Ravix.Operations.Database.Maintenance do
           opts
         )
     after
-      response.data
+      response.body
     end
   end
 
@@ -106,7 +106,7 @@ defmodule Ravix.Operations.Database.Maintenance do
         }
         |> RequestExecutor.execute_with_node(node_pid)
     after
-      response.data
+      response.body
     end
   end
 end

@@ -14,8 +14,8 @@ defmodule Ravix do
     children = [
       {Registry, [keys: :unique, name: :sessions]},
       {Registry, [keys: :unique, name: :connections]},
-      {Registry, [keys: :duplicate, name: :request_executors]},
-      {Registry, [keys: :unique, name: :request_executor_pools]}
+      {Registry, [keys: :unique, name: :request_executors]},
+      {Finch, name: Ravix.Finch}
     ]
 
     opts = [strategy: :one_for_one, name: Ravix.Supervisor]

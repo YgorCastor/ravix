@@ -1,89 +1,39 @@
 defmodule Ravix.Connection.RequestExecutor do
-  @moduledoc false
-  use Retry
+  use GenServer
 
-  require OK
   require Logger
+  require OK
 
+  alias Ravix.Connection
+  alias Ravix.Connection.ServerNode
+  alias Ravix.Connection.NodeSelector
   alias Ravix.Connection.State, as: ConnectionState
-  alias Ravix.Connection.{ServerNode, NodeSelector, Response}
-  alias Ravix.Connection.RequestExecutor
 
-  @doc """
-  Executes a RavenDB command for the informed connection
+  alias Ravix.Documents.Protocols.CreateRequest
 
-  ## Parameters
+  def init(%ServerNode{} = node) do
+    Logger.debug(
+      "[RAVIX] Creating a connection to node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}'"
+    )
 
-  - command: The command that will be executed, must be a RavenCommand
-  - conn_state: The connection state for which this execution will be linked
-  - headers: HTTP headers to send to RavenDB
-  - opts: Request options
-
-  ## Returns
-  - `{:ok, Ravix.Connection.Response}` for a successful synchronous call
-  - `{:ok, Enumerable}` if it's a streammed command
-  - `{:error, cause}` if the request fails
-  """
-  @spec execute(struct(), ConnectionState.t(), tuple(), keyword()) ::
-          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
-  def execute(
-        %{is_stream: is_stream} = command,
-        %ConnectionState{} = conn_state,
-        headers \\ {},
-        opts \\ []
-      ) do
-    opts = opts ++ RequestExecutor.Options.from_connection_state(conn_state)
-
-    should_retry = Keyword.get(opts, :retry_on_failure, false) and not is_stream
-    retry_backoff = Keyword.get(opts, :retry_backoff, 100)
-
-    retry_count =
-      case should_retry do
-        true -> Keyword.get(opts, :retry_count, 3)
-        false -> 0
-      end
-
-    headers =
-      case conn_state.disable_topology_updates do
-        true -> headers
-        false -> [{"Topology-Etag", conn_state.topology_etag}]
-      end
-
-    retry with: constant_backoff(retry_backoff) |> Stream.take(retry_count) do
-      pool_name = NodeSelector.current_node(conn_state)
-      execute_with_node_pool(command, pool_name, headers, opts)
-    after
-      {:ok, result} ->
-        {:ok, result}
-
-      {:error, :not_found} ->
-        {:error, :not_found}
-
-      {_, response} ->
-        Logger.error("[RAVIX] Error received from RavenDB: #{inspect(response)}")
-        {:error, response}
-    else
-      err -> err
+    case client(node) do
+      {:ok, node} -> {:ok, node}
+      {:error, node} -> {:stop, node}
     end
   end
 
-  @doc """
-  Executes a RavenDB command on the informed node
+  def start_link(_attrs, node) do
+    GenServer.start_link(__MODULE__, node)
+  end
 
-  ## Parameters
+  def execute(
+        command,
+        %ConnectionState{} = conn_state,
+        headers \\ {},
+        opts \\ []
+      ),
+      do: execute_with_node(command, NodeSelector.current_node(conn_state), headers, opts)
 
-  - command: The command that will be executed, must be a RavenCommand
-  - pid: The PID of the node
-  - headers: HTTP headers to send to RavenDB
-  - opts: Request options
-
-  ## Returns
-  - `{:ok, Ravix.Connection.Response}` for a successful synchronous call
-  - `{:ok, Enumerable}` if it's a streammed command
-  - `{:error, cause}` if the request fails
-  """
-  @spec execute_with_node(struct(), pid(), tuple(), keyword()) ::
-          {:ok, Response.t()} | {:ok, Enumerable.t()} | {:error, any()}
   def execute_with_node(command, pid, headers \\ {}, opts \\ []) do
     case call_raven(pid, command, headers, opts) do
       {:ok, result} ->
@@ -93,103 +43,112 @@ defmodule Ravix.Connection.RequestExecutor do
         {:error, :not_found}
 
       {_, response} ->
-        Logger.error("[RAVIX] Error received from RavenDB: #{inspect(response)}")
+        Logger.error("[RAVIX] Error: #{inspect(response)}")
         {:error, response}
     end
   end
 
-  defp execute_with_node_pool(command, pool_name, headers, opts) do
-    :poolboy.transaction(
-      pool_id(pool_name),
-      fn pid ->
-        call_raven(pid, command, headers, opts)
-      end
-    )
-  end
-
-  defp call_raven(pid, %{is_stream: false} = command, headers, opts) do
-    timeout = Keyword.get(opts, :timeout, 15000)
-
-    GenServer.call(pid, {:request, command, headers, opts}, timeout)
-  end
-
-  defp call_raven(pid, command, headers, opts) do
-    init_request = fn ->
-      GenServer.call(pid, {:request, command, headers, opts})
-    end
-
-    read_buffer = fn {:ok, request_ref} ->
-      case GenServer.call(pid, {:read_request_buffer, request_ref}) do
-        {:ok, :halt} -> {:halt, {:ok, request_ref}}
-        {:ok, chunk} -> {[chunk], {:ok, request_ref}}
-      end
-    end
-
-    no_op = fn _request_ref ->
-      nil
-    end
-
-    {:ok,
-     Stream.resource(init_request, read_buffer, no_op)
-     |> Jaxon.Stream.from_enumerable()
-     |> Jaxon.Stream.query([:root, "Results", :all])}
-  end
-
-  @doc """
-  Fetches the current node executor state
-
-  ## Parameters
-  pid = The PID of the node
-
-  ## Returns
-  - `{:ok, Ravix.Connection.ServerNode}` if there's a node
-  - `{:error, :node_not_found}` if there's not a node with the informed pid
-  """
-  @spec fetch_node_state(pid) :: {:ok, ServerNode.t()} | {:error, :node_not_found}
-  def fetch_node_state(pid) when is_pid(pid) do
+  defp fetch_state(executor_pid) do
     try do
-      {:ok, pid |> :sys.get_state()}
+      {:ok,
+       executor_pid
+       |> :sys.get_state()}
     catch
       :exit, _ -> {:error, :node_not_found}
     end
   end
 
-  @spec start_link(any, ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(_attrs, %ServerNode{} = node) do
-    poolboy_config = [
-      {:name, pool_registry(node)},
-      {:worker_module, Ravix.Connection.RequestExecutor.Worker},
-      {:size, node.min_pool_size},
-      {:max_overflow, node.max_pool_size}
-    ]
+  defp call_raven(pid, command, headers, opts) do
+    OK.for do
+      node <- fetch_state(pid)
+      request = CreateRequest.create_request(command, node)
 
-    executor_config =
-      Keyword.new(Map.from_struct(node), fn {k, v} ->
-        {k, v}
-      end)
+      result <-
+        Tesla.request(
+          node.client,
+          url: request.url,
+          method: request.method,
+          body: request.data,
+          headers: request.headers
+        )
+        |> IO.inspect()
 
-    :poolboy.start_link(
-      poolboy_config,
-      executor_config
-    )
+      result <- parse_result(result, node)
+    after
+      result
+    end
   end
 
-  @spec child_spec(ServerNode.t()) :: %{
-          id: atom,
-          start: {RequestExecutor, :start_link, [map, ...]}
-        }
-  def child_spec(%ServerNode{} = node) do
-    %{
-      id: String.to_atom(node.url <> "_" <> node.database),
-      start: {__MODULE__, :start_link, [node]}
-    }
+  defp parse_result(response, node) do
+    case response do
+      %{status: 404} ->
+        {:error, :document_not_found}
+
+      %{status: 403} ->
+        {:error, :unauthorized}
+
+      %{status: 409} ->
+        {:error, :conflict}
+
+      %{status: 410} ->
+        {:error, :node_gone}
+
+      %{body: body} when is_map_key(body, "Error") ->
+        {:error, body["Message"]}
+
+      %{body: %{"IsStale" => true}} ->
+        {:error, :stale}
+
+      error_response when error_response.status in [408, 502, 503, 504] ->
+        parse_error(error_response)
+
+      response ->
+        {:ok, response.body}
+    end
+    |> check_if_needs_topology_update(node)
   end
 
-  defp pool_registry(%ServerNode{} = node) do
-    {:via, Registry, {:request_executor_pools, NodeSelector.node_id(node), node}}
+  defp check_if_needs_topology_update({:ok, response}, %ServerNode{} = node) do
+    case Enum.find(response.headers, fn header -> elem(header, 0) == "Refresh-Topology" end) do
+      nil ->
+        {:ok, response}
+
+      _ ->
+        Logger.info(
+          "[RAVIX] The database requested a topology refresh for the store '#{inspect(node.store)}'"
+        )
+
+        Connection.update_topology(node.store)
+
+        {:ok, response}
+    end
   end
 
-  defp pool_id(pool_id) do
-    {:via, Registry, {:request_executor_pools, pool_id}}
+  defp check_if_needs_topology_update({error_kind, err}, _), do: {error_kind, err}
+
+  defp parse_error(error_response) do
+    {:error, error_response.body["Message"]}
+  end
+
+  defp build_ssl_params(_, :http), do: {:ok, []}
+
+  defp build_ssl_params(ssl_config, :https) do
+    case ssl_config do
+      [] ->
+        {:error, :no_ssl_configurations_informed}
+
+      transport_ops ->
+        {:ok, transport_opts: transport_ops}
+    end
+  end
+
+  defp client(node) do
+    OK.for do
+      ssl_params <- build_ssl_params(node.ssl_config, node.protocol)
+      base_url = {Tesla.Middleware.BaseUrl, "#{node.protocol}://#{node.url}:#{node.port}"}
+      adapter = {Tesla.Adapter.Finch, name: Ravix.Finch}
+    after
+      %ServerNode{node | client: Tesla.client([base_url, Tesla.Middleware.JSON], adapter)}
+    end
   end
 end
