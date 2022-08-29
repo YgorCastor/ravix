@@ -30,7 +30,7 @@ defmodule Ravix.Operations.Database.Commands.GetStatisticsCommand do
       %GetStatisticsCommand{
         command
         | url: "/databases/#{database_name}/stats?" <> command.debugTag,
-          method: "GET"
+          method: :get
       }
     end
   end

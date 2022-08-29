@@ -36,7 +36,7 @@ defmodule Ravix.Documents.Commands.ExecuteQueryCommand do
 
     defp fix_body(command) do
       case command.method do
-        "PATCH" -> %{Query: command} |> ToJson.to_json()
+        :patch -> %{Query: command} |> ToJson.to_json()
         _ -> command |> ToJson.to_json()
       end
     end

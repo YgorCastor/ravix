@@ -27,7 +27,7 @@ defmodule Ravix.Operations.Database.MaintenanceTest do
 
   describe "database_stats/1" do
     test "Should fetch database stats if it exists" do
-      {:ok, %{"LastDatabaseEtag" => 0}} = Maintenance.database_stats(NonRetryableStore)
+      {:ok, %{"CountOfConflicts" => 0}} = Maintenance.database_stats(NonRetryableStore)
     end
   end
 end

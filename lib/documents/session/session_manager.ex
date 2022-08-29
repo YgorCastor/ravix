@@ -111,7 +111,7 @@ defmodule Ravix.Documents.Session.Manager do
   def save_changes(%SessionState{} = state) do
     OK.for do
       network_state <- Connection.fetch_state(state.store)
-      result <- execute_save_request(state, network_state, [])
+      result <- execute_save_request(state, network_state)
 
       parsed_updates =
         BatchCommand.parse_batch_response(
@@ -157,7 +157,7 @@ defmodule Ravix.Documents.Session.Manager do
 
       result <- RequestExecutor.execute(command, network_state)
     after
-      result.data
+      result
     end
   end
 
@@ -169,7 +169,7 @@ defmodule Ravix.Documents.Session.Manager do
       command = %ExecuteStreamQueryCommand{
         Query: query.query_string,
         QueryParameters: query.query_params,
-        method: "GET",
+        method: :get,
         is_stream: true
       }
 
@@ -204,16 +204,14 @@ defmodule Ravix.Documents.Session.Manager do
              page_size: page_size,
              metadata_only: metadata_only
            },
-           network_state,
-           {},
-           opts
+           network_state
          ) do
-      {:ok, response} -> {:ok, response.data}
+      {:ok, response} -> {:ok, response}
       {:error, err} -> {:error, err}
     end
   end
 
-  defp execute_save_request(%SessionState{} = state, %ConnectionState{} = network_state, opts) do
+  defp execute_save_request(%SessionState{} = state, %ConnectionState{} = network_state) do
     OK.for do
       data_to_save =
         %SaveChangesData{}
@@ -223,7 +221,7 @@ defmodule Ravix.Documents.Session.Manager do
 
       response <-
         %BatchCommand{Commands: data_to_save.commands}
-        |> RequestExecutor.execute(network_state, {}, opts)
+        |> RequestExecutor.execute(network_state)
 
       updated_state =
         state
@@ -232,7 +230,7 @@ defmodule Ravix.Documents.Session.Manager do
         |> SessionState.clear_deleted_entities()
         |> SessionState.clear_tmp_keys()
     after
-      [request_response: response.data, updated_state: updated_state]
+      [request_response: response, updated_state: updated_state]
     end
   end
 

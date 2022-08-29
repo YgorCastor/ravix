@@ -4,7 +4,8 @@ Faker.start()
 
 ExUnit.start(
   exclude: [
-    :flaky
+    :flaky,
+    :not_supported
   ]
 )
 

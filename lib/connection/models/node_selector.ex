@@ -4,6 +4,7 @@ defmodule Ravix.Connection.NodeSelector do
 
   alias Ravix.Connection.State, as: ConnectionState
   alias Ravix.Connection.NodeSelector
+  alias Ravix.Connection.ServerNode
   alias Ravix.Connection.RequestExecutor.Supervisor, as: ExecutorSupervisor
 
   @type t :: %NodeSelector{
@@ -25,11 +26,9 @@ defmodule Ravix.Connection.NodeSelector do
 
     Returns the pool name
   """
-  @spec current_node(ConnectionState.t()) :: binary()
+  @spec current_node(ConnectionState.t()) :: {pid(), ServerNode.t()}
   def current_node(%ConnectionState{} = state) do
-    current_nodes =
-      ExecutorSupervisor.fetch_node_pools(state.store)
-      |> Enum.map(fn {_pid, pool_id, _} -> pool_id end)
+    current_nodes = ExecutorSupervisor.fetch_nodes(state.store)
 
     if length(current_nodes) == 0 do
       raise "No nodes available to execute the request!"
@@ -43,9 +42,9 @@ defmodule Ravix.Connection.NodeSelector do
     Enum.at(current_nodes, current_index)
   end
 
-  @spec random_executor_for(atom()) :: pid()
+  @spec random_executor_for(atom()) :: {pid(), ServerNode.t()}
   def random_executor_for(store) do
-    ExecutorSupervisor.fetch_executors(store) |> Enum.random()
+    ExecutorSupervisor.fetch_nodes(store) |> Enum.random()
   end
 
   def node_id(node) do

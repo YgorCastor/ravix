@@ -4,7 +4,6 @@ defmodule Ravix.Connection.State do
 
      - store: Store atom for this state. E.g: Ravix.Test.Store
      - database: Name of the database.
-     - ssl_config: SSL Configurations, E.g: https://www.erlang.org/doc/man/ssl.html
      - conventions: Document Configuration conventions
      - retry_on_failure: Automatic retry in retryable errors
      - retry_on_stale: Automatic retry when the query is stale
@@ -17,13 +16,9 @@ defmodule Ravix.Connection.State do
      - force_create_database: If true, when the database does not exist, it will be created
      - last_topology_update: DateTime when the topology was last updated
      - cluster_token: Security Token for the members of the cluster
-     - timeout: Maximum amount of time to wait for a execution (in ms)
-     - min_pool_size: Minimum amount of parallel connections to the node
-     - max_pool_size: Maximum amount of parallel connections to the node
   """
   defstruct store: nil,
             database: nil,
-            ssl_config: [],
             retry_on_failure: true,
             retry_on_stale: false,
             retry_backoff: 100,
@@ -35,15 +30,12 @@ defmodule Ravix.Connection.State do
             disable_topology_updates: false,
             force_create_database: false,
             last_topology_update: nil,
-            timeout: 15000,
-            min_pool_size: 1,
-            max_pool_size: 10,
-            cluster_token: nil
+            cluster_token: nil,
+            adapter: nil
 
   @type t :: %Ravix.Connection.State{
           store: any(),
           database: String.t(),
-          ssl_config: Keyword.t(),
           retry_on_failure: boolean(),
           retry_on_stale: boolean(),
           retry_backoff: non_neg_integer(),
@@ -55,9 +47,6 @@ defmodule Ravix.Connection.State do
           disable_topology_updates: boolean(),
           force_create_database: boolean(),
           last_topology_update: DateTime.t() | nil,
-          timeout: non_neg_integer(),
-          min_pool_size: non_neg_integer(),
-          max_pool_size: non_neg_integer(),
           cluster_token: String.t() | nil
         }
 end

@@ -31,7 +31,7 @@ defmodule Ravix.Connection.Commands.GetTopology do
             "/topology?"
             |> append_param("name", command.database_name)
             |> append_param("url", command.force_url),
-          method: "GET",
+          method: :get,
           is_read_request: true
       }
     end

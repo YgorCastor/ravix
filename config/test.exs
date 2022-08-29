@@ -94,4 +94,4 @@ config :ravix, Ravix.Test.StoreInvalid,
     disable_topology_update: false
   }
 
-config :logger, level: :emergency
+config :logger, level: :error

@@ -23,8 +23,6 @@ defmodule Ravix.RQL.QueryTest do
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
 
-          :timer.sleep(500)
-
           query_response <-
             from("@all_docs")
             |> where(equal_to("cat_name", any_entity.cat_name))
@@ -516,6 +514,7 @@ defmodule Ravix.RQL.QueryTest do
     end
   end
 
+  @tag :not_supported
   describe "stream_query/2" do
     test "should stream a query in a non-blocking way" do
       glaring = build_list(1000, :cat_entity)

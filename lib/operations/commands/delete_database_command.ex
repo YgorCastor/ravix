@@ -26,7 +26,7 @@ defmodule Ravix.Operations.Database.Commands.DeleteDatabaseCommand do
       %DeleteDatabaseCommand{
         command
         | url: "/admin/databases",
-          method: "DELETE",
+          method: :delete,
           data: command |> ToJson.to_json()
       }
     end

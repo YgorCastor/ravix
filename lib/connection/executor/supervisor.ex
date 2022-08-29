@@ -4,7 +4,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
 
   require Logger
 
-  alias Ravix.Connection.{RequestExecutor, ServerNode, Topology, NodeSelector}
+  alias Ravix.Connection.{RequestExecutor, ServerNode, Topology}
 
   def init(init_arg) do
     DynamicSupervisor.init(
@@ -18,26 +18,16 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
     DynamicSupervisor.start_link(__MODULE__, %{}, name: supervisor_name(store))
   end
 
-  @doc """
-  Register a new RavenDB Database node for the informed store
-
-  ## Parameters
-  - store: the store module. E.g: Ravix.Test.Store
-  - node: the node to be registered
-  """
-  @spec register_node_pool(any, ServerNode.t()) ::
-          :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
-  def register_node_pool(store, %ServerNode{} = node) do
+  def register_node(node = %ServerNode{}) do
     Logger.debug(
-      "[RAVIX] Registering the connection pool with the node '#{node.url}' for the store '#{inspect(store)}'"
+      "[RAVIX] Registering the connection with the node '#{node.url}' for the store '#{node.store}'"
     )
 
-    node = %ServerNode{node | store: store}
-    DynamicSupervisor.start_child(supervisor_name(store), {RequestExecutor, node})
+    DynamicSupervisor.start_child(supervisor_name(node.store), {RequestExecutor, node})
   end
 
-  @spec remove_node_pool(atom(), pid) :: :ok | {:error, :not_found}
-  def remove_node_pool(store, pid) do
+  @spec remove_node(atom(), pid) :: :ok | {:error, :not_found}
+  def remove_node(store, pid) do
     Logger.debug(
       "[RAVIX] Removing cluster node '#{inspect(pid)}' for the store '#{inspect(store)}'"
     )
@@ -46,40 +36,25 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   end
 
   @doc """
-  Fetch the Node pools for the informed store
-
+  Fetches the nodes running for a specific store
   ## Parameters
   - store: the store module: E.g: Ravix.Test.Store
+  ## Returns
+  - list({pod, Ravix.Connection.ServerNode})
   """
-  @spec fetch_node_pools(atom()) :: list({pid(), binary(), ServerNode.t()})
-  def fetch_node_pools(store) do
-    Registry.select(:request_executor_pools, [
-      {{:"$1", :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}
-    ])
-    |> Enum.filter(fn {_pool_name, _pid, node} -> node.store == store end)
-    |> Enum.map(fn {pool_name, pid, node} -> {pid, pool_name, node} end)
-  end
-
-  @doc """
-  Fetch all the executors for the informed Store
-
-  ## Parameters
-  - store: the store module: E.g: Ravix.Test.Store
-  """
-  @spec fetch_executors(atom()) :: list(pid())
-  def fetch_executors(store) do
-    Registry.select(:request_executors, [{{:"$1", :"$2", :"$3"}, [], [{{:"$1", :"$2"}}]}])
-    |> Enum.filter(fn {executor_store, _pid} -> executor_store == store end)
-    |> Enum.map(fn {_executor_store, pid} -> pid end)
+  def fetch_nodes(store) do
+    DynamicSupervisor.which_children(supervisor_name(store))
+    |> Enum.map(fn {_, pid, _kind, _modules} -> pid end)
+    |> Enum.map(fn pid -> {pid, RequestExecutor.fetch_node_state(pid)} end)
+    |> Enum.filter(fn {_, response} -> elem(response, 0) == :ok end)
+    |> Enum.map(fn {pid, {:ok, node}} -> {pid, node} end)
   end
 
   @doc """
   Triggers a topology update for all nodes of a specific store
-
   ## Parameters
   - store: the store module. E.g: Ravix.Test.Store
   - topology: The `Ravix.Connection.Topology` to be used
-
   ## Returns
   - List of nodes `[new_nodes: list(Ravix.Connection.ServerNode), updated_nodes: list(Ravix.Connection.ServerNode)]`
   """
@@ -87,9 +62,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
           {:new_nodes, list} | {:updated_nodes, list}
         ]
   def update_topology(store, %Topology{} = topology) do
-    Logger.info("[RAVIX] A topology update was requested by the server, updating nodes...")
-
-    current_nodes = fetch_node_pools(store)
+    current_nodes = fetch_nodes(store)
     remaining_nodes = remove_old_nodes(store, current_nodes, topology)
     updated_nodes = update_existing_nodes(remaining_nodes, topology)
     new_nodes = add_new_nodes(store, remaining_nodes, topology)
@@ -98,52 +71,49 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   end
 
   defp remove_old_nodes(store, current_nodes, %Topology{} = topology) do
-    new_nodes_ids = Enum.map(topology.nodes, &NodeSelector.node_id(&1))
+    new_nodes_urls = Enum.map(topology.nodes, fn node -> node.url end)
 
     nodes_to_delete =
       current_nodes
-      |> Enum.reject(fn {_pid, pool_id, _node} -> Enum.member?(new_nodes_ids, pool_id) end)
+      |> Enum.reject(fn {_, node} -> Enum.member?(new_nodes_urls, node.url) end)
 
     nodes_to_delete
-    |> Enum.each(fn {pid, _, _} ->
-      RequestExecutor.Supervisor.remove_node_pool(store, pid)
+    |> Enum.each(fn {pid, _node} ->
+      RequestExecutor.Supervisor.remove_node(store, pid)
     end)
-
-    Logger.info("[RAVIX] Unregistering the nodes '#{inspect(nodes_to_delete)}'")
 
     current_nodes -- nodes_to_delete
   end
 
   defp update_existing_nodes(nodes, %Topology{} = topology) do
     nodes
-    |> Enum.map(fn {pid, _, node} ->
-      {pid,
-       %ServerNode{
-         node
-         | cluster_tag: Topology.cluster_tag_for_node(topology, node.url)
-       }}
+    |> Enum.map(fn {_pid, node} ->
+      [
+        url: node.url,
+        database: node.database,
+        cluster_tag: Topology.cluster_tag_for_node(topology, node.url)
+      ]
     end)
-    |> Enum.map(fn {pid, node} ->
+    |> Enum.map(fn [url: url, database: database, cluster_tag: cluster_tag] ->
       Logger.info(
-        "[RAVIX] Updating node '#{inspect(node.url)}' for the database '#{inspect(node.database)}' with cluster tag '#{inspect(node.cluster_tag)}'"
+        "[RAVIX] Updating node '#{inspect(url)}' for the database '#{inspect(database)}' with cluster tag '#{inspect(cluster_tag)}'"
       )
 
-      RequestExecutor.Supervisor.remove_node_pool(node.store, pid)
-      RequestExecutor.Supervisor.register_node_pool(node.store, node)
+      %{url: url, updated: RequestExecutor.update_cluster_tag(url, database, cluster_tag)}
     end)
   end
 
   defp add_new_nodes(store, existing_nodes, %Topology{} = topology) do
-    existing_nodes = Enum.map(existing_nodes, fn {_pid, pool_id, _node} -> pool_id end)
+    existing_nodes_urls = Enum.map(existing_nodes, fn {_pid, node} -> node.url end)
 
     topology.nodes
-    |> Enum.reject(&Enum.member?(existing_nodes, NodeSelector.node_id(&1)))
+    |> Enum.reject(fn node -> Enum.member?(existing_nodes_urls, node.url) end)
     |> Enum.map(fn new_node ->
       Logger.info(
         "[RAVIX] Registering new node '#{inspect(new_node)}' for the store '#{inspect(store)}'"
       )
 
-      RequestExecutor.Supervisor.register_node_pool(store, new_node)
+      RequestExecutor.Supervisor.register_node(new_node)
     end)
   end
 

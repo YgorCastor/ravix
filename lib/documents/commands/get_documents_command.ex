@@ -75,7 +75,7 @@ defmodule Ravix.Documents.Commands.GetDocumentsCommand do
 
       %GetDocumentsCommand{
         command
-        | method: "GET",
+        | method: :get,
           is_read_request: true,
           url:
             "#{base_url}/docs?"
