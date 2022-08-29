@@ -129,6 +129,7 @@ defmodule Ravix.Connection.State.Manager do
       state
       |> ServerNode.bootstrap()
       |> Enum.map(&RequestExecutor.Supervisor.register_node/1)
+      |> Enum.reject(fn result -> elem(result, 0) == :error end)
 
     case registered_node_pools do
       nodes when is_nil(nodes) or nodes == [] -> {:error, :no_node_registered}

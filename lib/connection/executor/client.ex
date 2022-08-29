@@ -1,5 +1,6 @@
 defmodule Ravix.Connection.RequestExecutor.Client do
   require OK
+  require Logger
 
   alias Ravix.Connection.ServerNode
 
@@ -20,16 +21,24 @@ defmodule Ravix.Connection.RequestExecutor.Client do
   end
 
   defp test_conn(client, node) do
-    case Tesla.get(client, "/databases") do
-      {:ok, %{status: 200}} ->
-        {:ok,
-         %ServerNode{
-           node
-           | client: client
-         }}
+    try do
+      case Tesla.get(client, "/databases") do
+        {:ok, %{status: 200}} ->
+          {:ok,
+           %ServerNode{
+             node
+             | client: client
+           }}
 
-      _ ->
-        {:error, :invalid_node}
+        err ->
+          Logger.error("[RAVIX] Failed to connect to the database #{inspect(err)}")
+          {:error, :invalid_node}
+      end
+    catch
+      :exit, failure ->
+        Logger.error(
+          "Failed to start the connection with the node #{inspect(node.url)} - #{inspect(failure)}"
+        )
     end
   end
 
