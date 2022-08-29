@@ -364,7 +364,7 @@ defmodule Ravix.RQL.Query do
   """
   @spec list_all(Query.t(), binary) :: {:error, any} | {:ok, any}
   def list_all(%Query{} = query, session_id) do
-    execute_for(query, session_id, "POST", false)
+    execute_for(query, session_id, :post, false)
   end
 
   @doc """
@@ -395,7 +395,7 @@ defmodule Ravix.RQL.Query do
   """
   @spec stream_all(Ravix.RQL.Query.t(), binary()) :: any
   def stream_all(%Query{} = query, session_id) do
-    execute_for(query, session_id, "GET", true)
+    execute_for(query, session_id, :get, true)
   end
 
   @doc """
@@ -411,7 +411,7 @@ defmodule Ravix.RQL.Query do
   """
   @spec delete_for(Query.t(), binary) :: {:error, any} | {:ok, any}
   def delete_for(%Query{} = query, session_id) do
-    execute_for(query, session_id, "DELETE", false)
+    execute_for(query, session_id, :delete, false)
   end
 
   @doc """
@@ -428,13 +428,16 @@ defmodule Ravix.RQL.Query do
   """
   @spec update_for(Query.t(), binary) :: {:error, any} | {:ok, any}
   def update_for(%Query{} = query, session_id) do
-    execute_for(query, session_id, "PATCH", false)
+    execute_for(query, session_id, :patch, false)
   end
 
   defp execute_for(%Query{is_raw: false} = query, session_id, method, stream) do
     case QueryParser.parse(query) do
-      {:ok, parsed_query} -> stream_or_list(parsed_query, session_id, method, stream)
-      {:error, err} -> {:error, err}
+      {:ok, parsed_query} ->
+        stream_or_list(parsed_query, session_id, method, stream)
+
+      {:error, err} ->
+        {:error, err}
     end
   end
 

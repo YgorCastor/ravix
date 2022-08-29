@@ -10,10 +10,8 @@ defmodule Ravix.Connection.ServerNode do
       - protocol: http or https
       - database: For which database is this executor
       - cluster_tag: Tag of this node in the RavenDB cluster
-      - min_pool_size: Minimum amount of parallel connections to the node
-      - max_pool_size: Maximum amount of parallel connections to the node
-      - timeout: Maximum amount of time to wait for a execution (in ms)
-      - opts: General node Options
+      - adapter: Tesla Adapter
+      - settings: General node settings
   """
   defstruct store: nil,
             url: nil,
@@ -23,6 +21,7 @@ defmodule Ravix.Connection.ServerNode do
             protocol: nil,
             database: nil,
             cluster_tag: nil,
+            adapter: Tesla.Adapter.Hackney,
             settings: nil
 
   alias Ravix.Connection.ServerNode
@@ -35,7 +34,9 @@ defmodule Ravix.Connection.ServerNode do
           ssl_config: Keyword.t() | nil,
           protocol: atom(),
           database: String.t(),
-          cluster_tag: String.t() | nil
+          cluster_tag: String.t() | nil,
+          adapter: Tesla.Adapter,
+          settings: ServerNode.Settings.t()
         }
 
   def bootstrap(conn_state = %ConnectionState{}) do
@@ -50,9 +51,26 @@ defmodule Ravix.Connection.ServerNode do
         protocol: String.to_atom(parsed_url.scheme),
         ssl_config: conn_state.ssl_config,
         database: conn_state.database,
+        adapter: conn_state.adapter,
         settings: ServerNode.Settings.build(conn_state)
       }
     end)
+  end
+
+  def from_api_response(node_response, conn_state = %ConnectionState{}) do
+    parsed_url = URI.new!(node_response["Url"])
+
+    %ServerNode{
+      store: conn_state.store,
+      url: parsed_url.host,
+      port: parsed_url.port,
+      protocol: String.to_atom(parsed_url.scheme),
+      ssl_config: conn_state.ssl_config,
+      database: node_response["Database"],
+      cluster_tag: node_response["ClusterTag"],
+      adapter: conn_state.adapter,
+      settings: ServerNode.Settings.build(conn_state)
+    }
   end
 
   @doc """
@@ -78,24 +96,30 @@ defmodule Ravix.Connection.ServerNode do
      - retry_on_stale: Automatic retry when the query is stale
      - retry_backoff: Amount of time between retries (in ms)
      - retry_count: Amount of retries
-     - min_pool_size: Minimum pool size for the Http Pool
-     - max_pool_size: Maximum pool size for the Http pool
     """
     defstruct retry_on_failure: true,
               retry_on_stale: true,
               retry_backoff: 500,
               retry_count: 3,
-              min_pool_size: 1,
-              max_pool_size: 10
+              max_url_length: 1024
 
     alias __MODULE__
+
+    @type t :: %__MODULE__{
+            retry_on_failure: boolean(),
+            retry_on_stale: boolean(),
+            retry_backoff: non_neg_integer(),
+            retry_count: non_neg_integer(),
+            max_url_length: non_neg_integer()
+          }
 
     def build(conn_state) do
       %Settings{
         retry_on_failure: conn_state.retry_on_failure,
         retry_on_stale: conn_state.retry_on_stale,
         retry_backoff: conn_state.retry_backoff,
-        retry_count: conn_state.retry_count
+        retry_count: conn_state.retry_count,
+        max_url_length: conn_state.conventions.max_length_of_query_using_get_url
       }
     end
   end

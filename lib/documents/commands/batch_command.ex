@@ -54,7 +54,7 @@ defmodule Ravix.Documents.Commands.BatchCommand do
       %BatchCommand{
         command
         | url: url <> "/bulk_docs",
-          method: "POST",
+          method: :post,
           data: command |> ToJson.to_json()
       }
     end

@@ -47,7 +47,8 @@ defmodule Ravix.Operations.Database.Maintenance do
   def create_database(store_or_pid, database_name, opts \\ [])
 
   def create_database(store, database_name, opts) when is_atom(store) do
-    create_database(NodeSelector.random_executor_for(store), database_name, opts)
+    {pid, _} = NodeSelector.random_executor_for(store)
+    create_database(pid, database_name, opts)
   end
 
   def create_database(node_pid, database_name, opts) when is_pid(node_pid) do
@@ -61,7 +62,7 @@ defmodule Ravix.Operations.Database.Maintenance do
         }
         |> RequestExecutor.execute_with_node(node_pid)
     after
-      response.body
+      response
     end
   end
 
@@ -69,7 +70,8 @@ defmodule Ravix.Operations.Database.Maintenance do
   def delete_database(store_or_pid, database_name, opts \\ [])
 
   def delete_database(store, database_name, opts) when is_atom(store) do
-    delete_database(NodeSelector.random_executor_for(store), database_name, opts)
+    {pid, _} = NodeSelector.random_executor_for(store)
+    delete_database(pid, database_name, opts)
   end
 
   def delete_database(node_pid, database_name, opts) when is_pid(node_pid) do
@@ -80,13 +82,9 @@ defmodule Ravix.Operations.Database.Maintenance do
           HardDelete: Keyword.get(opts, :hard_delete, false),
           TimeToWaitForConfirmation: Keyword.get(opts, :time_for_confirmation, 100)
         }
-        |> RequestExecutor.execute_with_node(
-          node_pid,
-          {},
-          opts
-        )
+        |> RequestExecutor.execute_with_node(node_pid)
     after
-      response.body
+      response
     end
   end
 
@@ -94,7 +92,8 @@ defmodule Ravix.Operations.Database.Maintenance do
   def database_stats(store_or_pid, database_name \\ nil, opts \\ [])
 
   def database_stats(store, database_name, opts) when is_atom(store) do
-    database_stats(NodeSelector.random_executor_for(store), database_name, opts)
+    {pid, _} = NodeSelector.random_executor_for(store)
+    database_stats(pid, database_name, opts)
   end
 
   def database_stats(node_pid, database_name, opts) when is_pid(node_pid) do
@@ -106,7 +105,7 @@ defmodule Ravix.Operations.Database.Maintenance do
         }
         |> RequestExecutor.execute_with_node(node_pid)
     after
-      response.body
+      response
     end
   end
 end

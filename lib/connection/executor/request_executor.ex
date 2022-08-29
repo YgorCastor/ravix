@@ -7,6 +7,7 @@ defmodule Ravix.Connection.RequestExecutor do
   alias Ravix.Connection
   alias Ravix.Connection.ServerNode
   alias Ravix.Connection.NodeSelector
+  alias Ravix.Connection.RequestExecutor
   alias Ravix.Connection.State, as: ConnectionState
 
   alias Ravix.Documents.Protocols.CreateRequest
@@ -16,31 +17,44 @@ defmodule Ravix.Connection.RequestExecutor do
       "[RAVIX] Creating a connection to node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}'"
     )
 
-    case client(node) do
+    case RequestExecutor.Client.build(node) do
       {:ok, node} -> {:ok, node}
       {:error, node} -> {:stop, node}
     end
   end
 
-  def start_link(_attrs, node) do
-    GenServer.start_link(__MODULE__, node)
+  @spec start_link(any, ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}
+  def start_link(_attrs, %ServerNode{} = node) do
+    GenServer.start_link(
+      __MODULE__,
+      node,
+      name: executor_id(node.url, node.database)
+    )
   end
 
   def execute(
         command,
         %ConnectionState{} = conn_state,
-        headers \\ {},
-        opts \\ []
-      ),
-      do: execute_with_node(command, NodeSelector.current_node(conn_state), headers, opts)
+        headers \\ []
+      ) do
+    {pid, _} = NodeSelector.current_node(conn_state)
 
-  def execute_with_node(command, pid, headers \\ {}, opts \\ []) do
-    case call_raven(pid, command, headers, opts) do
+    headers =
+      case conn_state.disable_topology_updates do
+        true -> headers
+        false -> headers ++ [{"Topology-Etag", conn_state.topology_etag}]
+      end
+
+    execute_with_node(command, pid, headers)
+  end
+
+  def execute_with_node(command, pid, headers \\ []) do
+    case call_raven(pid, command, headers) do
       {:ok, result} ->
-        {:ok, result}
+        {:ok, result.body}
 
-      {:error, :not_found} ->
-        {:error, :not_found}
+      {:error, err} when err in [:not_found, :conflict] ->
+        {:error, err}
 
       {_, response} ->
         Logger.error("[RAVIX] Error: #{inspect(response)}")
@@ -48,20 +62,60 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
-  defp fetch_state(executor_pid) do
+  @doc """
+  Fetches the current node executor state
+  ## Parameters
+  pid = The PID of the node
+  ## Returns
+  - `{:ok, Ravix.Connection.ServerNode}` if there's a node
+  - `{:error, :node_not_found}` if there's not a node with the informed pid
+  """
+  @spec fetch_node_state(bitstring | pid) :: {:ok, ServerNode.t()} | {:error, :node_not_found}
+  def fetch_node_state(pid) when is_pid(pid) do
     try do
-      {:ok,
-       executor_pid
-       |> :sys.get_state()}
+      {:ok, pid |> :sys.get_state()}
     catch
       :exit, _ -> {:error, :node_not_found}
     end
   end
 
-  defp call_raven(pid, command, headers, opts) do
+  @doc """
+  Fetches the current node executor state
+  ## Parameters
+  url = The node url
+  database = the node database name
+  ## Returns
+  - `{:ok, Ravix.Connection.ServerNode}` if there's a node
+  - `{:error, :node_not_found}` if there's not a node with the informed pid
+  """
+  @spec fetch_node_state(binary, binary) :: {:ok, ServerNode.t()} | {:error, :node_not_found}
+  def fetch_node_state(url, database) when is_bitstring(url) do
+    try do
+      {:ok, executor_id(url, database) |> :sys.get_state()}
+    catch
+      :exit, _ -> {:error, :node_not_found}
+    end
+  end
+
+  @doc """
+  Asynchronously updates the cluster tag for the current node
+  ## Parameters
+  - url: Node url
+  - database:  Database name
+  - cluster_tag: new cluster tag
+  ## Returns
+  - :ok
+  """
+  @spec update_cluster_tag(String.t(), String.t(), String.t()) :: :ok
+  def update_cluster_tag(url, database, cluster_tag) do
+    GenServer.cast(executor_id(url, database), {:update_cluster_tag, cluster_tag})
+  end
+
+  defp call_raven(pid, command, headers) do
     OK.for do
-      node <- fetch_state(pid)
+      node <- fetch_node_state(pid)
       request = CreateRequest.create_request(command, node)
+      _ <- maximum_url_length_reached?(node, request.url)
 
       result <-
         Tesla.request(
@@ -69,9 +123,8 @@ defmodule Ravix.Connection.RequestExecutor do
           url: request.url,
           method: request.method,
           body: request.data,
-          headers: request.headers
+          headers: request.headers ++ headers
         )
-        |> IO.inspect()
 
       result <- parse_result(result, node)
     after
@@ -103,7 +156,7 @@ defmodule Ravix.Connection.RequestExecutor do
         parse_error(error_response)
 
       response ->
-        {:ok, response.body}
+        {:ok, response}
     end
     |> check_if_needs_topology_update(node)
   end
@@ -126,29 +179,25 @@ defmodule Ravix.Connection.RequestExecutor do
 
   defp check_if_needs_topology_update({error_kind, err}, _), do: {error_kind, err}
 
+  @spec maximum_url_length_reached?(ServerNode.t(), String.t()) ::
+          {:ok, nil} | {:error, :maximum_url_length_reached}
+  defp maximum_url_length_reached?(node, url) do
+    max_url_length = node.settings.max_url_length
+
+    case String.length(url) > max_url_length do
+      true -> {:error, :maximum_url_length_reached}
+      false -> {:ok, nil}
+    end
+  end
+
   defp parse_error(error_response) do
     {:error, error_response.body["Message"]}
   end
 
-  defp build_ssl_params(_, :http), do: {:ok, []}
+  defp executor_id(url, database),
+    do: {:via, Registry, {:request_executors, url <> "/" <> database}}
 
-  defp build_ssl_params(ssl_config, :https) do
-    case ssl_config do
-      [] ->
-        {:error, :no_ssl_configurations_informed}
-
-      transport_ops ->
-        {:ok, transport_opts: transport_ops}
-    end
-  end
-
-  defp client(node) do
-    OK.for do
-      ssl_params <- build_ssl_params(node.ssl_config, node.protocol)
-      base_url = {Tesla.Middleware.BaseUrl, "#{node.protocol}://#{node.url}:#{node.port}"}
-      adapter = {Tesla.Adapter.Finch, name: Ravix.Finch}
-    after
-      %ServerNode{node | client: Tesla.client([base_url, Tesla.Middleware.JSON], adapter)}
-    end
+  def handle_cast({:update_cluster_tag, cluster_tag}, %ServerNode{} = node) do
+    {:noreply, %ServerNode{node | cluster_tag: cluster_tag}}
   end
 end

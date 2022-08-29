@@ -44,10 +44,10 @@ defmodule Ravix.MixProject do
     [
       {:castore, "~> 0.1"},
       {:elixir_uuid, "~> 1.2"},
-      {:finch, "~> 0.13"},
       {:inflex, "~> 2.1"},
       {:jason, "~> 1.3"},
       {:jaxon, "~> 2.0"},
+      {:hackney, "~> 1.18"},
       {:mappable, "~> 0.2"},
       {:morphix, "~> 0.8"},
       {:ok, "~> 2.3"},

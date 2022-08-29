@@ -23,8 +23,6 @@ defmodule Ravix.RQL.QueryTest do
           _ <- Session.store(session_id, any_entity)
           _ <- Session.save_changes(session_id)
 
-          :timer.sleep(500)
-
           query_response <-
             from("@all_docs")
             |> where(equal_to("cat_name", any_entity.cat_name))

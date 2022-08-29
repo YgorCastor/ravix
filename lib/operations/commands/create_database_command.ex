@@ -38,7 +38,7 @@ defmodule Ravix.Operations.Database.Commands.CreateDatabaseCommand do
             "/admin/databases?"
             |> append_param("name", Map.get(command, "DatabaseName"))
             |> append_param("replicationFactor", Map.get(command, "ReplicationFactor")),
-          method: "PUT",
+          method: :put,
           data: command |> ToJson.to_json()
       }
     end
