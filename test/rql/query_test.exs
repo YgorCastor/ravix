@@ -514,6 +514,7 @@ defmodule Ravix.RQL.QueryTest do
     end
   end
 
+  @tag :not_supported
   describe "stream_query/2" do
     test "should stream a query in a non-blocking way" do
       glaring = build_list(1000, :cat_entity)

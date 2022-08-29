@@ -6,7 +6,6 @@ defmodule Ravix.Connection.ServerNode do
       - url: URL of this node
       - port: port of this node
       - conn: TCP Connection State
-      - ssl_config: User SSL certificate config for this node
       - protocol: http or https
       - database: For which database is this executor
       - cluster_tag: Tag of this node in the RavenDB cluster
@@ -17,7 +16,6 @@ defmodule Ravix.Connection.ServerNode do
             url: nil,
             port: nil,
             client: nil,
-            ssl_config: nil,
             protocol: nil,
             database: nil,
             cluster_tag: nil,
@@ -31,7 +29,6 @@ defmodule Ravix.Connection.ServerNode do
           store: atom(),
           url: String.t(),
           port: non_neg_integer(),
-          ssl_config: Keyword.t() | nil,
           protocol: atom(),
           database: String.t(),
           cluster_tag: String.t() | nil,
@@ -49,7 +46,6 @@ defmodule Ravix.Connection.ServerNode do
         url: parsed_url.host,
         port: parsed_url.port,
         protocol: String.to_atom(parsed_url.scheme),
-        ssl_config: conn_state.ssl_config,
         database: conn_state.database,
         adapter: conn_state.adapter,
         settings: ServerNode.Settings.build(conn_state)
@@ -65,7 +61,6 @@ defmodule Ravix.Connection.ServerNode do
       url: parsed_url.host,
       port: parsed_url.port,
       protocol: String.to_atom(parsed_url.scheme),
-      ssl_config: conn_state.ssl_config,
       database: node_response["Database"],
       cluster_tag: node_response["ClusterTag"],
       adapter: conn_state.adapter,

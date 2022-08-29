@@ -38,6 +38,7 @@ config :ravix, Ravix.Test.Store,
   retry_backoff: 100,
   retry_count: 3,
   force_create_database: true,
+  adapter: Tesla.Adapter.Hackney,
   document_conventions: %{
     max_number_of_requests_per_session: 30,
     max_ids_to_catch: 32,
@@ -48,6 +49,9 @@ config :ravix, Ravix.Test.Store,
     disable_topology_update: false
   }
 ```
+
+Note: All the calls to RavenDB are done via HTTP calls, to that we leverage the use of [Tesla](https://github.com/elixir-tesla/tesla), by default
+the hackney adapter is used, but if you need a pooled connection and telemetries we recomend the Flinch Adapter
 
 Then you can start the processes in your main supervisor
 
@@ -209,7 +213,7 @@ end
 
 ## Secure Server
 
-To connect to a secure server, you can just inform the SSL certificates based on the [erlang ssl configs](https://www.erlang.org/doc/man/ssl.html).
+To connect to a secure server, you can just inform the SSL certificates based on the [erlang ssl configs](https://www.erlang.org/doc/man/ssl.html) to the adapter itself.
 
 E.g:
 
@@ -217,20 +221,7 @@ E.g:
 config :ravix, Ravix.Test.Store,
   urls: [System.get_env("RAVENDB_URL", "https://localhost:8080")],
   database: "test",
-  ssl_config: [
-    certfile: "certs/ravix_test.crt",
-    keyfile: "certs/ravix_test.key"
-  ]
-```
-OR
-
-```elixir
-config :ravix, Ravix.Test.Store,
-  urls: [System.get_env("RAVENDB_URL", "https://localhost:8080")],
-  database: "test",
-  ssl_config: [
-    certfile: "certs/ravix_test.pem"
-  ]
+  adapter: {Tesla.Adapter.Hackney, ssl_options: [certfile: "certs/client.crt"]}
 ```
 
 ## Ecto
@@ -248,7 +239,7 @@ What about querying your RavenDB using Ecto? [Ravix-Ecto](https://github.com/Ygo
 * ~~Create Document~~
 * ~~Delete Document~~
 * ~~Load Document~~
-* _Queries Engine_ (it works, but i'm not happy)
+* ~~Queries Engine~~
 * ~~Clustering~~
 * ~~Topology Updates~~
 * Counters
