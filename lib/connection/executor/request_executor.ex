@@ -12,6 +12,8 @@ defmodule Ravix.Connection.RequestExecutor do
 
   alias Ravix.Documents.Protocols.CreateRequest
 
+  @default_headers [{"content-type", "application/json"}, {"accept", "application/json"}]
+
   def init(%ServerNode{} = node) do
     Logger.debug(
       "[RAVIX] Creating a connection to node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}'"
@@ -123,7 +125,7 @@ defmodule Ravix.Connection.RequestExecutor do
           url: request.url,
           method: request.method,
           body: request.data,
-          headers: request.headers ++ headers
+          headers: request.headers ++ headers ++ @default_headers
         )
 
       result <- parse_result(result, node)

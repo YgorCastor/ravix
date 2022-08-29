@@ -9,15 +9,11 @@ defmodule Ravix.Connection.RequestExecutor.Client do
     Tesla.Builder.client(
       [
         base_url,
-        retry(node),
-        {Tesla.Middleware.Headers,
-         [
-           {"Raven-Client-Version", "Elixir"},
-           {"Content-Type", "application/json"},
-           {"Accept", "application/json"}
-         ]}
+        retry(node)
       ],
-      [Tesla.Middleware.JSON],
+      [
+        Tesla.Middleware.JSON
+      ],
       node.adapter
     )
     |> test_conn(node)
@@ -45,7 +41,7 @@ defmodule Ravix.Connection.RequestExecutor.Client do
          max_retry: node.settings.retry_count,
          max_delay: 4000,
          should_retry: fn
-           {:ok, %{status: status}} when status in [408, 500, 502, 503, 504] -> true
+           {:ok, %{status: status}} when status in [408, 500, 502, 503, 504] -> false
            {:ok, %{body: %{"IsStale" => true}}} -> true
            {:ok, _} -> false
            {:error, _} -> true
