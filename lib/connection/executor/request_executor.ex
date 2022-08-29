@@ -17,10 +17,7 @@ defmodule Ravix.Connection.RequestExecutor do
       "[RAVIX] Creating a connection to node '#{inspect(node.url)}:#{inspect(node.port)}' for store '#{inspect(node.store)}'"
     )
 
-    case RequestExecutor.Client.build(node) do
-      {:ok, node} -> {:ok, node}
-      {:error, node} -> {:stop, node}
-    end
+    {:ok, RequestExecutor.Client.build(node)}
   end
 
   @spec start_link(any, ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}

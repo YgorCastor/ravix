@@ -6,25 +6,24 @@ defmodule Ravix.Connection.RequestExecutor.Client do
   def build(node = %ServerNode{}) do
     base_url = {Tesla.Middleware.BaseUrl, "#{node.protocol}://#{node.url}:#{node.port}"}
 
-    {:ok,
-     %ServerNode{
-       node
-       | client:
-           Tesla.Builder.client(
-             [
-               base_url,
-               retry(node),
-               {Tesla.Middleware.Headers,
-                [
-                  {"raven-client-version", "Elixir"},
-                  {"content-type", "application/json"},
-                  {"accept", "application/json"}
-                ]}
-             ],
-             [Tesla.Middleware.JSON],
-             node.adapter
-           )
-     }}
+    %ServerNode{
+      node
+      | client:
+          Tesla.Builder.client(
+            [
+              base_url,
+              retry(node),
+              {Tesla.Middleware.Headers,
+               [
+                 {"raven-client-version", "Elixir"},
+                 {"content-type", "application/json"},
+                 {"accept", "application/json"}
+               ]}
+            ],
+            [Tesla.Middleware.JSON],
+            node.adapter
+          )
+    }
   end
 
   defp retry(node),
