@@ -42,7 +42,7 @@ defmodule Ravix.Connection.RequestExecutor do
     headers =
       case conn_state.disable_topology_updates do
         true -> headers
-        false -> headers ++ [{"Topology-Etag", conn_state.topology_etag}]
+        false -> headers ++ [{"Topology-Etag", Integer.to_string(conn_state.topology_etag)}]
       end
 
     execute_with_node(command, pid, headers)

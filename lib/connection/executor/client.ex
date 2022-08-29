@@ -12,9 +12,9 @@ defmodule Ravix.Connection.RequestExecutor.Client do
         retry(node),
         {Tesla.Middleware.Headers,
          [
-           {"raven-client-version", "Elixir"},
-           {"content-type", "application/json"},
-           {"accept", "application/json"}
+           {"Raven-Client-Version", "Elixir"},
+           {"Content-Type", "application/json"},
+           {"Accept", "application/json"}
          ]}
       ],
       [Tesla.Middleware.JSON],
