@@ -41,7 +41,7 @@ defmodule Ravix.Connection.RequestExecutor.Client do
          max_retry: node.settings.retry_count,
          max_delay: 4000,
          should_retry: fn
-           {:ok, %{status: status}} when status in [408, 500, 502, 503, 504] -> false
+           {:ok, %{status: status}} when status in [408, 500, 502, 503, 504] -> true
            {:ok, %{body: %{"IsStale" => true}}} -> true
            {:ok, _} -> false
            {:error, _} -> true
