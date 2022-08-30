@@ -91,12 +91,14 @@ defmodule Ravix.Connection.ServerNode do
      - retry_on_stale: Automatic retry when the query is stale
      - retry_backoff: Amount of time between retries (in ms)
      - retry_count: Amount of retries
+     - allow_stale_indexes: Indexes that can be stale queried
     """
     defstruct retry_on_failure: true,
               retry_on_stale: true,
               retry_backoff: 500,
               retry_count: 3,
-              max_url_length: 1024
+              max_url_length: 1024,
+              allowed_stale_indexes: []
 
     alias __MODULE__
 
@@ -105,7 +107,8 @@ defmodule Ravix.Connection.ServerNode do
             retry_on_stale: boolean(),
             retry_backoff: non_neg_integer(),
             retry_count: non_neg_integer(),
-            max_url_length: non_neg_integer()
+            max_url_length: non_neg_integer(),
+            allowed_stale_indexes: list(String.t())
           }
 
     def build(conn_state) do
@@ -114,7 +117,8 @@ defmodule Ravix.Connection.ServerNode do
         retry_on_stale: conn_state.retry_on_stale,
         retry_backoff: conn_state.retry_backoff,
         retry_count: conn_state.retry_count,
-        max_url_length: conn_state.conventions.max_length_of_query_using_get_url
+        max_url_length: conn_state.conventions.max_length_of_query_using_get_url,
+        allowed_stale_indexes: conn_state.conventions.allowed_stale_indexes
       }
     end
   end
