@@ -53,8 +53,8 @@ defmodule Ravix.Connection.RequestExecutor.Client do
            {:ok, %{status: status}} when status in [408, 502, 503, 504] ->
              true
 
-           {:ok, %{body: %{"IsStale" => true, "IndexName" => index_name}}} ->
-             should_retry_stale(node.settings.retry_on_stale, index_name, node)
+           {:ok, %{body: %{"IsStale" => true}}} ->
+             node.settings.retry_on_stale
 
            {:ok, _} ->
              false
@@ -63,9 +63,4 @@ defmodule Ravix.Connection.RequestExecutor.Client do
              true
          end
        ]}
-
-  defp should_retry_stale(false, _, _), do: false
-
-  defp should_retry_stale(true, index, node),
-    do: not Enum.member?(node.settings.allowed_stale_indexes, index)
 end

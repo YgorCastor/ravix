@@ -10,7 +10,7 @@ defmodule Ravix.Documents.Conventions do
   - max_length_of_query_using_get_url: Maximum lenght of an api call url
   - session_idle_ttl: How much time a session can live without interaction
   - disable_topology_update: if true, no automatic topology updates will be executed
-  - allow_stale_indexes: List of indexes that can have stale reads
+  - not_allow_stale_indexes: List of indexes that can't have stale reads
   """
   defstruct max_number_of_requests_per_session: 30,
             max_ids_to_catch: 32,
@@ -20,7 +20,8 @@ defmodule Ravix.Documents.Conventions do
             identity_parts_separator: "/",
             session_idle_ttl: 30,
             disable_topology_update: false,
-            allowed_stale_indexes: []
+            stale_is_error: false,
+            not_allowed_stale_indexes: []
 
   alias Ravix.Documents.Conventions
 
@@ -33,6 +34,7 @@ defmodule Ravix.Documents.Conventions do
           identity_parts_separator: String.t(),
           session_idle_ttl: non_neg_integer(),
           disable_topology_update: boolean(),
-          allowed_stale_indexes: list(String.t())
+          stale_is_error: boolean(),
+          not_allowed_stale_indexes: list(String.t())
         }
 end

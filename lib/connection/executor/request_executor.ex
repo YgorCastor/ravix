@@ -151,8 +151,11 @@ defmodule Ravix.Connection.RequestExecutor do
       %{body: body} when is_map_key(body, "Error") ->
         {:error, body["Message"]}
 
-      %{body: %{"IsStale" => true}} ->
-        {:error, :stale}
+      %{body: %{"IsStale" => true, "IndexName" => index_name}} = response ->
+        case stale_is_error(node.settings.stale_is_error, index_name, node) do
+          true -> {:error, :stale}
+          false -> {:ok, response}
+        end
 
       error_response when error_response.status in [408, 502, 503, 504] ->
         parse_error(error_response)
@@ -202,4 +205,10 @@ defmodule Ravix.Connection.RequestExecutor do
   def handle_cast({:update_cluster_tag, cluster_tag}, %ServerNode{} = node) do
     {:noreply, %ServerNode{node | cluster_tag: cluster_tag}}
   end
+
+  defp stale_is_error(false, index, node),
+    do: Enum.member?(node.settings.not_allowed_stale_indexes, index)
+
+  defp stale_is_error(true, _, _),
+    do: true
 end
