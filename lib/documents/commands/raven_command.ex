@@ -13,6 +13,7 @@ defmodule Ravix.Documents.Commands.RavenCommand do
   @base_fields [
     url: nil,
     method: nil,
+    query_params: [],
     data: nil,
     headers: [],
     is_stream: false,
