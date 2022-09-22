@@ -5,6 +5,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   require Logger
 
   alias Ravix.Connection.{RequestExecutor, ServerNode, Topology}
+  alias Ravix.Telemetry
 
   def init(init_arg) do
     DynamicSupervisor.init(
@@ -58,10 +59,12 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   ## Returns
   - List of nodes `[new_nodes: list(Ravix.Connection.ServerNode), updated_nodes: list(Ravix.Connection.ServerNode)]`
   """
-  @spec update_topology(any, Ravix.Connection.Topology.t()) :: [
+  @spec update_topology(atom(), Ravix.Connection.Topology.t()) :: [
           {:new_nodes, list} | {:updated_nodes, list}
         ]
   def update_topology(store, %Topology{} = topology) do
+    Telemetry.topology_updated(store)
+
     current_nodes = fetch_nodes(store)
     remaining_nodes = remove_old_nodes(store, current_nodes, topology)
     updated_nodes = update_existing_nodes(remaining_nodes, topology)
