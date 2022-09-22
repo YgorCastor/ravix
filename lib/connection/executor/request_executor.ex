@@ -4,12 +4,12 @@ defmodule Ravix.Connection.RequestExecutor do
   require Logger
   require OK
 
+  alias Ravix.Telemetry
   alias Ravix.Connection
   alias Ravix.Connection.ServerNode
   alias Ravix.Connection.NodeSelector
   alias Ravix.Connection.RequestExecutor
   alias Ravix.Connection.State, as: ConnectionState
-
   alias Ravix.Documents.Protocols.CreateRequest
 
   @default_headers [{"content-type", "application/json"}, {"accept", "application/json"}]
@@ -137,30 +137,46 @@ defmodule Ravix.Connection.RequestExecutor do
   defp parse_result(response, node) do
     case response do
       %{status: 404} ->
+        Telemetry.request_error(node, 404)
+
         {:error, :document_not_found}
 
       %{status: 403} ->
+        Telemetry.request_error(node, 403)
+
         {:error, :unauthorized}
 
       %{status: 409} ->
+        Telemetry.request_error(node, 409)
+
         {:error, :conflict}
 
       %{status: 410} ->
+        Telemetry.request_error(node, 410)
+
         {:error, :node_gone}
 
       %{body: body} when is_map_key(body, "Error") ->
+        Telemetry.request_error(node, 500)
+
         {:error, body["Message"]}
 
       %{body: %{"IsStale" => true, "IndexName" => index_name}} = response ->
+        Telemetry.request_stale(node, index_name)
+
         case stale_is_error(node.settings.stale_is_error, index_name, node) do
           true -> {:error, :stale}
           false -> {:ok, response}
         end
 
       error_response when error_response.status in [408, 502, 503, 504] ->
+        Telemetry.request_error(node, error_response.status)
+
         parse_error(error_response)
 
       response ->
+        Telemetry.request_success(node)
+
         {:ok, response}
     end
     |> check_if_needs_topology_update(node)

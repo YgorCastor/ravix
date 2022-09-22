@@ -3,6 +3,7 @@ defmodule Ravix.Connection.RequestExecutor.Client do
   require Logger
 
   alias Ravix.Connection.ServerNode
+  alias Ravix.Telemetry
 
   def build(node = %ServerNode{}) do
     base_url = {Tesla.Middleware.BaseUrl, "#{node.protocol}://#{node.url}:#{node.port}"}
@@ -13,6 +14,8 @@ defmodule Ravix.Connection.RequestExecutor.Client do
         retry(node)
       ],
       [
+        Tesla.Middleware.OpenTelemetry,
+        Tesla.Middleware.PathParams,
         Tesla.Middleware.JSON
       ],
       node.adapter
@@ -51,6 +54,7 @@ defmodule Ravix.Connection.RequestExecutor.Client do
          max_delay: 4000,
          should_retry: fn
            {:ok, %{status: status}} when status in [408, 502, 503, 504] ->
+             Telemetry.retry_count(node, status)
              true
 
            {:ok, %{body: %{"IsStale" => true}}} ->

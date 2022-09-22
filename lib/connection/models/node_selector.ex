@@ -6,6 +6,7 @@ defmodule Ravix.Connection.NodeSelector do
   alias Ravix.Connection.NodeSelector
   alias Ravix.Connection.ServerNode
   alias Ravix.Connection.RequestExecutor.Supervisor, as: ExecutorSupervisor
+  alias Ravix.Telemetry
 
   @type t :: %NodeSelector{
           current_node_index: :counters.counters_ref()
@@ -40,6 +41,7 @@ defmodule Ravix.Connection.NodeSelector do
     state.node_selector.current_node_index |> :counters.add(1, 1)
 
     Enum.at(current_nodes, current_index)
+    |> Telemetry.node_selected()
   end
 
   @spec random_executor_for(atom()) :: {pid(), ServerNode.t()}
