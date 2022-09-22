@@ -52,7 +52,7 @@ defmodule Ravix.MixProject do
       {:mappable, "~> 0.2"},
       {:morphix, "~> 0.8"},
       {:ok, "~> 2.3"},
-      {:opentelemetry, "~> 1.0.0"},
+      {:opentelemetry, "~> 1.1.0"},
       {:opentelemetry_tesla, "~> 2.0"},
       {:retry, "~> 0.16"},
       {:telemetry, "~> 1.1"},
