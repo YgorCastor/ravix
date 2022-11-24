@@ -9,6 +9,7 @@ defmodule Ravix.Connection.State do
      - retry_on_stale: Automatic retry when the query is stale
      - retry_backoff: Amount of time between retries (in ms)
      - retry_count: Amount of retries
+     - http_client_name: The name of the http client that will be used by this store
      - node_selector: Module that selects the nodes based on different strategies. E.g: Ravix.Connection.NodeSelector
      - urls: List of the urls of RavenDB servers
      - topology_etag: ETAG of the RavenDB cluster topology
@@ -23,6 +24,7 @@ defmodule Ravix.Connection.State do
             retry_on_stale: false,
             retry_backoff: 100,
             retry_count: 3,
+            http_client_name: Ravix.Finch,
             conventions: %Ravix.Documents.Conventions{},
             node_selector: nil,
             urls: [],
@@ -30,8 +32,7 @@ defmodule Ravix.Connection.State do
             disable_topology_updates: false,
             force_create_database: false,
             last_topology_update: nil,
-            cluster_token: nil,
-            adapter: nil
+            cluster_token: nil
 
   @type t :: %Ravix.Connection.State{
           store: any(),
@@ -40,6 +41,7 @@ defmodule Ravix.Connection.State do
           retry_on_stale: boolean(),
           retry_backoff: non_neg_integer(),
           retry_count: non_neg_integer(),
+          http_client_name: atom(),
           conventions: Ravix.Documents.Conventions.t(),
           node_selector: Ravix.Connection.NodeSelector.t(),
           urls: list(String.t()),

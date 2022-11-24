@@ -1,70 +1,68 @@
 defmodule Ravix.Connection.RequestExecutor.Client do
-  require OK
+  use Retry
   require Logger
 
   alias Ravix.Connection.ServerNode
   alias Ravix.Telemetry
 
   def build(node = %ServerNode{}) do
-    base_url = {Tesla.Middleware.BaseUrl, "#{node.protocol}://#{node.url}:#{node.port}"}
+    path = ServerNode.node_url(node) <> "/databases"
+    client = Finch.build(:get, path)
 
-    Tesla.Builder.client(
-      [
-        base_url,
-        retry(node)
-      ],
-      [
-        Tesla.Middleware.OpenTelemetry,
-        Tesla.Middleware.PathParams,
-        Tesla.Middleware.JSON
-      ],
-      node.adapter
-    )
-    |> test_conn(node)
-  end
+    case Finch.request(client, node.settings.http_client_name) do
+      {:ok, %{status: 200}} ->
+        {:ok, node}
 
-  defp test_conn(client, node) do
-    try do
-      case Tesla.get(client, "/databases") do
-        {:ok, %{status: 200}} ->
-          {:ok,
-           %ServerNode{
-             node
-             | client: client
-           }}
-
-        err ->
-          Logger.error("[RAVIX] Failed to connect to the database #{inspect(err)}")
-          {:error, :invalid_node}
-      end
-    catch
-      :exit, failure ->
-        Logger.error(
-          "Failed to start the connection with the node #{inspect(node.url)} - #{inspect(failure)}"
-        )
+      err ->
+        Logger.error("[RAVIX] Failed to connect to the database #{inspect(err)}")
+        {:error, :invalid_node}
     end
   end
 
-  defp retry(node),
-    do:
-      {Tesla.Middleware.Retry,
-       [
-         delay: node.settings.retry_backoff,
-         max_retry: node.settings.retry_count,
-         max_delay: 4000,
-         should_retry: fn
-           {:ok, %{status: status}} when status in [408, 502, 503, 504] ->
-             Telemetry.retry_count(node, status)
-             true
+  def request(node, method, path, headers \\ [], body \\ []) do
+    path = ServerNode.node_url(node) <> path
+    client = Finch.build(method, path, headers, body)
 
-           {:ok, %{body: %{"IsStale" => true}}} ->
-             node.settings.retry_on_stale
+    retry with:
+            constant_backoff(node.settings.retry_backoff)
+            |> Stream.take(node.settings.retry_count) do
+      do_request(node, client)
+    after
+      {:ok, result} ->
+        {:ok, result}
 
-           {:ok, _} ->
-             false
+      {_, response} ->
+        Logger.error("[RAVIX] Error received from RavenDB: #{inspect(response)}")
+        {:error, response}
+    else
+      err -> err
+    end
+  end
 
-           {:error, _} ->
-             true
-         end
-       ]}
+  defp do_request(node, client) do
+    case Finch.request(client, node.settings.http_client_name) do
+      {:ok, %{status: status}} when status in [408, 502, 503, 504] ->
+        Telemetry.retry_count(node, status)
+        {:error, status}
+
+      {:ok, %{status: status} = response} when status == 404 ->
+        {:ok, response}
+
+      {:ok, result} ->
+        put_in(result.body, Jason.decode!(result.body))
+        |> check_stale(node)
+
+      {:error, response} ->
+        {:fatal, response}
+    end
+  end
+
+  defp check_stale(%{body: %{"IsStale" => true}} = response, node) do
+    case node.settings.retry_on_stale do
+      true -> {:error, response}
+      false -> {:ok, response}
+    end
+  end
+
+  defp check_stale(response, _), do: {:ok, response}
 end

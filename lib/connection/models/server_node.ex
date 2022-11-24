@@ -9,7 +9,6 @@ defmodule Ravix.Connection.ServerNode do
       - protocol: http or https
       - database: For which database is this executor
       - cluster_tag: Tag of this node in the RavenDB cluster
-      - adapter: Tesla Adapter
       - settings: General node settings
   """
   defstruct store: nil,
@@ -19,7 +18,6 @@ defmodule Ravix.Connection.ServerNode do
             protocol: nil,
             database: nil,
             cluster_tag: nil,
-            adapter: Tesla.Adapter.Hackney,
             settings: nil
 
   alias Ravix.Connection.ServerNode
@@ -32,7 +30,6 @@ defmodule Ravix.Connection.ServerNode do
           protocol: atom(),
           database: String.t(),
           cluster_tag: String.t() | nil,
-          adapter: Tesla.Adapter,
           settings: ServerNode.Settings.t()
         }
 
@@ -47,7 +44,6 @@ defmodule Ravix.Connection.ServerNode do
         port: parsed_url.port,
         protocol: String.to_atom(parsed_url.scheme),
         database: conn_state.database,
-        adapter: conn_state.adapter,
         settings: ServerNode.Settings.build(conn_state)
       }
     end)
@@ -63,17 +59,22 @@ defmodule Ravix.Connection.ServerNode do
       protocol: String.to_atom(parsed_url.scheme),
       database: node_response["Database"],
       cluster_tag: node_response["ClusterTag"],
-      adapter: conn_state.adapter,
       settings: ServerNode.Settings.build(conn_state)
     }
   end
 
   @doc """
-    Helper method to build the url for Database specific API requests
+    Helper method to build the base path for Database specific API requests
+  """
+  @spec node_database_path(ServerNode.t()) :: String.t()
+  def node_database_path(%ServerNode{} = server_node),
+    do: "/databases/#{server_node.database}"
+
+  @doc """
+    Node host and port
   """
   @spec node_url(ServerNode.t()) :: String.t()
-  def node_url(%ServerNode{} = server_node),
-    do: "/databases/#{server_node.database}"
+  def node_url(%ServerNode{} = node), do: "#{node.protocol}://#{node.url}:#{node.port}"
 
   defimpl String.Chars, for: Ravix.Connection.ServerNode do
     def to_string(nil) do
@@ -81,7 +82,7 @@ defmodule Ravix.Connection.ServerNode do
     end
 
     def to_string(node) do
-      "#{node.protocol}://#{node.url}:#{node.port}"
+      ServerNode.node_url(node)
     end
   end
 
@@ -91,6 +92,7 @@ defmodule Ravix.Connection.ServerNode do
      - retry_on_stale: Automatic retry when the query is stale
      - retry_backoff: Amount of time between retries (in ms)
      - retry_count: Amount of retries
+     - http_client_name: Name of the Finch http client to use with this node,
      - not_allowed_stale_indexes: Indexes that cant be stale queried
      - stale_is_error: Treat stale as an error
     """
@@ -98,6 +100,7 @@ defmodule Ravix.Connection.ServerNode do
               retry_on_stale: true,
               retry_backoff: 500,
               retry_count: 3,
+              http_client_name: Ravix.Finch,
               max_url_length: 1024,
               not_allowed_stale_indexes: [],
               stale_is_error: false
@@ -109,6 +112,7 @@ defmodule Ravix.Connection.ServerNode do
             retry_on_stale: boolean(),
             retry_backoff: non_neg_integer(),
             retry_count: non_neg_integer(),
+            http_client_name: atom(),
             max_url_length: non_neg_integer(),
             not_allowed_stale_indexes: list(String.t()),
             stale_is_error: boolean()
@@ -120,6 +124,7 @@ defmodule Ravix.Connection.ServerNode do
         retry_on_stale: conn_state.retry_on_stale,
         retry_backoff: conn_state.retry_backoff,
         retry_count: conn_state.retry_count,
+        http_client_name: conn_state.http_client_name,
         max_url_length: conn_state.conventions.max_length_of_query_using_get_url,
         not_allowed_stale_indexes: conn_state.conventions.not_allowed_stale_indexes,
         stale_is_error: conn_state.conventions.stale_is_error

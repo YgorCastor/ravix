@@ -15,6 +15,7 @@ defmodule Ravix.Integration.Case do
   import Ravix.RQL.Query
 
   setup do
+    _ = start_supervised!({Finch, name: Ravix.Finch})
     _ = start_supervised!(Ravix.Test.Store)
     _ = start_supervised!(Ravix.Test.NonRetryableStore)
     _ = start_supervised!(Ravix.Test.OptimisticLockStore)

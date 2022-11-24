@@ -9,6 +9,7 @@ defmodule Ravix.Connection.RequestExecutor do
   alias Ravix.Connection.ServerNode
   alias Ravix.Connection.NodeSelector
   alias Ravix.Connection.RequestExecutor
+  alias Ravix.Connection.RequestExecutor.Client
   alias Ravix.Connection.State, as: ConnectionState
   alias Ravix.Documents.Protocols.CreateRequest
 
@@ -53,7 +54,7 @@ defmodule Ravix.Connection.RequestExecutor do
   def execute_with_node(command, pid, headers \\ []) do
     case call_raven(pid, command, headers) do
       {:ok, result} ->
-        {:ok, result.body}
+        {:ok, result}
 
       {:error, err} when err in [:not_found, :conflict] ->
         {:error, err}
@@ -120,12 +121,12 @@ defmodule Ravix.Connection.RequestExecutor do
       _ <- maximum_url_length_reached?(node, request.url)
 
       result <-
-        Tesla.request(
-          node.client,
-          url: request.url,
-          method: request.method,
-          body: request.data,
-          headers: request.headers ++ headers ++ @default_headers
+        Client.request(
+          node,
+          request.method,
+          request.url,
+          request.headers ++ headers ++ @default_headers,
+          request.data
         )
 
       result <- parse_result(result, node)
@@ -180,6 +181,7 @@ defmodule Ravix.Connection.RequestExecutor do
         {:ok, response}
     end
     |> check_if_needs_topology_update(node)
+    |> parse_body()
   end
 
   defp check_if_needs_topology_update({:ok, response}, %ServerNode{} = node) do
@@ -218,13 +220,17 @@ defmodule Ravix.Connection.RequestExecutor do
   defp executor_id(url, database),
     do: {:via, Registry, {:request_executors, url <> "/" <> database}}
 
-  def handle_cast({:update_cluster_tag, cluster_tag}, %ServerNode{} = node) do
-    {:noreply, %ServerNode{node | cluster_tag: cluster_tag}}
-  end
-
   defp stale_is_error(false, index, node),
     do: Enum.member?(node.settings.not_allowed_stale_indexes, index)
 
   defp stale_is_error(true, _, _),
     do: true
+
+  defp parse_body({:ok, response}), do: {:ok, response.body}
+
+  defp parse_body({:error, error}), do: {:error, error}
+
+  def handle_cast({:update_cluster_tag, cluster_tag}, %ServerNode{} = node) do
+    {:noreply, %ServerNode{node | cluster_tag: cluster_tag}}
+  end
 end
