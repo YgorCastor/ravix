@@ -11,6 +11,7 @@ defmodule Ravix.Documents.Store do
 
   defmacro __using__(opts) do
     require OK
+    alias Ravix.Telemetry
 
     quote bind_quoted: [opts: opts] do
       @behaviour Ravix.Documents.Store
@@ -36,10 +37,13 @@ defmodule Ravix.Documents.Store do
 
         {:ok, _} = Ravix.Documents.Session.Supervisor.create_session(session_initial_state)
 
+        Telemetry.session_started(__MODULE__)
+
         {:ok, session_id}
       end
 
       def close_session(session_id) do
+        Telemetry.session_ended(__MODULE__)
         Ravix.Documents.Session.Supervisor.close_session(__MODULE__, session_id)
       end
 

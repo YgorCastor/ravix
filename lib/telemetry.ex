@@ -15,7 +15,7 @@ defmodule Ravix.Telemetry do
     :telemetry.execute(
       [:ravix, node.store, :node_selected, :count],
       %{count: 1},
-      %{node_url: node.url}
+      %{node_url: node.url, database: node.database}
     )
 
     {pid, node}
@@ -38,7 +38,7 @@ defmodule Ravix.Telemetry do
     :telemetry.execute(
       [:ravix, node.store, :retries, :count],
       %{count: 1},
-      %{node_url: node.url, status: status}
+      %{node_url: node.url, status: status, database: node.database}
     )
   end
 
@@ -49,7 +49,7 @@ defmodule Ravix.Telemetry do
     :telemetry.execute(
       [:ravix, node.store, :requests, :error],
       %{count: 1},
-      %{node_url: node.url, status: status}
+      %{node_url: node.url, status: status, database: node.database}
     )
   end
 
@@ -60,7 +60,7 @@ defmodule Ravix.Telemetry do
     :telemetry.execute(
       [:ravix, node.store, :requests, :stale_index],
       %{count: 1},
-      %{node_url: node.url, index: index_name}
+      %{node_url: node.url, index: index_name, database: node.database}
     )
   end
 
@@ -71,7 +71,47 @@ defmodule Ravix.Telemetry do
     :telemetry.execute(
       [:ravix, node.store, :requests, :success],
       %{count: 1},
-      %{node_url: node.url}
+      %{node_url: node.url, database: node.database}
+    )
+  end
+
+  @doc """
+    Fires when a session is started
+  """
+  def session_started(store) do
+    :telemetry.execute(
+      [:ravix, store, :session_started, :count],
+      %{count: 1}
+    )
+  end
+
+  @doc """
+    Fires when a session is ended
+  """
+  def session_ended(store) do
+    :telemetry.execute(
+      [:ravix, store, :session_ended, :count],
+      %{count: -1}
+    )
+  end
+
+  @doc """
+    Fires when a session times-out
+  """
+  def session_timed_out(store) do
+    :telemetry.execute(
+      [:ravix, store, :session_timed_out, :count],
+      %{count: 1}
+    )
+  end
+  
+  @doc """
+    Fires when a query is executed
+  """
+  def query_executed(store) do
+    :telemetry.execute(
+      [:ravix, store, :query_executed, :count],
+      %{count: 1}
     )
   end
 end

@@ -50,7 +50,6 @@ defmodule Ravix.MixProject do
       {:mappable, "~> 0.2"},
       {:morphix, "~> 0.8"},
       {:ok, "~> 2.3"},
-      {:opentelemetry, "~> 1.1"},
       {:retry, "~> 0.16"},
       {:telemetry, "~> 1.1"},
       {:timex, "~> 3.7"},
