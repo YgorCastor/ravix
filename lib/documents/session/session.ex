@@ -10,6 +10,7 @@ defmodule Ravix.Documents.Session do
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.Manager, as: SessionManager
   alias Ravix.Documents.Session.Supervisor, as: SessionSupervisor
+  alias Ravix.Telemetry
 
   def init(session_state) do
     {:ok, session_state, {:continue, :session_ttl_checker}}
@@ -274,6 +275,7 @@ defmodule Ravix.Documents.Session do
   def handle_call({:execute_query, query, method}, from, %SessionState{} = state) do
     reference = make_ref()
     self_pid = self()
+    Telemetry.query_executed(state.store)
 
     Task.start(fn ->
       response = SessionManager.execute_query(state, query, method)
@@ -309,6 +311,8 @@ defmodule Ravix.Documents.Session do
     Task.start(fn ->
       if Timex.diff(Timex.now(), state.last_session_call, :seconds) >
            state.conventions.session_idle_ttl do
+        Telemetry.session_timed_out(state.store)
+
         Logger.warn(
           "[RAVIX] The session #{state.session_id} timed-out because it was inactive for more than #{inspect(state.conventions.session_idle_ttl)} seconds"
         )

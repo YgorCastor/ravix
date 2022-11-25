@@ -26,7 +26,7 @@ defmodule Ravix.Documents.Commands.ExecuteStreamQueryCommand do
     @spec create_request(ExecuteStreamQueryCommand.t(), ServerNode.t()) ::
             ExecuteStreamQueryCommand.t()
     def create_request(%ExecuteStreamQueryCommand{} = command, %ServerNode{} = server_node) do
-      url = server_node |> ServerNode.node_url()
+      url = server_node |> ServerNode.node_database_path()
 
       %ExecuteStreamQueryCommand{
         command
