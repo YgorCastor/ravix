@@ -19,14 +19,14 @@ defmodule Ravix.Connection.RequestExecutor.Client do
     end
   end
 
-  def request(node, method, path, headers \\ [], body \\ []) do
+  def request(node, method, path, headers \\ [], body \\ [], opts \\ [is_stream: false]) do
     path = ServerNode.node_url(node) <> path
     client = Finch.build(method, path, headers, body)
 
     retry with:
             constant_backoff(node.settings.retry_backoff)
             |> Stream.take(node.settings.retry_count) do
-      do_request(node, client)
+      do_request(node, client, opts)
     after
       {:ok, result} ->
         {:ok, result}
@@ -39,7 +39,7 @@ defmodule Ravix.Connection.RequestExecutor.Client do
     end
   end
 
-  defp do_request(node, client) do
+  defp do_request(node, client, is_stream: false) do
     case Finch.request(client, node.settings.http_client_name) do
       {:ok, %{status: status}} when status in [408, 502, 503, 504] ->
         Telemetry.retry_count(node, status)
@@ -48,12 +48,37 @@ defmodule Ravix.Connection.RequestExecutor.Client do
       {:ok, %{status: status} = response} when status == 404 ->
         {:ok, response}
 
-      {:ok, result} ->
-        put_in(result.body, Jason.decode!(result.body))
+      {:ok, response} ->
+        put_in(response.body, Jason.decode!(response.body))
         |> check_stale(node)
 
       {:error, response} ->
         {:fatal, response}
+    end
+  end
+
+  defp do_request(node, client, is_stream: true) do
+    parse_response = fn
+      {:status, value}, acc -> %{acc | status: value}
+      {:headers, value}, acc -> %{acc | headers: acc.headers ++ value}
+      {:data, value}, acc -> %{acc | body: acc.body <> value}
+    end
+
+    parse_stream = fn
+      body ->
+        body
+        |> Jaxon.Stream.from_binary()
+        |> Jaxon.Stream.query([:root, "Results", :all])
+    end
+
+    case Finch.stream(
+           client,
+           node.settings.http_client_name,
+           %{status: nil, headers: [], body: ""},
+           parse_response
+         ) do
+      {:ok, response} ->
+        {:ok, put_in(response.body, parse_stream.(response.body))}
     end
   end
 

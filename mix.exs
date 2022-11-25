@@ -47,6 +47,7 @@ defmodule Ravix.MixProject do
       {:finch, "~> 0.13"},
       {:inflex, "~> 2.1"},
       {:jason, "~> 1.3"},
+      {:jaxon, "~> 2.0"},
       {:mappable, "~> 0.2"},
       {:morphix, "~> 0.8"},
       {:ok, "~> 2.3"},

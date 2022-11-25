@@ -126,7 +126,8 @@ defmodule Ravix.Connection.RequestExecutor do
           request.method,
           request.url,
           request.headers ++ headers ++ @default_headers,
-          request.data
+          request.data,
+          is_stream: command.is_stream
         )
 
       result <- parse_result(result, node)
