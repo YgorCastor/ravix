@@ -1,19 +1,15 @@
 defmodule Ravix.Connection.RequestExecutor do
+  @moduledoc false
   use GenServer
 
   require Logger
   require OK
 
-  alias Ravix.Telemetry
   alias Ravix.Connection
   alias Ravix.Connection.ServerNode
-  alias Ravix.Connection.NodeSelector
   alias Ravix.Connection.RequestExecutor
   alias Ravix.Connection.RequestExecutor.Client
   alias Ravix.Connection.State, as: ConnectionState
-  alias Ravix.Documents.Protocols.CreateRequest
-
-  @default_headers [{"content-type", "application/json"}, {"accept", "application/json"}]
 
   def init(%ServerNode{} = node) do
     Logger.debug(
@@ -40,19 +36,14 @@ defmodule Ravix.Connection.RequestExecutor do
         %ConnectionState{} = conn_state,
         headers \\ []
       ) do
-    {pid, _} = NodeSelector.current_node(conn_state)
-
     headers =
-      case conn_state.disable_topology_updates do
-        true -> headers
-        false -> headers ++ [{"Topology-Etag", Integer.to_string(conn_state.topology_etag)}]
+      if conn_state.topology_etag != nil and conn_state.disable_topology_updates == false do
+        headers ++ [{"Topology-Etag", Integer.to_string(conn_state.topology_etag)}]
+      else
+        headers
       end
 
-    execute_with_node(command, pid, headers)
-  end
-
-  def execute_with_node(command, pid, headers \\ []) do
-    case call_raven(pid, command, headers) do
+    case call_raven(conn_state, command, headers) do
       {:ok, result} ->
         {:ok, result}
 
@@ -114,105 +105,72 @@ defmodule Ravix.Connection.RequestExecutor do
     GenServer.cast(executor_id(url, database), {:update_cluster_tag, cluster_tag})
   end
 
-  defp call_raven(pid, command, headers) do
+  defp call_raven(conn_state, command, headers) do
     OK.for do
-      node <- fetch_node_state(pid)
-      request = CreateRequest.create_request(command, node)
-      _ <- maximum_url_length_reached?(node, request.url)
-
       result <-
         Client.request(
-          node,
-          request.method,
-          request.url,
-          request.headers ++ headers ++ @default_headers,
-          request.data,
-          is_stream: command.is_stream
+          conn_state,
+          command,
+          headers
         )
 
-      result <- parse_result(result, node)
+      result <- parse_result(result, conn_state)
     after
       result
     end
   end
 
-  defp parse_result(response, node) do
+  # credo:disable-for-next-line
+  defp parse_result(response, %ConnectionState{} = conn_state) do
     case response do
       %{status: 404} ->
-        Telemetry.request_error(node, 404)
-
         {:error, :document_not_found}
 
       %{status: 403} ->
-        Telemetry.request_error(node, 403)
-
         {:error, :unauthorized}
 
       %{status: 409} ->
-        Telemetry.request_error(node, 409)
-
         {:error, :conflict}
 
       %{status: 410} ->
-        Telemetry.request_error(node, 410)
-
         {:error, :node_gone}
 
       %{body: body} when is_map_key(body, "Error") ->
-        Telemetry.request_error(node, 500)
-
         {:error, body["Message"]}
 
       %{body: %{"IsStale" => true, "IndexName" => index_name}} = response ->
-        Telemetry.request_stale(node, index_name)
-
-        case stale_is_error(node.settings.stale_is_error, index_name, node) do
+        case stale_is_error(conn_state.conventions, index_name) do
           true -> {:error, :stale}
           false -> {:ok, response}
         end
 
       error_response when error_response.status in [408, 502, 503, 504] ->
-        Telemetry.request_error(node, error_response.status)
-
         parse_error(error_response)
 
       response ->
-        Telemetry.request_success(node)
-
         {:ok, response}
     end
-    |> check_if_needs_topology_update(node)
+    |> check_if_needs_topology_update(conn_state)
     |> parse_body()
   end
 
-  defp check_if_needs_topology_update({:ok, response}, %ServerNode{} = node) do
+  defp check_if_needs_topology_update({:ok, response}, %ConnectionState{} = conn_state) do
     case Enum.find(response.headers, fn header -> elem(header, 0) == "Refresh-Topology" end) do
       nil ->
         {:ok, response}
 
       _ ->
         Logger.info(
-          "[RAVIX] The database requested a topology refresh for the store '#{inspect(node.store)}'"
+          "[RAVIX] The database requested a topology refresh for the store '#{inspect(conn_state.store)}'"
         )
 
-        Connection.update_topology(node.store)
+        Connection.update_topology(conn_state.store)
 
         {:ok, response}
     end
   end
 
   defp check_if_needs_topology_update({error_kind, err}, _), do: {error_kind, err}
-
-  @spec maximum_url_length_reached?(ServerNode.t(), String.t()) ::
-          {:ok, nil} | {:error, :maximum_url_length_reached}
-  defp maximum_url_length_reached?(node, url) do
-    max_url_length = node.settings.max_url_length
-
-    case String.length(url) > max_url_length do
-      true -> {:error, :maximum_url_length_reached}
-      false -> {:ok, nil}
-    end
-  end
 
   defp parse_error(error_response) do
     {:error, error_response.body["Message"]}
@@ -221,10 +179,10 @@ defmodule Ravix.Connection.RequestExecutor do
   defp executor_id(url, database),
     do: {:via, Registry, {:request_executors, url <> "/" <> database}}
 
-  defp stale_is_error(false, index, node),
-    do: Enum.member?(node.settings.not_allowed_stale_indexes, index)
+  defp stale_is_error(%{stale_is_error: false} = conventions, index),
+    do: Enum.member?(conventions.not_allowed_stale_indexes, index)
 
-  defp stale_is_error(true, _, _),
+  defp stale_is_error(%{stale_is_error: true}, _),
     do: true
 
   defp parse_body({:ok, response}), do: {:ok, response.body}

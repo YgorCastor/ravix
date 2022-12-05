@@ -33,7 +33,7 @@ defmodule Ravix.Connection.ServerNode do
           settings: ServerNode.Settings.t()
         }
 
-  def bootstrap(conn_state = %ConnectionState{}) do
+  def bootstrap(%ConnectionState{} = conn_state) do
     conn_state.urls
     |> Enum.map(fn url ->
       parsed_url = URI.parse(url)
@@ -49,7 +49,7 @@ defmodule Ravix.Connection.ServerNode do
     end)
   end
 
-  def from_api_response(node_response, conn_state = %ConnectionState{}) do
+  def from_api_response(node_response, %ConnectionState{} = conn_state) do
     parsed_url = URI.new!(node_response["Url"])
 
     %ServerNode{
@@ -88,46 +88,22 @@ defmodule Ravix.Connection.ServerNode do
 
   defmodule Settings do
     @moduledoc """
-     - retry_on_failure: Automatic retry in retryable errors
-     - retry_on_stale: Automatic retry when the query is stale
-     - retry_backoff: Amount of time between retries (in ms)
-     - retry_count: Amount of retries
      - http_client_name: Name of the Finch http client to use with this node,
-     - not_allowed_stale_indexes: Indexes that cant be stale queried
-     - stale_is_error: Treat stale as an error
     """
-    defstruct retry_on_failure: true,
-              retry_on_stale: true,
-              retry_backoff: 500,
-              retry_count: 3,
-              http_client_name: Ravix.Finch,
-              max_url_length: 1024,
-              not_allowed_stale_indexes: [],
-              stale_is_error: false
+    defstruct retry_on_stale: true,
+              http_client_name: Ravix.Finch
 
     alias __MODULE__
 
     @type t :: %__MODULE__{
-            retry_on_failure: boolean(),
             retry_on_stale: boolean(),
-            retry_backoff: non_neg_integer(),
-            retry_count: non_neg_integer(),
-            http_client_name: atom(),
-            max_url_length: non_neg_integer(),
-            not_allowed_stale_indexes: list(String.t()),
-            stale_is_error: boolean()
+            http_client_name: atom()
           }
 
     def build(conn_state) do
       %Settings{
-        retry_on_failure: conn_state.retry_on_failure,
         retry_on_stale: conn_state.retry_on_stale,
-        retry_backoff: conn_state.retry_backoff,
-        retry_count: conn_state.retry_count,
-        http_client_name: conn_state.http_client_name,
-        max_url_length: conn_state.conventions.max_length_of_query_using_get_url,
-        not_allowed_stale_indexes: conn_state.conventions.not_allowed_stale_indexes,
-        stale_is_error: conn_state.conventions.stale_is_error
+        http_client_name: conn_state.http_client_name
       }
     end
   end

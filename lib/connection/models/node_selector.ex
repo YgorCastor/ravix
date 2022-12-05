@@ -31,7 +31,7 @@ defmodule Ravix.Connection.NodeSelector do
   def current_node(%ConnectionState{} = state) do
     current_nodes = ExecutorSupervisor.fetch_nodes(state.store)
 
-    if length(current_nodes) == 0 do
+    if Enum.empty?(current_nodes) do
       raise "No nodes available to execute the request!"
     end
 

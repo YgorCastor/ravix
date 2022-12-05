@@ -19,7 +19,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
     DynamicSupervisor.start_link(__MODULE__, %{}, name: supervisor_name(store))
   end
 
-  def register_node(node = %ServerNode{}) do
+  def register_node(%ServerNode{} = node) do
     Logger.debug(
       "[RAVIX] Registering the connection with the node '#{node.url}' for the store '#{node.store}'"
     )

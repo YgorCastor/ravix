@@ -94,4 +94,23 @@ config :ravix, Ravix.Test.StoreInvalid,
     disable_topology_update: false
   }
 
+config :ravix, Ravix.Test.RandomStore,
+  urls: [System.get_env("RAVENDB_URL", "http://localhost:8080")],
+  database: :crypto.strong_rand_bytes(5) |> Base.url_encode64() |> binary_part(0, 5),
+  retry_on_failure: false,
+  retry_on_stale: false,
+  retry_backoff: 100,
+  retry_count: 3,
+  force_create_database: true,
+  document_conventions: %{
+    max_number_of_requests_per_session: 30,
+    max_ids_to_catch: 32,
+    timeout: 30,
+    session_idle_ttl: 3,
+    use_optimistic_concurrency: false,
+    max_length_of_query_using_get_url: 1024 + 512,
+    identity_parts_separator: "/",
+    disable_topology_update: false
+  }
+
 config :logger, level: :error
