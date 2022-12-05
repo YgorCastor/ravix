@@ -1,4 +1,5 @@
 defmodule Ravix.Connection.RequestExecutor.Client do
+  @moduledoc false
   use Retry
   require Logger
 
@@ -9,7 +10,7 @@ defmodule Ravix.Connection.RequestExecutor.Client do
   alias Ravix.Telemetry
   alias Ravix.Documents.Protocols.CreateRequest
 
-  def build(node = %ServerNode{}) do
+  def build(%ServerNode{} = node) do
     path = ServerNode.node_url(node) <> "/databases"
     client = Finch.build(:get, path)
 
@@ -31,7 +32,7 @@ defmodule Ravix.Connection.RequestExecutor.Client do
       {_pid, node} = NodeSelector.current_node(conn_state)
       request = CreateRequest.create_request(command, node)
       path = ServerNode.node_url(node) <> request.url
-      _ = maximum_url_length_reached?(node, path)
+      _ = maximum_url_length_reached?(conn_state, path)
       client = Finch.build(request.method, path, request.headers ++ headers, request.data)
       do_request(node, client, is_stream: command.is_stream)
     after
@@ -108,10 +109,10 @@ defmodule Ravix.Connection.RequestExecutor.Client do
 
   defp check_stale(response, _), do: {:ok, response}
 
-  @spec maximum_url_length_reached?(ServerNode.t(), String.t()) ::
+  @spec maximum_url_length_reached?(ConnState.t(), String.t()) ::
           :ok | {:error, :maximum_url_length_reached}
-  defp maximum_url_length_reached?(node, url) do
-    max_url_length = node.settings.max_url_length
+  defp maximum_url_length_reached?(conn_state, url) do
+    max_url_length = conn_state.conventions.max_length_of_query_using_get_url
 
     case String.length(url) > max_url_length do
       true ->

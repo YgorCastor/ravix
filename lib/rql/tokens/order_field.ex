@@ -1,4 +1,5 @@
 defmodule Ravix.RQL.Tokens.Order.Field do
+  @moduledoc false
   defstruct order: :desc,
             name: nil,
             type: :lexicographicaly

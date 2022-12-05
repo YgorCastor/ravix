@@ -1,4 +1,5 @@
 defmodule Ravix.Connection.RequestExecutor do
+  @moduledoc false
   use GenServer
 
   require Logger
@@ -36,12 +37,10 @@ defmodule Ravix.Connection.RequestExecutor do
         headers \\ []
       ) do
     headers =
-      cond do
-        conn_state.topology_etag != nil and conn_state.disable_topology_updates == false ->
-          headers ++ [{"Topology-Etag", Integer.to_string(conn_state.topology_etag)}]
-
-        true ->
-          headers
+      if conn_state.topology_etag != nil and conn_state.disable_topology_updates == false do
+        headers ++ [{"Topology-Etag", Integer.to_string(conn_state.topology_etag)}]
+      else
+        headers
       end
 
     case call_raven(conn_state, command, headers) do
