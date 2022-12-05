@@ -46,7 +46,7 @@ defmodule Ravix.Connection.RequestExecutor.Client do
         Logger.error("[RAVIX] Error received from RavenDB: #{inspect(response)}")
         {:error, response}
     else
-      MaximumUrlLengthError ->
+      %MaximumUrlLengthError{} = _err ->
         {:error, :maximum_url_length_reached}
 
       err ->
