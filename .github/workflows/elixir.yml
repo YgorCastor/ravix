@@ -62,7 +62,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: mix coveralls.github
   run-dialyzer:
-    name: Build and test
+    name: Run Dialyzer
     runs-on: ubuntu-latest
     env:
       MIX_ENV: test
