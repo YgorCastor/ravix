@@ -41,10 +41,10 @@ jobs:
           path: |
             _build
             deps
-          key: ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
+          key: ${{ runner.os }}-02-build-${{ hashFiles('mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
-            ${{ runner.os }}-01-build-
+            ${{ runner.os }}-02-build-${{ hashFiles('mix.lock') }}
+            ${{ runner.os }}-02-build-
       - name: Instal Mix and Rebar
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
@@ -95,18 +95,18 @@ jobs:
           path: |
             _build
             deps
-          key: ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
+          key: ${{ runner.os }}-02-build-${{ hashFiles('mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
-            ${{ runner.os }}-01-build-
+            ${{ runner.os }}-02-build-${{ hashFiles('mix.lock') }}
+            ${{ runner.os }}-02-build-
       - name: Dyalizer Cache
         uses: actions/cache@v3
         id: mix-dialyzer
         with:
           path: priv/plts
-          key: ${{ runner.os }}-01-dialyzer
+          key: ${{ runner.os }}-02-dialyzer
           restore-keys: |
-            ${{ runner.os }}-01-dialyzer
+            ${{ runner.os }}-02-dialyzer
       - name: Instal Mix and Rebar
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
