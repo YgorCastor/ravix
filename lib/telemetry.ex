@@ -104,7 +104,7 @@ defmodule Ravix.Telemetry do
       %{count: 1}
     )
   end
-  
+
   @doc """
     Fires when a query is executed
   """
