@@ -19,6 +19,7 @@ defmodule Ravix.Integration.Case do
     _ = start_supervised!(Ravix.Test.Store)
     _ = start_supervised!(Ravix.Test.NonRetryableStore)
     _ = start_supervised!(Ravix.Test.OptimisticLockStore)
+    _ = start_supervised!(Ravix.Test.RandomStore)
 
     {:ok, session_id} = Ravix.Test.Store.open_session()
     {:ok, _} = from("@all_docs") |> delete_for(session_id)

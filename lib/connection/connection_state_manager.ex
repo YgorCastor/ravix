@@ -25,6 +25,7 @@ defmodule Ravix.Connection.State.Manager do
 
     OK.try do
       nodes <- register_nodes(state)
+      state = put_in(state.node_selector, NodeSelector.new())
 
       Logger.info(
         "[RAVIX] '#{length(nodes)}' Node pools were registered successfully for the repository '#{inspect(state.store)}'"
@@ -37,14 +38,12 @@ defmodule Ravix.Connection.State.Manager do
               "[RAVIX] Forcing the database creation is enabled, it will create the #{inspect(state.database)} if it does not exists"
             )
 
-            {node_pid, _} = NodeSelector.random_executor_for(state.store)
-            DatabaseMaintenance.create_database(node_pid, state.database)
+            DatabaseMaintenance.create_database(state)
 
           false ->
             :ok
         end
 
-      state = put_in(state.node_selector, NodeSelector.new())
       state <- __MODULE__.update_topology(state)
     after
       Logger.info("[RAVIX] Connection stabilished for the Store '#{inspect(state.store)}'")
@@ -66,8 +65,7 @@ defmodule Ravix.Connection.State.Manager do
   def update_topology(%ConnectionState{} = state) do
     OK.for do
       Logger.debug("[RAVIX] Updating the topology for the store '#{inspect(state.store)}'")
-      {pid, _random_node} = NodeSelector.random_executor_for(state.store)
-      topology <- __MODULE__.request_topology(pid, state)
+      topology <- __MODULE__.request_topology(state)
       _ = ExecutorSupervisor.update_topology(state.store, topology)
 
       state = put_in(state.topology_etag, topology.etag)
@@ -89,14 +87,14 @@ defmodule Ravix.Connection.State.Manager do
      - `{:ok, Ravix.Connection.Topology}` if the topology request was successful
      - `{:error, :invalid_cluster_topology}` if it fails to pool the topology
   """
-  @spec request_topology(pid(), ConnectionState.t()) ::
+  @spec request_topology(ConnectionState.t()) ::
           {:error, :invalid_cluster_topology} | {:ok, Ravix.Connection.Topology.t()}
-  def request_topology(node_pid, state) do
+  def request_topology(state) do
     Logger.debug(
       "[RAVIX] Requesting the cluster topology for the database '#{inspect(state.database)}'"
     )
 
-    case RequestExecutor.execute_with_node(%GetTopology{database_name: state.database}, node_pid) do
+    case RequestExecutor.execute(%GetTopology{database_name: state.database}, state) do
       {:ok, response} ->
         topology = %Topology{
           etag: response["Etag"],
@@ -115,6 +113,14 @@ defmodule Ravix.Connection.State.Manager do
         )
 
         {:error, :invalid_cluster_topology}
+    end
+  end
+
+  def fetch_connection_state(state) do
+    try do
+      {:ok, connection_id(state) |> :sys.get_state()}
+    catch
+      :exit, _ -> {:error, :connection_not_found}
     end
   end
 
