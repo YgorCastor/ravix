@@ -19,7 +19,6 @@ defmodule Ravix.Documents.Session.Manager do
   alias Ravix.Connection.State, as: ConnectionState
   alias Ravix.Connection.RequestExecutor
   alias Ravix.RQL.Query
-  alias Ravix.Telemetry
 
   @spec load_documents(SessionState.t(), list, any, any) ::
           {:error, any} | {:ok, [{any, any}, ...]}

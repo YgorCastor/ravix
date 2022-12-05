@@ -8,7 +8,7 @@ on:
 
 jobs:
   run-test:
-    name: Build and test
+    name: Build and Test
     runs-on: ubuntu-latest
     env:
       MIX_ENV: test
@@ -110,6 +110,7 @@ jobs:
       - name: Instal Mix and Rebar
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
+        if: steps.mix-deps.outputs.cache-hit != 'true'
         run: mix deps.get
       - name: Run Dialyzer
         run: mix dialyzer
