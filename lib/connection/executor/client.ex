@@ -10,6 +10,8 @@ defmodule Ravix.Connection.RequestExecutor.Client do
   alias Ravix.Telemetry
   alias Ravix.Documents.Protocols.CreateRequest
 
+  @spec build(Ravix.Connection.ServerNode.t()) ::
+          {:error, :invalid_node} | {:ok, ServerNode.t()}
   def build(%ServerNode{} = node) do
     path = ServerNode.node_url(node) <> "/databases"
     client = Finch.build(:get, path)
@@ -24,6 +26,7 @@ defmodule Ravix.Connection.RequestExecutor.Client do
     end
   end
 
+  @spec request(ConnState.t(), struct(), keyword()) :: {:ok, term()} | {:error, term()}
   def request(%ConnState{} = conn_state, command, headers) do
     retry with:
             constant_backoff(conn_state.retry_backoff)
@@ -43,7 +46,7 @@ defmodule Ravix.Connection.RequestExecutor.Client do
         Logger.error("[RAVIX] Error received from RavenDB: #{inspect(response)}")
         {:error, response}
     else
-      %MaximumUrlLengthError{} ->
+      MaximumUrlLengthError ->
         {:error, :maximum_url_length_reached}
 
       err ->
