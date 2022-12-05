@@ -120,6 +120,7 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
+  # credo:disable-for-next-line
   defp parse_result(response, %ConnectionState{} = conn_state) do
     case response do
       %{status: 404} ->

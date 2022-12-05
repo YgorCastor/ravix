@@ -45,6 +45,60 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
             ${{ runner.os }}-01-build-
+      - name: Instal Mix and Rebar
+        run: mix local.hex --force && mix local.rebar --force
+      - name: Install dependencies
+        if: steps.mix-deps.outputs.cache-hit != 'true'
+        run: | 
+          mix deps.get
+          mix compile --warnings-as-errors
+      - name: Lint (format, credo)
+        run: |
+          mix format --check-formatted
+          mix credo
+      - name: Run tests
+        env:
+          RAVENDB_URL: "http://ravendb:8080"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mix coveralls.github
+  run-dialyzer:
+    name: Build and test
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+    container:
+      image: elixir:1.13.3-alpine
+    services:
+      ravendb:
+        image: ravendb/ravendb
+        ports:
+          - 8080:8080
+        env:
+          RAVEN_Setup_Mode: "None"
+          RAVEN_License_Eula_Accepted: "true"
+          RAVEN_Security_UnsecuredAccessAllowed: "PublicNetwork"
+    steps:
+      - uses: technote-space/auto-cancel-redundant-job@v1
+        with:
+          EXCLUDE_MERGED: "true"
+      - name: Install Git/Curl/GNU Tar
+        run: apk add --no-cache curl tar git make gcc libc-dev g++
+      - name: Fix git permissions
+        run: git config --global --add safe.directory /__w/ravix/ravix
+      - uses: actions/checkout@v3
+      - name: Install Git client
+        run: apk add --no-cache git
+      - name: Build & Deps Cache
+        uses: actions/cache@v3
+        id: mix-deps
+        with:
+          path: |
+            _build
+            deps
+          key: ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
+            ${{ runner.os }}-01-build-
       - name: Dyalizer Cache
         uses: actions/cache@v3
         id: mix-dialyzer
@@ -59,8 +113,3 @@ jobs:
         run: mix deps.get
       - name: Run Dialyzer
         run: mix dialyzer
-      - name: Run tests
-        env:
-          RAVENDB_URL: "http://ravendb:8080"
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: mix coveralls.github

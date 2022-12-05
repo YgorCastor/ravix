@@ -52,6 +52,7 @@ defmodule Ravix.RQL.QueryParser do
   defp parse_stmt({:error, err}, _),
     do: {:error, err}
 
+  # credo:disable-for-next-line
   defp parse_stmt(%Query{} = query, stmt) do
     case stmt.token do
       :from -> parse_from(query, stmt)
@@ -72,6 +73,7 @@ defmodule Ravix.RQL.QueryParser do
 
   defp parse_condition_stmt(%Query{} = query, nil), do: query
 
+  # credo:disable-for-next-line
   defp parse_condition_stmt(%Query{} = query, condition) do
     query_part =
       case condition.token do
