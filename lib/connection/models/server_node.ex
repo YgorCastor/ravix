@@ -63,6 +63,12 @@ defmodule Ravix.Connection.ServerNode do
     }
   end
 
+  def node_id(%ServerNode{} = server_node),
+    do:
+      :crypto.hash(:sha256, server_node.url <> server_node.database)
+      |> Base.encode16()
+      |> String.downcase()
+
   @doc """
     Helper method to build the base path for Database specific API requests
   """

@@ -1,22 +1,17 @@
 defmodule Ravix.Connection.RequestExecutor.Supervisor do
   @moduledoc false
-  use DynamicSupervisor
-
   require Logger
 
   alias Ravix.Connection.{RequestExecutor, ServerNode, Topology}
   alias Ravix.Telemetry
 
-  def init(init_arg) do
-    DynamicSupervisor.init(
-      strategy: :one_for_one,
-      extra_arguments: [init_arg]
-    )
-  end
-
   @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(store) do
-    DynamicSupervisor.start_link(__MODULE__, %{}, name: supervisor_name(store))
+    children = [
+      {PartitionSupervisor, child_spec: DynamicSupervisor, name: supervisor_name(store)}
+    ]
+
+    Supervisor.start_link(children, strategy: :one_for_one)
   end
 
   def register_node(%ServerNode{} = node) do
@@ -24,16 +19,10 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
       "[RAVIX] Registering the connection with the node '#{node.url}' for the store '#{node.store}'"
     )
 
-    DynamicSupervisor.start_child(supervisor_name(node.store), {RequestExecutor, node})
-  end
-
-  @spec remove_node(atom(), pid) :: :ok | {:error, :not_found}
-  def remove_node(store, pid) do
-    Logger.debug(
-      "[RAVIX] Removing cluster node '#{inspect(pid)}' for the store '#{inspect(store)}'"
+    DynamicSupervisor.start_child(
+      {:via, PartitionSupervisor, {supervisor_name(node.store), ServerNode.node_id(node)}},
+      {RequestExecutor, node}
     )
-
-    DynamicSupervisor.terminate_child(supervisor_name(store), pid)
   end
 
   @doc """
@@ -44,12 +33,20 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
   - list({pod, Ravix.Connection.ServerNode})
   """
   def fetch_nodes(store) do
-    DynamicSupervisor.which_children(supervisor_name(store))
-    |> Enum.map(fn {_, pid, _kind, _modules} -> pid end)
-    |> Enum.map(fn pid -> {pid, RequestExecutor.fetch_node_state(pid)} end)
-    |> Enum.filter(fn {_, response} -> elem(response, 0) == :ok end)
+    PartitionSupervisor.which_children(supervisor_name(store))
+    |> Enum.map(&fetch_pid/1)
+    |> Enum.flat_map(&DynamicSupervisor.which_children/1)
+    |> Enum.map(&fetch_pid/1)
+    |> Enum.map(&node_state_from_pid/1)
+    |> Enum.filter(&filter_valid_nodes/1)
     |> Enum.map(fn {pid, {:ok, node}} -> {pid, node} end)
   end
+
+  defp fetch_pid({_, pid, _kind, _modules}), do: pid
+
+  defp node_state_from_pid(pid), do: {pid, RequestExecutor.fetch_node_state(pid)}
+
+  defp filter_valid_nodes({_, node}), do: elem(node, 0) == :ok
 
   @doc """
   Triggers a topology update for all nodes of a specific store
@@ -66,14 +63,26 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
     Telemetry.topology_updated(store)
 
     current_nodes = fetch_nodes(store)
-    remaining_nodes = remove_old_nodes(store, current_nodes, topology)
+    remaining_nodes = remove_old_nodes(current_nodes, topology)
     updated_nodes = update_existing_nodes(remaining_nodes, topology)
     new_nodes = add_new_nodes(store, remaining_nodes, topology)
 
     [updated_nodes: updated_nodes, new_nodes: new_nodes]
   end
 
-  defp remove_old_nodes(store, current_nodes, %Topology{} = topology) do
+  @spec remove_node(ServerNode.t(), pid) :: :ok | {:error, :not_found}
+  defp remove_node(node, pid) do
+    Logger.info(
+      "[RAVIX] Removing cluster node '#{inspect(node.url)}' for the store '#{inspect(node.store)}'"
+    )
+
+    DynamicSupervisor.terminate_child(
+      {:via, PartitionSupervisor, {supervisor_name(node.store), node.url}},
+      pid
+    )
+  end
+
+  defp remove_old_nodes(current_nodes, %Topology{} = topology) do
     new_nodes_urls = Enum.map(topology.nodes, fn node -> node.url end)
 
     nodes_to_delete =
@@ -81,9 +90,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
       |> Enum.reject(fn {_, node} -> Enum.member?(new_nodes_urls, node.url) end)
 
     nodes_to_delete
-    |> Enum.each(fn {pid, _node} ->
-      RequestExecutor.Supervisor.remove_node(store, pid)
-    end)
+    |> Enum.each(fn {pid, node} -> remove_node(node, pid) end)
 
     current_nodes -- nodes_to_delete
   end
@@ -113,7 +120,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
     |> Enum.reject(fn node -> Enum.member?(existing_nodes_urls, node.url) end)
     |> Enum.map(fn new_node ->
       Logger.info(
-        "[RAVIX] Registering new node '#{inspect(new_node)}' for the store '#{inspect(store)}'"
+        "[RAVIX] Registering new node '#{inspect(new_node.url)}' for the store '#{inspect(store)}'"
       )
 
       RequestExecutor.Supervisor.register_node(new_node)
