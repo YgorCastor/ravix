@@ -113,4 +113,4 @@ config :ravix, Ravix.Test.RandomStore,
     disable_topology_update: false
   }
 
-config :logger, level: :error
+config :logger, level: :emergency

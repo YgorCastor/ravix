@@ -22,8 +22,8 @@ defmodule Ravix.Connection.RequestExecutor do
     end
   end
 
-  @spec start_link(any, ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(_attrs, %ServerNode{} = node) do
+  @spec start_link(ServerNode.t()) :: :ignore | {:error, any} | {:ok, pid}
+  def start_link(%ServerNode{} = node) do
     GenServer.start_link(
       __MODULE__,
       node,
