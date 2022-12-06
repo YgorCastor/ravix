@@ -22,7 +22,8 @@ defmodule Ravix.Documents.Session.Supervisor do
     session_state = session_state |> SessionState.update_last_session_call()
 
     DynamicSupervisor.start_child(
-      {:via, PartitionSupervisor, {supervisor_name(session_state.store), session_state.session_id}},
+      {:via, PartitionSupervisor,
+       {supervisor_name(session_state.store), session_state.session_id}},
       {Session, session_state}
     )
   end
