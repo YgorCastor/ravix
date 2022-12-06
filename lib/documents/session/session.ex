@@ -16,8 +16,8 @@ defmodule Ravix.Documents.Session do
     {:ok, session_state, {:continue, :session_ttl_checker}}
   end
 
-  @spec start_link(any, SessionState.t()) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(_attr, %SessionState{} = initial_state) do
+  @spec start_link(SessionState.t()) :: :ignore | {:error, any} | {:ok, pid}
+  def start_link(%SessionState{} = initial_state) do
     GenServer.start_link(
       __MODULE__,
       initial_state,
@@ -178,7 +178,7 @@ defmodule Ravix.Documents.Session do
 
   Returns a RavenDB query response
   """
-  @spec execute_query(any, binary, any) :: any
+  @spec execute_query(Ravix.RQL.Query.t(), binary, any) :: any
   def execute_query(query, session_id, method) do
     session_id
     |> session_id()
@@ -191,11 +191,10 @@ defmodule Ravix.Documents.Session do
   ## Paremeters
   - query: The `Ravix.RQL.Query` to be executed
   - session_id: the session_id
-  - method: The http method
 
   Returns a enumerable with the "Results" field of the RavenDB Query Response
   """
-  @spec stream_query(any, binary) :: Enumerable.t()
+  @spec stream_query(Ravix.RQL.Query.t(), binary) :: Enumerable.t()
   def stream_query(query, session_id) do
     session_id
     |> session_id()
@@ -306,8 +305,6 @@ defmodule Ravix.Documents.Session do
   end
 
   def handle_info(:check_session, %SessionState{} = state) do
-    self_pid = self()
-
     Task.start(fn ->
       if Timex.diff(Timex.now(), state.last_session_call, :seconds) >
            state.conventions.session_idle_ttl do
@@ -317,13 +314,15 @@ defmodule Ravix.Documents.Session do
           "[RAVIX] The session #{state.session_id} timed-out because it was inactive for more than #{inspect(state.conventions.session_idle_ttl)} seconds"
         )
 
-        SessionSupervisor.close_session(state.store, self_pid)
+        SessionSupervisor.close_session(state.store, state.session_id)
       end
     end)
 
     {:noreply, state}
   end
 
+  @spec handle_continue(:session_ttl_checker, Ravix.Documents.Session.State.t()) ::
+          {:noreply, Ravix.Documents.Session.State.t()}
   def handle_continue(:session_ttl_checker, %SessionState{} = state) do
     Process.send_after(self(), :check_session, 5000)
 
