@@ -11,7 +11,7 @@ jobs:
     env:
       MIX_ENV: dev
     container:
-      image: elixir:1.13.3-alpine
+      image: elixir:1.14.2-alpine
     steps:
       - name: Install Git/Curl/GNU Tar
         run: apk add --no-cache curl tar git make gcc libc-dev g++
@@ -31,13 +31,14 @@ jobs:
           path: |
             _build
             deps
-          key: ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
+          key: ${{ runner.os }}-02-build-${{ hashFiles('mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-01-build-${{ hashFiles('mix.lock') }}
-            ${{ runner.os }}-01-build-
+            ${{ runner.os }}-02-build-${{ hashFiles('mix.lock') }}
+            ${{ runner.os }}-02-build-
       - name: Instal Mix and Rebar
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
+        if: steps.mix-deps.outputs.cache-hit != 'true'
         run: mix deps.get
       - name: Set the new patch version
         if: "contains(github.event.head_commit.message, '[patch]')"
