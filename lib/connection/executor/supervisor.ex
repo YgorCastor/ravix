@@ -77,7 +77,7 @@ defmodule Ravix.Connection.RequestExecutor.Supervisor do
     )
 
     DynamicSupervisor.terminate_child(
-      {:via, PartitionSupervisor, {supervisor_name(node.store), node.url}},
+      {:via, PartitionSupervisor, {supervisor_name(node.store), ServerNode.node_id(node)}},
       pid
     )
   end

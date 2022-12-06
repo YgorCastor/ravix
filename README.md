@@ -38,7 +38,6 @@ config :ravix, Ravix.Test.Store,
   retry_backoff: 100,
   retry_count: 3,
   force_create_database: true,
-  adapter: Tesla.Adapter.Hackney,
   document_conventions: %{
     max_number_of_requests_per_session: 30,
     max_ids_to_catch: 32,
@@ -50,8 +49,7 @@ config :ravix, Ravix.Test.Store,
   }
 ```
 
-Note: All the calls to RavenDB are done via HTTP calls, to that we leverage the use of [Tesla](https://github.com/elixir-tesla/tesla), by default
-the hackney adapter is used, but if you need a pooled connection and telemetries we recomend the Flinch Adapter
+Note: All the calls to RavenDB are done via HTTP calls, to that we leverage the use of [Finch](https://github.com/sneako/finch), check there for adapter configurations.
 
 Then you can start the processes in your main supervisor
 
@@ -61,6 +59,7 @@ defmodule Ravix.TestApplication do
 
   def start(_opts, _) do
     children = [
+      {Finch, name: Ravix.Finch}, # By default the store searches for a Finch instance called 'Ravix.Finch' 
       {Ravix.Test.Store, [%{}]} # you can create multiple stores
     ]
 
@@ -213,15 +212,23 @@ end
 
 ## Secure Server
 
-To connect to a secure server, you can just inform the SSL certificates based on the [erlang ssl configs](https://www.erlang.org/doc/man/ssl.html) to the adapter itself.
+To connect to a secure server, you can just inform the SSL certificates based on the [erlang ssl configs](https://www.erlang.org/doc/man/ssl.html) to Finch itself.
 
 E.g:
 
 ```elixir
-config :ravix, Ravix.Test.Store,
-  urls: [System.get_env("RAVENDB_URL", "https://localhost:8080")],
-  database: "test",
-  adapter: {Tesla.Adapter.Hackney, ssl_options: [certfile: "certs/client.crt"]}
+{Finch, name: Ravix.Finch,
+    pools: %{
+      default: [
+        conn_opts: [
+          transport_opts: [
+            cert: DER_CERT,
+            key: DER_KEY
+          ]
+        ]
+      ]
+    }
+},
 ```
 
 ## Ecto
