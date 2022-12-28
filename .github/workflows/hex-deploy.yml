@@ -35,7 +35,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-02-build-${{ hashFiles('mix.lock') }}
             ${{ runner.os }}-02-build-
-      - name: Instal Mix and Rebar
+      - name: Install Mix and Rebar
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
         if: steps.mix-deps.outputs.cache-hit != 'true'

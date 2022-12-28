@@ -7,7 +7,7 @@ defmodule Ravix.Documents.Conventions do
   - max_ids_to_catch: Maximum amount of ids that can be loaded
   - timeout: How much time until an api call times out
   - use_optimistic_concurrency: If optimistic concurrency should be used
-  - max_length_of_query_using_get_url: Maximum lenght of an api call url
+  - max_length_of_query_using_get_url: Maximum length of an api call url
   - session_idle_ttl: How much time a session can live without interaction
   - disable_topology_update: if true, no automatic topology updates will be executed
   - not_allow_stale_indexes: List of indexes that can't have stale reads

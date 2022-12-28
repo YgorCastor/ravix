@@ -15,7 +15,7 @@ defmodule Ravix.Connection do
   is registered in the :connections register under the naming StoreModule.Connection
 
   Returns:
-    `{:ok, pid}` if the connecion is started
+    `{:ok, pid}` if the connection is started
     `{:error, cause}` if the connection start failed
   """
   @spec start_link(atom(), ConnectionState.t()) :: :ignore | {:error, any} | {:ok, pid}
