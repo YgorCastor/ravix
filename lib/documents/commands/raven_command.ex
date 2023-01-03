@@ -7,7 +7,7 @@ defmodule Ravix.Documents.Commands.RavenCommand do
   - method: HTTP Method
   - data: The json body payload
   - headers: HTTP headers to send to Raven
-  - is_stream: If the request should be streammed
+  - is_stream: If the request should be streamed
   - is_read_request: If this request is read_only
   """
   @base_fields [

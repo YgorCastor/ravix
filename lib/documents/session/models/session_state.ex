@@ -191,7 +191,7 @@ defmodule Ravix.Documents.Session.State do
   @doc """
   Fetches a document from the session
 
-  ## Paremeters
+  ## Parameters
   - state: the session state
   - document_id: the document id
 

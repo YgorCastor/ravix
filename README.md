@@ -10,7 +10,7 @@ Ravix is a in-development project to implement a client for the amazing [RavenDB
 
 # Usage
 
-## Instaling
+## Installing
 
 Add Ravix to your mix.exs dependencies
 

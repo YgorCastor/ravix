@@ -171,7 +171,7 @@ defmodule Ravix.Documents.Session do
   @doc """
   Executes a query into the RavenDB
 
-  ## Paremeters
+  ## Parameters
   - query: The `Ravix.RQL.Query` to be executed
   - session_id: the session_id
   - method: The http method
@@ -188,7 +188,7 @@ defmodule Ravix.Documents.Session do
   @doc """
   Executes a query in RavenDB and stream the response
 
-  ## Paremeters
+  ## Parameters
   - query: The `Ravix.RQL.Query` to be executed
   - session_id: the session_id
 

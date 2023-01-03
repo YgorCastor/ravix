@@ -9,7 +9,7 @@ defmodule Ravix.RQL.QueryParserTest do
   alias Ravix.RQL.Tokens.Condition
 
   describe "parse/1" do
-    test "It should parse the tokens succesfully" do
+    test "It should parse the tokens successfully" do
       {:ok, query_result} =
         from("test")
         |> where(greater_than("field", 10))
@@ -41,7 +41,7 @@ defmodule Ravix.RQL.QueryParserTest do
         from("test") |> where(%Condition{token: :invalid}) |> QueryParser.parse()
     end
 
-    test "Should parse an update succesfully" do
+    test "Should parse an update successfully" do
       updates = set("field", "new_value") |> inc("field2", 1) |> dec("field3", 2)
 
       {:ok, query_result} =
