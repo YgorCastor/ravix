@@ -7,6 +7,7 @@ defmodule Ravix.Documents.Conventions do
   - max_ids_to_catch: Maximum amount of ids that can be loaded
   - timeout: How much time until an api call times out
   - use_optimistic_concurrency: If optimistic concurrency should be used
+  - caching: Configures query caching
   - max_length_of_query_using_get_url: Maximum length of an api call url
   - session_idle_ttl: How much time a session can live without interaction
   - disable_topology_update: if true, no automatic topology updates will be executed
@@ -16,6 +17,7 @@ defmodule Ravix.Documents.Conventions do
             max_ids_to_catch: 32,
             timeout: 30,
             use_optimistic_concurrency: false,
+            caching: %Ravix.Documents.Caching{},
             max_length_of_query_using_get_url: 1024 + 512,
             identity_parts_separator: "/",
             session_idle_ttl: 30,
@@ -30,6 +32,7 @@ defmodule Ravix.Documents.Conventions do
           max_ids_to_catch: non_neg_integer(),
           timeout: non_neg_integer(),
           use_optimistic_concurrency: boolean(),
+          caching: Ravix.Documents.Caching.t(),
           max_length_of_query_using_get_url: non_neg_integer(),
           identity_parts_separator: String.t(),
           session_idle_ttl: non_neg_integer(),

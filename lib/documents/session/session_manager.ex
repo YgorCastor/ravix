@@ -179,6 +179,10 @@ defmodule Ravix.Documents.Session.Manager do
     end
   end
 
+  defp query_cache() do
+    Nebulex.Cache.put()
+  end
+
   defp fetch_loaded_documents(%SessionState{} = state, document_ids) do
     document_ids
     |> Enum.map(fn id ->
