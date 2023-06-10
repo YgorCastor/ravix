@@ -42,7 +42,7 @@ defmodule Ravix.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:castore, "~> 0.1"},
+      {:castore, "~> 1.0"},
       {:elixir_uuid, "~> 1.2"},
       {:finch, "~> 0.13"},
       {:inflex, "~> 2.1"},
