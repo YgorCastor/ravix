@@ -579,14 +579,14 @@ defmodule Ravix.RQL.QueryTest do
 
       [etag: _etag, cached_response: cached_response] = cache.get(cached_key)
 
-      assert [^result] = cached_response.body["Results"]
+      assert [result] == cached_response.body["Results"]
 
       {:ok, second_response} =
         from("Cats")
         |> where(equal_to("id", cat.id))
         |> list_all(session_id)
 
-      assert ^cached_response = second_response
+      assert second_response["Results"] == cached_response.body["Results"]
     end
 
     test "if cache is enabled, different queries should have different caches" do
