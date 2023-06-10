@@ -24,8 +24,8 @@ defmodule Ravix.Documents.Commands.ExecuteQueryCommand do
   })
 
   def hash_query(%ExecuteQueryCommand{Query: query, QueryParameters: query_params}) do
-    joined_params = Enum.join(query_params, ",")
-    :crypto.hash(:sha256, query <> joined_params) |> Base.encode16()
+    joined_params = Map.values(query_params) |> Enum.join()
+    :crypto.hash(:sha256, query <> joined_params) |> Base.encode64()
   end
 
   defimpl CreateRequest, for: ExecuteQueryCommand do

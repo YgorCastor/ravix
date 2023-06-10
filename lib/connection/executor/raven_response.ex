@@ -9,5 +9,10 @@ defmodule Ravix.Connection.Executor.RavenResponse do
           headers: keyword()
         }
 
-  def response_etag(%RavenResponse{} = response), do: response.headers["ETag"]
+  def response_etag(%RavenResponse{} = response) do
+    case response.headers |> Enum.find(fn {key, _} -> key == "etag" end) do
+      nil -> {:no_etag, response}
+      {_, etag} -> {:ok, etag}
+    end
+  end
 end

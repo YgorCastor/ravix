@@ -162,7 +162,7 @@ defmodule Ravix.Documents.Session.Manager do
   defp query_caching_plan(
          %ConnectionState{
            conventions: %{
-             cache: %{
+             caching: %{
                enable_agressive_cache: true,
                cache: cache
              }
@@ -190,15 +190,14 @@ defmodule Ravix.Documents.Session.Manager do
   end
 
   defp execute_with_caching_plan({:execute_and_cache, cache_key}, command, network_state) do
-    case RequestExecutor.execute(command, network_state) do
-      {:ok, response} ->
-        etag = response.headers["Etag"]
-        cache = network_state.conventions.caching.cache
-        cache.put(cache_key, etag: etag, body: response.body)
-        {:ok, response.body}
-
-      err ->
-        err
+    with {:ok, response} <- RequestExecutor.execute(command, network_state),
+         {:ok, etag} <- RavenResponse.response_etag(response) do
+      cache = network_state.conventions.caching.cache
+      cache.put(cache_key, etag: etag, cached_response: response)
+      {:ok, response.body}
+    else
+      {:no_etag, response} -> {:ok, response.body}
+      err -> err
     end
   end
 
@@ -211,18 +210,19 @@ defmodule Ravix.Documents.Session.Manager do
          command,
          network_state
        ) do
-    case RequestExecutor.execute(command, network_state, "If-None-Match": cached_etag) do
-      {:ok, response} ->
-        etag = RavenResponse.response_etag(response)
-        cache = network_state.conventions.caching.cache
+    headers = [{"If-None-Match", cached_etag}]
 
+    case RequestExecutor.execute(command, network_state, headers) do
+      {:ok, response} ->
         cond do
-          response.status_code == 204 ->
+          response.status_code == 304 ->
             {:ok, cached_response}
 
           true ->
-            cache.put(cache_key, etag: etag, cached_response: response.body)
-            {:ok, response.body}
+            etag = RavenResponse.response_etag(response)
+            cache = network_state.conventions.caching.cache
+            cache.put(cache_key, etag: etag, cached_response: response)
+            {:ok, response}
         end
 
       err ->

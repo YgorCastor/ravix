@@ -6,12 +6,14 @@ defmodule Ravix.RQL.QueryTest do
   import Ravix.RQL.Tokens.Condition
   import Ravix.RQL.Tokens.Update
   import Ravix.Factory
+  import Assertions
 
   alias Ravix.RQL.Tokens.Order
 
   alias Ravix.Documents.Session
   alias Ravix.Test.Store, as: Store
   alias Ravix.Test.NonRetryableStore
+  alias Ravix.Test.CachedStore
 
   describe "list_all/2" do
     test "Should list all the matching documents of a query" do
@@ -548,6 +550,115 @@ defmodule Ravix.RQL.QueryTest do
       result = Enum.to_list(stream)
 
       assert 1000 = length(result)
+    end
+  end
+
+  describe "cached list_all/2" do
+    test "if cache is enabled, it should cache query results" do
+      cat = build(:cat_entity)
+
+      {:ok, session_id} = CachedStore.open_session()
+      _ = Session.store(session_id, cat)
+      _ = Session.save_changes(session_id)
+
+      {:ok, query_response} =
+        from("Cats")
+        |> where(equal_to("id", cat.id))
+        |> list_all(session_id)
+
+      assert [result] = query_response["Results"]
+
+      {:ok,
+       %{
+         conventions: %{
+           caching: %{cache: cache}
+         }
+       }} = Session.fetch_state(session_id)
+
+      assert [cached_key] = cache.all()
+
+      [etag: _etag, cached_response: cached_response] = cache.get(cached_key)
+
+      assert [^result] = cached_response.body["Results"]
+
+      {:ok, second_response} =
+        from("Cats")
+        |> where(equal_to("id", cat.id))
+        |> list_all(session_id)
+
+      assert ^cached_response = second_response
+    end
+
+    test "if cache is enabled, different queries should have different caches" do
+      cat = build(:cat_entity)
+
+      {:ok, session_id} = CachedStore.open_session()
+      _ = Session.store(session_id, cat)
+      _ = Session.save_changes(session_id)
+
+      {:ok,
+       %{
+         conventions: %{
+           caching: %{cache: cache}
+         }
+       }} = Session.fetch_state(session_id)
+
+      {:ok, _query_response} =
+        from("Cats")
+        |> where(equal_to("id", cat.id))
+        |> list_all(session_id)
+
+      assert [cached_key] = cache.all()
+
+      [etag: _etag, cached_response: cached_response] = cache.get(cached_key)
+
+      {:ok, second_response} =
+        from("Cats")
+        |> where(equal_to("id", 123))
+        |> list_all(session_id)
+
+      assert cached_response != second_response
+      assert [_, _] = cache.all()
+    end
+
+    test "if cache is enabled, and the etag changes, it should update the cache" do
+      cat = build(:cat_entity)
+
+      {:ok, session_id} = CachedStore.open_session()
+      _ = Session.store(session_id, cat)
+      _ = Session.save_changes(session_id)
+
+      {:ok, query_response} =
+        from("Cats")
+        |> list_all(session_id)
+
+      assert [result] = query_response["Results"]
+
+      {:ok,
+       %{
+         conventions: %{
+           caching: %{cache: cache}
+         }
+       }} = Session.fetch_state(session_id)
+
+      assert [cached_key] = cache.all()
+
+      [etag: _etag, cached_response: cached_response] = cache.get(cached_key)
+
+      assert [^result] = cached_response.body["Results"]
+
+      second_cat = build(:cat_entity)
+
+      _ = Session.store(session_id, second_cat)
+      _ = Session.save_changes(session_id)
+
+      assert_async timeout: 500 do
+        {:ok, second_response} =
+          from("Cats")
+          |> list_all(session_id)
+
+        assert cached_response != second_response
+      end
     end
   end
 end

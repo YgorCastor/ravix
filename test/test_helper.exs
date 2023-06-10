@@ -16,12 +16,16 @@ defmodule Ravix.Integration.Case do
 
   setup do
     _ = start_supervised!({Finch, name: Ravix.Finch})
+    _ = start_supervised!({Ravix.Test.Cache, []})
     _ = start_supervised!(Ravix.Test.Store)
     _ = start_supervised!(Ravix.Test.NonRetryableStore)
     _ = start_supervised!(Ravix.Test.OptimisticLockStore)
     _ = start_supervised!(Ravix.Test.RandomStore)
+    _ = start_supervised!(Ravix.Test.CachedStore)
 
     {:ok, session_id} = Ravix.Test.Store.open_session()
+    {:ok, _} = from("@all_docs") |> delete_for(session_id)
+    {:ok, session_id} = Ravix.Test.CachedStore.open_session()
     {:ok, _} = from("@all_docs") |> delete_for(session_id)
     _ = Ravix.Test.Store.close_session(session_id)
 
