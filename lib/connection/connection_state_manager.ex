@@ -97,8 +97,8 @@ defmodule Ravix.Connection.State.Manager do
     case RequestExecutor.execute(%GetTopology{database_name: state.database}, state) do
       {:ok, response} ->
         topology = %Topology{
-          etag: response["Etag"],
-          nodes: response["Nodes"] |> Enum.map(&ServerNode.from_api_response(&1, state))
+          etag: response.body["Etag"],
+          nodes: response.body["Nodes"] |> Enum.map(&ServerNode.from_api_response(&1, state))
         }
 
         Logger.info(

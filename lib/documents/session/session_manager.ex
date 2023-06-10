@@ -154,7 +154,7 @@ defmodule Ravix.Documents.Session.Manager do
            method: method
          },
          caching_plan <- query_caching_plan(network_state, command),
-         result <- execute_with_caching_plan(caching_plan, command, network_state) do
+         {:ok, result} <- execute_with_caching_plan(caching_plan, command, network_state) do
       {:ok, result}
     end
   end
@@ -244,7 +244,7 @@ defmodule Ravix.Documents.Session.Manager do
 
       stream <- RequestExecutor.execute(command, network_state)
     after
-      stream
+      stream.body
     end
   end
 
@@ -275,7 +275,7 @@ defmodule Ravix.Documents.Session.Manager do
            },
            network_state
          ) do
-      {:ok, response} -> {:ok, response}
+      {:ok, response} -> {:ok, response.body}
       {:error, err} -> {:error, err}
     end
   end
@@ -299,7 +299,7 @@ defmodule Ravix.Documents.Session.Manager do
         |> SessionState.clear_deleted_entities()
         |> SessionState.clear_tmp_keys()
     after
-      [request_response: response, updated_state: updated_state]
+      [request_response: response.body, updated_state: updated_state]
     end
   end
 

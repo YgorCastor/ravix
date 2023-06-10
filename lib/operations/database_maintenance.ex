@@ -55,7 +55,7 @@ defmodule Ravix.Operations.Database.Maintenance do
         }
         |> RequestExecutor.execute(conn_state)
     after
-      response
+      response.body
     end
   end
 
@@ -70,7 +70,7 @@ defmodule Ravix.Operations.Database.Maintenance do
         }
         |> RequestExecutor.execute(conn_state)
     after
-      response
+      response.body
     end
   end
 
@@ -84,7 +84,7 @@ defmodule Ravix.Operations.Database.Maintenance do
         }
         |> RequestExecutor.execute(conn_state)
     after
-      response
+      response.body
     end
   end
 end
