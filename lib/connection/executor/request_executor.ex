@@ -32,7 +32,7 @@ defmodule Ravix.Connection.RequestExecutor do
     )
   end
 
-  @spec execute(struct(), ConnectionState.t(), keyword()) ::
+  @spec execute(struct(), ConnectionState.t(), list()) ::
           {:ok, RavenResponse.t()} | {:error, term()}
   def execute(
         command,

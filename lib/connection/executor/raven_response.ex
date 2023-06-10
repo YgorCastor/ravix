@@ -1,4 +1,7 @@
 defmodule Ravix.Connection.Executor.RavenResponse do
+  @moduledoc """
+   Struct to represent a response from RavenDB
+  """
   defstruct body: nil, status_code: nil, headers: nil
 
   alias __MODULE__

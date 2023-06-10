@@ -145,7 +145,7 @@ defmodule Ravix.Documents.Session.Manager do
   end
 
   @spec execute_query(SessionState.t(), Query.t(), any) ::
-          {:error, any} | {:ok, RavenResponse.t()}
+          {:error, any} | {:ok, map()}
   def execute_query(%SessionState{} = session_state, %Query{} = query, method) do
     with {:ok, network_state} <- Connection.fetch_state(session_state.store),
          command <- %ExecuteQueryCommand{
@@ -153,9 +153,8 @@ defmodule Ravix.Documents.Session.Manager do
            QueryParameters: query.query_params,
            method: method
          },
-         caching_plan <- query_caching_plan(network_state, command),
-         {:ok, result} <- execute_with_caching_plan(caching_plan, command, network_state) do
-      {:ok, result}
+         caching_plan <- query_caching_plan(network_state, command) do
+      execute_with_caching_plan(caching_plan, command, network_state)
     end
   end
 
@@ -214,15 +213,13 @@ defmodule Ravix.Documents.Session.Manager do
 
     case RequestExecutor.execute(command, network_state, headers) do
       {:ok, response} ->
-        cond do
-          response.status_code == 304 ->
-            {:ok, cached_response}
-
-          true ->
-            etag = RavenResponse.response_etag(response)
-            cache = network_state.conventions.caching.cache
-            cache.put(cache_key, etag: etag, cached_response: response)
-            {:ok, response}
+        if response.status_code == 304 do
+          {:ok, cached_response.body}
+        else
+          etag = RavenResponse.response_etag(response)
+          cache = network_state.conventions.caching.cache
+          cache.put(cache_key, etag: etag, cached_response: response)
+          {:ok, response.body}
         end
 
       err ->

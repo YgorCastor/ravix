@@ -26,7 +26,7 @@ defmodule Ravix.Connection.RequestExecutor.Client do
     end
   end
 
-  @spec request(ConnState.t(), struct(), keyword()) :: {:ok, term()} | {:error, term()}
+  @spec request(ConnState.t(), struct(), list()) :: {:ok, term()} | {:error, term()}
   def request(%ConnState{} = conn_state, command, headers) do
     retry with:
             constant_backoff(conn_state.retry_backoff)
@@ -104,8 +104,6 @@ defmodule Ravix.Connection.RequestExecutor.Client do
   defp decode_response(""), do: ""
 
   defp decode_response(body) when is_binary(body), do: Jason.decode!(body)
-
-  defp decode_response(body), do: body
 
   defp check_stale(%{body: %{"IsStale" => true, "IndexName" => index_name}} = response, node) do
     Telemetry.request_stale(node, index_name)
