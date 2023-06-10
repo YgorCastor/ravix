@@ -4,6 +4,7 @@ defmodule Ravix.Documents.Session.Manager do
   """
   require OK
 
+  alias Ravix.Connection.Executor.RavenResponse
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.{SaveChangesData, Validations}
 
@@ -144,20 +145,88 @@ defmodule Ravix.Documents.Session.Manager do
   end
 
   @spec execute_query(SessionState.t(), Query.t(), any) ::
-          {:error, any} | {:ok, Connection.Response.t()}
+          {:error, any} | {:ok, RavenResponse.t()}
   def execute_query(%SessionState{} = session_state, %Query{} = query, method) do
-    OK.for do
-      network_state <- Connection.fetch_state(session_state.store)
+    with {:ok, network_state} <- Connection.fetch_state(session_state.store),
+         command <- %ExecuteQueryCommand{
+           Query: query.query_string,
+           QueryParameters: query.query_params,
+           method: method
+         },
+         caching_plan <- query_caching_plan(network_state, command),
+         result <- execute_with_caching_plan(caching_plan, command, network_state) do
+      {:ok, result}
+    end
+  end
 
-      command = %ExecuteQueryCommand{
-        Query: query.query_string,
-        QueryParameters: query.query_params,
-        method: method
-      }
+  defp query_caching_plan(
+         %ConnectionState{
+           conventions: %{
+             cache: %{
+               enable_agressive_cache: true,
+               cache: cache
+             }
+           }
+         },
+         %ExecuteQueryCommand{} = command
+       ) do
+    cache_key =
+      command
+      |> ExecuteQueryCommand.hash_query()
 
-      result <- RequestExecutor.execute(command, network_state)
-    after
-      result
+    case cache_key |> cache.get() do
+      nil -> {:execute_and_cache, cache_key}
+      cached_response -> {:return_from_cache_if_matched, cache_key, cached_response}
+    end
+  end
+
+  defp query_caching_plan(_, _), do: :no_cache
+
+  defp execute_with_caching_plan(:no_cache, command, network_state) do
+    case RequestExecutor.execute(command, network_state) do
+      {:ok, response} -> {:ok, response.body}
+      err -> err
+    end
+  end
+
+  defp execute_with_caching_plan({:execute_and_cache, cache_key}, command, network_state) do
+    case RequestExecutor.execute(command, network_state) do
+      {:ok, response} ->
+        etag = response.headers["Etag"]
+        cache = network_state.conventions.caching.cache
+        cache.put(cache_key, etag: etag, body: response.body)
+        {:ok, response.body}
+
+      err ->
+        err
+    end
+  end
+
+  defp execute_with_caching_plan(
+         {
+           :return_from_cache_if_matched,
+           cache_key,
+           etag: cached_etag, cached_response: cached_response
+         },
+         command,
+         network_state
+       ) do
+    case RequestExecutor.execute(command, network_state, "If-None-Match": cached_etag) do
+      {:ok, response} ->
+        etag = RavenResponse.response_etag(response)
+        cache = network_state.conventions.caching.cache
+
+        cond do
+          response.status_code == 204 ->
+            {:ok, cached_response}
+
+          true ->
+            cache.put(cache_key, etag: etag, cached_response: response.body)
+            {:ok, response.body}
+        end
+
+      err ->
+        err
     end
   end
 
@@ -177,10 +246,6 @@ defmodule Ravix.Documents.Session.Manager do
     after
       stream
     end
-  end
-
-  defp query_cache() do
-    Nebulex.Cache.put()
   end
 
   defp fetch_loaded_documents(%SessionState{} = state, document_ids) do

@@ -9,5 +9,5 @@ defmodule Ravix.Connection.Executor.RavenResponse do
           headers: keyword()
         }
 
-  def response_etag(%RavenResponse{} = response), do: response.headers["ResponseEtag"]
+  def response_etag(%RavenResponse{} = response), do: response.headers["ETag"]
 end
