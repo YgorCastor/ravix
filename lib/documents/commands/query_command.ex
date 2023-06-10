@@ -9,7 +9,8 @@ defmodule Ravix.Documents.Commands.ExecuteQueryCommand do
   @derive {Jason.Encoder, only: [:Query, :QueryParameters]}
   use Ravix.Documents.Commands.RavenCommand,
     Query: nil,
-    QueryParameters: %{}
+    QueryParameters: %{},
+    query_hash: nil
 
   import Ravix.Documents.Commands.RavenCommand
 
@@ -21,6 +22,11 @@ defmodule Ravix.Documents.Commands.ExecuteQueryCommand do
     Query: String.t(),
     QueryParameters: map()
   })
+
+  def hash_query(%ExecuteQueryCommand{Query: query, QueryParameters: query_params}) do
+    joined_params = Map.values(query_params) |> Enum.join()
+    :crypto.hash(:sha256, query <> joined_params) |> Base.encode64()
+  end
 
   defimpl CreateRequest, for: ExecuteQueryCommand do
     @spec create_request(ExecuteQueryCommand.t(), ServerNode.t()) :: ExecuteQueryCommand.t()

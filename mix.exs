@@ -50,6 +50,7 @@ defmodule Ravix.MixProject do
       {:jaxon, "~> 2.0"},
       {:mappable, "~> 0.2"},
       {:morphix, "~> 0.8"},
+      {:nebulex, "~> 2.5"},
       {:ok, "~> 2.3"},
       {:retry, "~> 0.16"},
       {:telemetry, "~> 1.1"},

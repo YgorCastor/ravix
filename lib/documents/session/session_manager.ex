@@ -4,6 +4,7 @@ defmodule Ravix.Documents.Session.Manager do
   """
   require OK
 
+  alias Ravix.Connection.Executor.RavenResponse
   alias Ravix.Documents.Session.State, as: SessionState
   alias Ravix.Documents.Session.{SaveChangesData, Validations}
 
@@ -144,20 +145,85 @@ defmodule Ravix.Documents.Session.Manager do
   end
 
   @spec execute_query(SessionState.t(), Query.t(), any) ::
-          {:error, any} | {:ok, Connection.Response.t()}
+          {:error, any} | {:ok, map()}
   def execute_query(%SessionState{} = session_state, %Query{} = query, method) do
-    OK.for do
-      network_state <- Connection.fetch_state(session_state.store)
+    with {:ok, network_state} <- Connection.fetch_state(session_state.store),
+         command <- %ExecuteQueryCommand{
+           Query: query.query_string,
+           QueryParameters: query.query_params,
+           method: method
+         },
+         caching_plan <- query_caching_plan(network_state, command) do
+      execute_with_caching_plan(caching_plan, command, network_state)
+    end
+  end
 
-      command = %ExecuteQueryCommand{
-        Query: query.query_string,
-        QueryParameters: query.query_params,
-        method: method
-      }
+  defp query_caching_plan(
+         %ConnectionState{
+           conventions: %{
+             caching: %{
+               enable_agressive_cache: true,
+               cache: cache
+             }
+           }
+         },
+         %ExecuteQueryCommand{} = command
+       ) do
+    cache_key =
+      command
+      |> ExecuteQueryCommand.hash_query()
 
-      result <- RequestExecutor.execute(command, network_state)
-    after
-      result
+    case cache_key |> cache.get() do
+      nil -> {:execute_and_cache, cache_key}
+      cached_response -> {:return_from_cache_if_matched, cache_key, cached_response}
+    end
+  end
+
+  defp query_caching_plan(_, _), do: :no_cache
+
+  defp execute_with_caching_plan(:no_cache, command, network_state) do
+    case RequestExecutor.execute(command, network_state) do
+      {:ok, response} -> {:ok, response.body}
+      err -> err
+    end
+  end
+
+  defp execute_with_caching_plan({:execute_and_cache, cache_key}, command, network_state) do
+    with {:ok, response} <- RequestExecutor.execute(command, network_state),
+         {:ok, etag} <- RavenResponse.response_etag(response) do
+      cache = network_state.conventions.caching.cache
+      cache.put(cache_key, etag: etag, cached_response: response)
+      {:ok, response.body}
+    else
+      {:no_etag, response} -> {:ok, response.body}
+      err -> err
+    end
+  end
+
+  defp execute_with_caching_plan(
+         {
+           :return_from_cache_if_matched,
+           cache_key,
+           etag: cached_etag, cached_response: cached_response
+         },
+         command,
+         network_state
+       ) do
+    headers = [{"If-None-Match", cached_etag}]
+
+    case RequestExecutor.execute(command, network_state, headers) do
+      {:ok, response} ->
+        if response.status_code == 304 do
+          {:ok, cached_response.body}
+        else
+          etag = RavenResponse.response_etag(response)
+          cache = network_state.conventions.caching.cache
+          cache.put(cache_key, etag: etag, cached_response: response)
+          {:ok, response.body}
+        end
+
+      err ->
+        err
     end
   end
 
@@ -175,7 +241,7 @@ defmodule Ravix.Documents.Session.Manager do
 
       stream <- RequestExecutor.execute(command, network_state)
     after
-      stream
+      stream.body
     end
   end
 
@@ -206,7 +272,7 @@ defmodule Ravix.Documents.Session.Manager do
            },
            network_state
          ) do
-      {:ok, response} -> {:ok, response}
+      {:ok, response} -> {:ok, response.body}
       {:error, err} -> {:error, err}
     end
   end
@@ -230,7 +296,7 @@ defmodule Ravix.Documents.Session.Manager do
         |> SessionState.clear_deleted_entities()
         |> SessionState.clear_tmp_keys()
     after
-      [request_response: response, updated_state: updated_state]
+      [request_response: response.body, updated_state: updated_state]
     end
   end
 

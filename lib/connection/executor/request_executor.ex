@@ -5,6 +5,7 @@ defmodule Ravix.Connection.RequestExecutor do
   require Logger
   require OK
 
+  alias Ravix.Connection.Executor.RavenResponse
   alias Ravix.Connection
   alias Ravix.Connection.ServerNode
   alias Ravix.Connection.RequestExecutor
@@ -31,6 +32,8 @@ defmodule Ravix.Connection.RequestExecutor do
     )
   end
 
+  @spec execute(struct(), ConnectionState.t(), list()) ::
+          {:ok, RavenResponse.t()} | {:error, term()}
   def execute(
         command,
         %ConnectionState{} = conn_state,
@@ -151,7 +154,7 @@ defmodule Ravix.Connection.RequestExecutor do
         {:ok, response}
     end
     |> check_if_needs_topology_update(conn_state)
-    |> parse_body()
+    |> parse_response()
   end
 
   defp check_if_needs_topology_update({:ok, response}, %ConnectionState{} = conn_state) do
@@ -185,9 +188,16 @@ defmodule Ravix.Connection.RequestExecutor do
   defp stale_is_error(%{stale_is_error: true}, _),
     do: true
 
-  defp parse_body({:ok, response}), do: {:ok, response.body}
+  defp parse_response({:ok, response}),
+    do:
+      {:ok,
+       %RavenResponse{
+         body: response.body,
+         status_code: response.status,
+         headers: response.headers
+       }}
 
-  defp parse_body({:error, error}), do: {:error, error}
+  defp parse_response({:error, error}), do: {:error, error}
 
   def handle_cast({:update_cluster_tag, cluster_tag}, %ServerNode{} = node) do
     {:noreply, %ServerNode{node | cluster_tag: cluster_tag}}

@@ -182,7 +182,7 @@ defmodule Ravix.Documents.Session do
   def execute_query(query, session_id, method) do
     session_id
     |> session_id()
-    |> GenServer.call({:execute_query, query, method}, :infinity)
+    |> GenServer.call({:execute_query, query, method})
   end
 
   @doc """
