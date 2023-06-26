@@ -216,7 +216,7 @@ defmodule Ravix.Documents.Session.Manager do
         if response.status_code == 304 do
           {:ok, cached_response.body}
         else
-          etag = RavenResponse.response_etag(response)
+          {:ok, etag} = RavenResponse.response_etag(response)
           cache = network_state.conventions.caching.cache
           cache.put(cache_key, etag: etag, cached_response: response)
           {:ok, response.body}
