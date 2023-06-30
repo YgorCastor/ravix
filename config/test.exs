@@ -129,6 +129,7 @@ config :ravix, Ravix.Test.CachedStore,
     timeout: 30,
     caching: %{
       enable_agressive_cache: true,
+      cache_duration: :timer.minutes(5),
       cache: Ravix.Test.Cache
     },
     use_optimistic_concurrency: false,

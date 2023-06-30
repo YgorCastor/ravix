@@ -192,7 +192,8 @@ defmodule Ravix.Documents.Session.Manager do
     with {:ok, response} <- RequestExecutor.execute(command, network_state),
          {:ok, etag} <- RavenResponse.response_etag(response) do
       cache = network_state.conventions.caching.cache
-      cache.put(cache_key, etag: etag, cached_response: response)
+      cache_duration = network_state.conventions.caching.cache_duration
+      cache.put(cache_key, [etag: etag, cached_response: response], ttl: cache_duration)
       {:ok, response.body}
     else
       {:no_etag, response} -> {:ok, response.body}
@@ -218,7 +219,8 @@ defmodule Ravix.Documents.Session.Manager do
         else
           {:ok, etag} = RavenResponse.response_etag(response)
           cache = network_state.conventions.caching.cache
-          cache.put(cache_key, etag: etag, cached_response: response)
+          cache_duration = network_state.conventions.caching.cache_duration
+          cache.put(cache_key, [etag: etag, cached_response: response], ttl: cache_duration)
           {:ok, response.body}
         end
 
