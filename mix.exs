@@ -4,7 +4,7 @@ defmodule Ravix.MixProject do
   def project do
     [
       app: :ravix,
-      version: "0.9.1",
+      version: "0.9.2",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
