@@ -11,7 +11,7 @@ jobs:
     env:
       MIX_ENV: dev
     container:
-      image: elixir:1.14.2-alpine
+      image: hexpm/elixir:1.16.0-erlang-26.2.1-alpine-3.17.5
     steps:
       - name: Install Git/Curl/GNU Tar
         run: apk add --no-cache curl tar git make gcc libc-dev g++
@@ -31,10 +31,10 @@ jobs:
           path: |
             _build
             deps
-          key: ${{ runner.os }}-02-build-${{ hashFiles('mix.lock') }}
+          key: ${{ runner.os }}-03-build-${{ hashFiles('mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-02-build-${{ hashFiles('mix.lock') }}
-            ${{ runner.os }}-02-build-
+            ${{ runner.os }}-03-build-${{ hashFiles('mix.lock') }}
+            ${{ runner.os }}-03-build-
       - name: Install Mix and Rebar
         run: mix local.hex --force && mix local.rebar --force
       - name: Install dependencies
