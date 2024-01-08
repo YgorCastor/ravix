@@ -70,6 +70,10 @@ defmodule Ravix.Connection.RequestExecutor.Client do
         put_in(response.body, decode_response(response.body))
         |> check_stale(node)
 
+      {:error, %Finch.Error{reason: :disconnected}} ->
+        Telemetry.request_error(node, :http2_pool_disconnected)
+        {:error, :pool_disconnected}
+
       {:error, response} ->
         {:fatal, response}
     end
