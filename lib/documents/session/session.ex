@@ -310,7 +310,7 @@ defmodule Ravix.Documents.Session do
            state.conventions.session_idle_ttl do
         Telemetry.session_timed_out(state.store)
 
-        Logger.warn(
+        Logger.warning(
           "[RAVIX] The session #{state.session_id} timed-out because it was inactive for more than #{inspect(state.conventions.session_idle_ttl)} seconds"
         )
 
